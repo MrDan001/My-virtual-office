@@ -262,10 +262,13 @@ function TasksPage({ staff }: { staff: Staff[] }) {
   };
 
   const toggleTask = async (id: number) => {
-    const currentTask = tasks.find((task) => task.id === id);
+    const currentTask = visibleTasks.find((task) => task.id === id);
     if (!currentTask) return;
     const status: Task["status"] = currentTask.status === "Completed" ? "Pending" : "Completed";
-    setTasks((current) => current.map((task) => task.id === id ? { ...task, status } : task));
+    setTasks((current) => {
+      const source = current.length ? current : defaults;
+      return source.map((task) => task.id === id ? { ...task, status } : task);
+    });
     if (id > 0) {
       try {
         const res = await fetch("/api/tasks", {
