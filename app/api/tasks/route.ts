@@ -32,7 +32,12 @@ export async function POST(request: Request) {
     args: [title, assigneeId, priority],
   });
 
-  return NextResponse.json({ configured: true, id: result.lastInsertRowid }, { status: 201 });
+  const newId = result.lastInsertRowid;
+  if (newId === undefined) {
+    return NextResponse.json({ error: "Task was created but no id was returned" }, { status: 500 });
+  }
+
+  return NextResponse.json({ configured: true, id: Number(newId) }, { status: 201 });
 }
 
 export async function PATCH(request: Request) {

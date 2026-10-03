@@ -34,10 +34,18 @@ export async function POST(request: Request) {
     args: [name, role, department, location],
   });
 
+  const newId = result.lastInsertRowid;
+  if (newId === undefined) {
+    return NextResponse.json({ error: "Employee was created but no id was returned" }, { status: 500 });
+  }
+
   const created = await db.execute({
     sql: "SELECT id, name, role, department, status, task, x, y, color, location FROM employees WHERE id = ?",
-    args: [result.lastInsertRowid],
+    args: [newId],
   });
 
-  return NextResponse.json({ configured: true, staff: created.rows[0] }, { status: 201 });
+  return NextResponse.json({
+    configured: true,
+    staff: created.rows[0] ?? null,
+  }, { status: 201 });
 }

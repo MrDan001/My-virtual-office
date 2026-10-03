@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
-import { advanceActor, officeNodes, homeRoomForDepartment, targetRoomForStaff, routineForStaff, type OfficeRoom } from "@/lib/office-sim";
+import { advanceActor, officeNodes, homeRoomForDepartment, targetRoomForStaff, routineForStaff, type OfficeRoom } from "../lib/office-sim";
 
 type Page = "dashboard" | "office" | "staff" | "tasks" | "schedule" | "reports" | "settings";
 type StaffStatus = "Working" | "Meeting" | "Break" | "Away";
