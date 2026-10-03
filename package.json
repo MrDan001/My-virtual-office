@@ -5,12 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "db:check": "node -e \"console.log('Turso schema is initialized automatically by the API on first request')\""
   },
   "dependencies": {
     "next": "16.3.8",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "@libsql/client": "0.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",
