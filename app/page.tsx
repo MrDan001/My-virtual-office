@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
-import { advanceActor, officeNodes, homeRoomForDepartment, targetRoomForStaff, type OfficeRoom } from "@/lib/office-sim";
+import { advanceActor, officeNodes, homeRoomForDepartment, targetRoomForStaff, routineForStaff, type OfficeRoom } from "@/lib/office-sim";
 
 type Page = "dashboard" | "office" | "staff" | "tasks" | "schedule" | "reports" | "settings";
 type StaffStatus = "Working" | "Meeting" | "Break" | "Away";
@@ -48,6 +48,19 @@ const waypoints = [
 
 const avatar = (name: string) => name.split(" ").map((part) => part[0]).join("").slice(0, 2);
 
+type RoomLayout = { x: number; y: number; w: number; h: number };
+
+const DEFAULT_LAYOUT: Record<OfficeRoom, RoomLayout> = {
+  Reception: { x: 35, y: 84, w: 8, h: 10 },
+  "Manager Office": { x: 3, y: 5, w: 27, h: 28 },
+  "Meeting Room": { x: 34, y: 5, w: 34, h: 28 },
+  "Design Studio": { x: 3, y: 38, w: 38, h: 59 },
+  Finance: { x: 45, y: 38, w: 23, h: 59 },
+  Support: { x: 72, y: 5, w: 25, h: 44 },
+  "Break Room": { x: 72, y: 53, w: 25, h: 44 },
+  "Open Office": { x: 35, y: 34, w: 34, h: 61 },
+};
+
 function Icon({ name }: { name: string }) {
   const icons: Record<string, string> = {
     grid: "▦", office: "⌂", people: "♙", tasks: "✓", calendar: "◫", reports: "▤", settings: "⚙",
@@ -70,39 +83,57 @@ function StatCard({ label, value, note, icon, tone }: { label: string; value: st
   );
 }
 
-function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom }: { staff: Staff[]; running: boolean; onSelect: (s: Staff) => void; onRoomSelect?: (room: OfficeRoom) => void; selectedRoom?: OfficeRoom | null }) {
-  const hotspots: { room: OfficeRoom; cls: string }[] = [
-    { room: "Manager Office", cls: "manager-hotspot" }, { room: "Meeting Room", cls: "meeting-hotspot" },
-    { room: "Design Studio", cls: "design-hotspot" }, { room: "Finance", cls: "finance-hotspot" },
-    { room: "Support", cls: "support-hotspot" }, { room: "Break Room", cls: "break-hotspot" },
+function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom, layout = DEFAULT_LAYOUT, editing = false }: {
+  staff: Staff[];
+  running: boolean;
+  onSelect: (s: Staff) => void;
+  onRoomSelect?: (room: OfficeRoom) => void;
+  selectedRoom?: OfficeRoom | null;
+  layout?: Record<OfficeRoom, RoomLayout>;
+  editing?: boolean;
+}) {
+  const rooms: { room: OfficeRoom; cls: string; }[] = [
+    { room: "Manager Office", cls: "manager-room" }, { room: "Meeting Room", cls: "meeting-room" },
+    { room: "Design Studio", cls: "design-room" }, { room: "Finance", cls: "finance-room" },
+    { room: "Support", cls: "support-room" }, { room: "Break Room", cls: "break-room" },
   ];
+
   return (
-    <div className={`office-scene ${running ? "is-running" : "is-paused"}`}>
+    <div className={`office-scene ${running ? "is-running" : "is-paused"} ${editing ? "is-editing" : ""}`}>
       <div className="scene-grid" />
-      <div className="wall top-wall" />
-      <div className="wall left-wall" />
-      <div className="room manager-room"><div className="room-label">Manager Office</div><div className="desk"><span className="monitor" /><span className="chair" /></div></div>
-      <div className="room meeting-room"><div className="room-label">Meeting Room</div><div className="meeting-table"><span/><span/><span/><span/></div></div>
-      <div className="room design-room"><div className="room-label">Design Studio</div><div className="cluster desks"><span/><span/><span/><span/></div></div>
-      <div className="room finance-room"><div className="room-label">Finance</div><div className="finance-desks"><span/><span/></div></div>
-      <div className="room support-room"><div className="room-label">Support</div><div className="support-counters"><span/><span/><span/></div></div>
-      <div className="room break-room"><div className="room-label">Break Room</div><div className="break-table"><span/><span/><span/></div></div>
-      {hotspots.map(({ room, cls }) => <button key={room} className={`room-hotspot ${cls} ${selectedRoom === room ? "selected" : ""}`} onClick={() => onRoomSelect?.(room)} aria-label={`Inspect ${room}`}>⌖</button>)}
+      <div className="wall top-wall" /><div className="wall left-wall" />
+
+      {rooms.map(({ room, cls }) => {
+        const box = layout[room];
+        return <button key={room} className={`room ${cls} room-object ${selectedRoom === room ? "room-selected-object" : ""}`} style={{ left: `${box.x}%`, top: `${box.y}%`, width: `${box.w}%`, height: `${box.h}%` }} onClick={() => onRoomSelect?.(room)}>
+          <span className="room-label">{room}</span>
+          {room === "Manager Office" && <span className="desk"><span className="monitor" /><span className="chair" /></span>}
+          {room === "Meeting Room" && <span className="meeting-table"><span/><span/><span/><span/></span>}
+          {room === "Design Studio" && <span className="cluster desks"><span/><span/><span/><span/></span>}
+          {room === "Finance" && <span className="finance-desks"><span/><span/></span>}
+          {room === "Support" && <span className="support-counters"><span/><span/><span/></span>}
+          {room === "Break Room" && <span className="break-table"><span/><span/><span/></span>}
+        </button>;
+      })}
+
       <div className="plant plant-1">🌿</div><div className="plant plant-2">🌿</div><div className="plant plant-3">🌿</div>
       <div className="reception"><span className="front-desk" /><small>Reception</small></div>
+
       {staff.map((person) => (
         <button
           key={person.id}
           className={`staff-token status-${person.status.toLowerCase()}`}
           style={{ left: `${person.x}%`, top: `${person.y}%`, "--staff-color": person.color } as CSSProperties}
-          onClick={() => onSelect(person)}
+          onClick={(event) => { event.stopPropagation(); onSelect(person); }}
           aria-label={`Open ${person.name}`}
         >
           <span className="staff-shadow" /><span className="staff-head">{avatar(person.name)}</span><span className="staff-body" />
           <span className="staff-name">{person.name.split(" ")[0]}</span>
+          <span className="staff-activity">{person.location ?? "Open Office"}</span>
         </button>
       ))}
-      <div className="scene-hint"><Icon name="pin" /> Click a staff member or room</div>
+
+      <div className="scene-hint"><Icon name="pin" /> {editing ? "Select a room, then move it from the inspector" : "Click a staff member or room"}</div>
     </div>
   );
 }
@@ -266,10 +297,14 @@ export default function Home() {
   const [clock, setClock] = useState("09:42 AM");
   const [dbConfigured, setDbConfigured] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [layout, setLayout] = useState<Record<OfficeRoom, RoomLayout>>(DEFAULT_LAYOUT);
+  const [editingLayout, setEditingLayout] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<OfficeRoom | null>(null);
 
   useEffect(() => {
     try {
+      const savedLayout = localStorage.getItem("officehub:layout");
+      if (savedLayout) setLayout({ ...DEFAULT_LAYOUT, ...(JSON.parse(savedLayout) as Record<OfficeRoom, RoomLayout>) });
       const saved = localStorage.getItem("officehub:staff");
       if (saved) setStaff(JSON.parse(saved) as Staff[]);
     } catch {}
@@ -281,6 +316,7 @@ export default function Home() {
     }).catch(() => {}).finally(() => setHydrated(true));
   }, []);
   useEffect(() => { if (hydrated) localStorage.setItem("officehub:staff", JSON.stringify(staff)); }, [staff, hydrated]);
+  useEffect(() => { if (hydrated) localStorage.setItem("officehub:layout", JSON.stringify(layout)); }, [layout, hydrated]);
   useEffect(() => { const tick = () => setClock(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })); tick(); const t = setInterval(tick, 30000); return () => clearInterval(t); }, []);
   useEffect(() => {
     if (!running) return;
@@ -288,17 +324,15 @@ export default function Home() {
       const now = Math.floor(Date.now() / 1000);
       setStaff((current) => current.map((person) => {
         if (person.status === "Away") return person;
-        const target = targetRoomForStaff(person.department, person.status, now);
+        const routine = routineForStaff(person.department, person.id, now);
+        const target = targetRoomForStaff(person.department, routine.status, now);
         const next = advanceActor(person, target, 2.4);
-        const arrived = next.location === target && Math.hypot(next.x - officeNodes[target].x, next.y - officeNodes[target].y) < 0.1;
+        const arrived = Math.hypot(next.x - officeNodes[target].x, next.y - officeNodes[target].y) < 0.8;
         return {
           ...person,
+          status: routine.status as StaffStatus,
           ...next,
-          task: arrived ? (
-            person.status === "Meeting" ? "Team sync" :
-            person.status === "Break" ? "Taking a break" :
-            person.task
-          ) : person.task,
+          task: arrived ? routine.task : `Walking to ${target}`,
         };
       }));
     }, 450);
