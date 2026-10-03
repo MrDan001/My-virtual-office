@@ -34,3 +34,30 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ configured: true, id: result.lastInsertRowid }, { status: 201 });
 }
+
+export async function PATCH(request: Request) {
+  const db = await requireDb();
+  if (!db) {
+    return NextResponse.json({ configured: false, error: "Turso database is not configured" }, { status: 503 });
+  }
+
+  const body = await request.json();
+  const id = Number(body.id);
+  const status = String(body.status ?? "Pending");
+  if (!Number.isInteger(id) || id <= 0) {
+    return NextResponse.json({ error: "Valid task id is required" }, { status: 400 });
+  }
+
+  const allowed = new Set(["Pending", "In Progress", "Completed"]);
+  if (!allowed.has(status)) {
+    return NextResponse.json({ error: "Invalid task status" }, { status: 400 });
+  }
+
+  await db.execute({ sql: "UPDATE tasks SET status = ? WHERE id = ?", args: [status, id] });
+  const result = await db.execute({
+    sql: "SELECT id, title, priority, status, due_label, assignee_id FROM tasks WHERE id = ?",
+    args: [id],
+  });
+
+  return NextResponse.json({ configured: true, task: result.rows[0] ?? null });
+}
