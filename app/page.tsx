@@ -370,12 +370,47 @@ export default function Home() {
   };
 
   const content = useMemo(() => {
-    if (page === "dashboard") return <Dashboard staff={staff} running={running} setRunning={setRunning} onSelect={setSelected} onAdd={() => setAdding(true)} setPage={setPage} />;
-    if (page === "office") return <div className="content"><section className="panel office-page"><div className="section-toolbar"><div><h2>Live office</h2><p>{running ? "Simulation running — staff follow role-based routines and room routes." : "Simulation paused."}</p></div><div className="office-actions">{selectedRoom && <span className="room-selected"><Icon name="pin"/> {selectedRoom}</span>}<button className={running ? "secondary" : "primary"} onClick={() => setRunning(!running)}><Icon name={running ? "pause" : "play"} /> {running ? "Pause simulation" : "Resume simulation"}</button></div></div><OfficeScene staff={staff} running={running} onSelect={setSelected} onRoomSelect={setSelectedRoom} selectedRoom={selectedRoom}/>{selectedRoom && <div className="room-inspector"><div><strong>{selectedRoom}</strong><span>{selectedRoom === "Meeting Room" ? "3 meetings scheduled today" : selectedRoom === "Break Room" ? "Staff wellness area" : `${staff.filter((s) => (s.location ?? homeRoomForDepartment(s.department)) === selectedRoom).length} staff linked to this room`}</span></div><button className="secondary" onClick={() => setSelectedRoom(null)}>Close</button></div>}</section></div>;
+    if (page === "dashboard") {
+      return <Dashboard staff={staff} running={running} setRunning={setRunning} onSelect={setSelected} onAdd={() => setAdding(true)} setPage={setPage} />;
+    }
+    if (page === "office") {
+      const activeRoom = selectedRoom;
+      return <div className="content"><section className="panel office-page">
+        <div className="section-toolbar">
+          <div>
+            <h2>Live office</h2>
+            <p>{editingLayout ? "Layout editor: select a room and reposition it with the controls." : running ? "Simulation running — staff follow role-based routines and connected room routes." : "Simulation paused."}</p>
+          </div>
+          <div className="office-actions">
+            {activeRoom && <span className="room-selected"><Icon name="pin"/> {activeRoom}</span>}
+            <button className={editingLayout ? "primary" : "secondary"} onClick={() => setEditingLayout((value) => !value)}>
+              {editingLayout ? "Finish layout" : "Edit layout"}
+            </button>
+            <button className={running ? "secondary" : "primary"} onClick={() => setRunning(!running)}>
+              <Icon name={running ? "pause" : "play"} /> {running ? "Pause simulation" : "Resume simulation"}
+            </button>
+          </div>
+        </div>
+        <OfficeScene staff={staff} running={running} onSelect={setSelected} onRoomSelect={setSelectedRoom} selectedRoom={activeRoom} layout={layout} editing={editingLayout}/>
+        {activeRoom && <div className="room-inspector">
+          <div>
+            <strong>{activeRoom}</strong>
+            <span>{staff.filter((s) => (s.location ?? homeRoomForDepartment(s.department)) === activeRoom).length} staff linked · {editingLayout ? "move the room with the controls" : "inspect room activity"}</span>
+          </div>
+          {editingLayout ? <div className="move-controls">
+            <button className="secondary" onClick={() => setLayout((current) => ({ ...current, [activeRoom]: { ...current[activeRoom], y: Math.max(0, current[activeRoom].y - 2) } }))}>↑</button>
+            <button className="secondary" onClick={() => setLayout((current) => ({ ...current, [activeRoom]: { ...current[activeRoom], x: Math.max(0, current[activeRoom].x - 2) } }))}>←</button>
+            <button className="secondary" onClick={() => setLayout((current) => ({ ...current, [activeRoom]: { ...current[activeRoom], x: Math.min(100 - current[activeRoom].w, current[activeRoom].x + 2) } }))}>→</button>
+            <button className="secondary" onClick={() => setLayout((current) => ({ ...current, [activeRoom]: { ...current[activeRoom], y: Math.min(100 - current[activeRoom].h, current[activeRoom].y + 2) } }))}>↓</button>
+            <button className="secondary" onClick={() => setLayout(DEFAULT_LAYOUT)}>Reset</button>
+          </div> : <button className="secondary" onClick={() => setSelectedRoom(null)}>Close</button>}
+        </div>}
+      </section></div>;
+    }
     if (page === "staff") return <StaffPage staff={staff} onSelect={setSelected} onAdd={() => setAdding(true)} />;
     if (page === "tasks") return <TasksPage staff={staff} />;
     return <SimplePage page={page} staff={staff} />;
-  }, [page, staff, running]);
+  }, [page, staff, running, selectedRoom, layout, editingLayout]);
   return <div className={`app-shell theme-${theme}`}>
     <Sidebar page={page} setPage={setPage} theme={theme} setTheme={setTheme} onAdd={() => setAdding(true)} />
     <main className="main"><Topbar page={page} onAdd={() => setAdding(true)} /><div className="clock-strip"><span><i className="live-dot" /> Live office simulation</span><strong>{clock}</strong><span>{dbConfigured ? "SQLite connected" : "Local prototype mode"}</span></div>{content}</main>
