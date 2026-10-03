@@ -49,6 +49,12 @@ export async function ensureSchema(db: Client) {
     ],
     "write",
   );
+
+  const columns = await db.execute("PRAGMA table_info(employees)");
+  const hasLocation = columns.rows.some((row) => String(row.name) === "location");
+  if (!hasLocation) {
+    await db.execute("ALTER TABLE employees ADD COLUMN location TEXT NOT NULL DEFAULT 'Open Office'");
+  }
 }
 
 export async function requireDb() {
