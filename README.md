@@ -1,15 +1,42 @@
 # My Virtual Office
 
-A Sims-inspired, interactive virtual office built with Next.js for Vercel.
+OfficeHub is a Sims-inspired virtual workplace built with Next.js and designed for Vercel.
 
-## First milestone
+## Current build
 
-- Animated office floorplan with autonomous staff movement
-- Clickable staff with live profile drawer
-- Dashboard, office view, staff directory, tasks, schedule, reports and settings shells
-- Add employee modal
+- Responsive OfficeHub dashboard
+- Live animated office floorplan
+- Staff characters with role-driven routines
+- Connected room navigation graph
+- Clickable staff profiles and rooms
+- Persistent employee and task APIs
+- SQLite-compatible Turso/libSQL data layer
+- Task creation and persistent completion
+- Local-persistent office layout editor
 - Light/dark mode
-- Responsive layout
-- No backend lock-in yet: the first milestone keeps the simulation client-side so the product can be shaped before persistence is introduced
+- GitHub Actions build workflow
 
-Next milestone: replace local simulation state with persistent business data and add authentication, database models, real task assignments, schedules, office layouts and activity events.
+## Runtime
+
+The application runs without database credentials in local prototype mode. Add the following environment variables for persistent server data:
+
+```env
+TURSO_DATABASE_URL=...
+TURSO_AUTH_TOKEN=...
+```
+
+When configured, the API creates/migrates the employee, task and office-event tables automatically.
+
+## Vercel
+
+Turso is available as a Vercel Marketplace Serverless SQLite integration. Connect the integration to the Vercel project so `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are supplied to the app.
+
+## Product roadmap
+
+1. Authentication and workspace accounts
+2. Rich character sprites and directional walking animations
+3. Real schedules, meetings and shift rules
+4. Office furniture/object editor
+5. Staff task queues driving movement and state
+6. Permissions and audit events
+7. Vercel production deployment and observability
