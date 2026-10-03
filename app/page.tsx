@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
+import { advanceActor, officeNodes, homeRoomForDepartment, targetRoomForStaff, type OfficeRoom } from "@/lib/office-sim";
 
 type Page = "dashboard" | "office" | "staff" | "tasks" | "schedule" | "reports" | "settings";
 type StaffStatus = "Working" | "Meeting" | "Break" | "Away";
@@ -16,6 +17,7 @@ type Staff = {
   x: number;
   y: number;
   color: string;
+  location?: OfficeRoom;
 };
 
 type Task = {
@@ -29,12 +31,12 @@ type Task = {
 };
 
 const seedStaff: Staff[] = [
-  { id: 1, name: "Sarah Johnson", role: "Team Lead", department: "Management", status: "Meeting", task: "Weekly standup", x: 69, y: 33, color: "#f59e0b" },
-  { id: 2, name: "Mike Williams", role: "Product Designer", department: "Design", status: "Working", task: "Landing page", x: 33, y: 37, color: "#22c55e" },
-  { id: 3, name: "Emma Davis", role: "Marketing", department: "Marketing", status: "Working", task: "Campaign review", x: 52, y: 70, color: "#a855f7" },
-  { id: 4, name: "James Brown", role: "Accountant", department: "Finance", status: "Away", task: "Payroll", x: 82, y: 70, color: "#ef4444" },
-  { id: 5, name: "Lina Wilson", role: "Support Agent", department: "Support", status: "Working", task: "Customer inbox", x: 20, y: 76, color: "#06b6d4" },
-  { id: 6, name: "David Miller", role: "Operations", department: "Operations", status: "Break", task: "Inventory check", x: 60, y: 17, color: "#3b82f6" },
+  { id: 1, name: "Sarah Johnson", role: "Team Lead", department: "Management", status: "Meeting", task: "Weekly standup", x: 69, y: 33, color: "#f59e0b", location: "Meeting Room" },
+  { id: 2, name: "Mike Williams", role: "Product Designer", department: "Design", status: "Working", task: "Landing page", x: 33, y: 37, color: "#22c55e", location: "Design Studio" },
+  { id: 3, name: "Emma Davis", role: "Marketing", department: "Marketing", status: "Working", task: "Campaign review", x: 52, y: 70, color: "#a855f7", location: "Open Office" },
+  { id: 4, name: "James Brown", role: "Accountant", department: "Finance", status: "Away", task: "Payroll", x: 82, y: 70, color: "#ef4444", location: "Finance" },
+  { id: 5, name: "Lina Wilson", role: "Support Agent", department: "Support", status: "Working", task: "Customer inbox", x: 20, y: 76, color: "#06b6d4", location: "Support" },
+  { id: 6, name: "David Miller", role: "Operations", department: "Operations", status: "Break", task: "Inventory check", x: 60, y: 17, color: "#3b82f6", location: "Break Room" },
 ];
 
 const waypoints = [
@@ -68,7 +70,12 @@ function StatCard({ label, value, note, icon, tone }: { label: string; value: st
   );
 }
 
-function OfficeScene({ staff, running, onSelect }: { staff: Staff[]; running: boolean; onSelect: (s: Staff) => void }) {
+function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom }: { staff: Staff[]; running: boolean; onSelect: (s: Staff) => void; onRoomSelect?: (room: OfficeRoom) => void; selectedRoom?: OfficeRoom | null }) {
+  const hotspots: { room: OfficeRoom; cls: string }[] = [
+    { room: "Manager Office", cls: "manager-hotspot" }, { room: "Meeting Room", cls: "meeting-hotspot" },
+    { room: "Design Studio", cls: "design-hotspot" }, { room: "Finance", cls: "finance-hotspot" },
+    { room: "Support", cls: "support-hotspot" }, { room: "Break Room", cls: "break-hotspot" },
+  ];
   return (
     <div className={`office-scene ${running ? "is-running" : "is-paused"}`}>
       <div className="scene-grid" />
@@ -80,6 +87,7 @@ function OfficeScene({ staff, running, onSelect }: { staff: Staff[]; running: bo
       <div className="room finance-room"><div className="room-label">Finance</div><div className="finance-desks"><span/><span/></div></div>
       <div className="room support-room"><div className="room-label">Support</div><div className="support-counters"><span/><span/><span/></div></div>
       <div className="room break-room"><div className="room-label">Break Room</div><div className="break-table"><span/><span/><span/></div></div>
+      {hotspots.map(({ room, cls }) => <button key={room} className={`room-hotspot ${cls} ${selectedRoom === room ? "selected" : ""}`} onClick={() => onRoomSelect?.(room)} aria-label={`Inspect ${room}`}>⌖</button>)}
       <div className="plant plant-1">🌿</div><div className="plant plant-2">🌿</div><div className="plant plant-3">🌿</div>
       <div className="reception"><span className="front-desk" /><small>Reception</small></div>
       {staff.map((person) => (
@@ -94,7 +102,7 @@ function OfficeScene({ staff, running, onSelect }: { staff: Staff[]; running: bo
           <span className="staff-name">{person.name.split(" ")[0]}</span>
         </button>
       ))}
-      <div className="scene-hint"><Icon name="pin" /> Click a staff member to inspect</div>
+      <div className="scene-hint"><Icon name="pin" /> Click a staff member or room</div>
     </div>
   );
 }
@@ -258,6 +266,7 @@ export default function Home() {
   const [clock, setClock] = useState("09:42 AM");
   const [dbConfigured, setDbConfigured] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<OfficeRoom | null>(null);
 
   useEffect(() => {
     try {
@@ -275,11 +284,24 @@ export default function Home() {
   useEffect(() => { const tick = () => setClock(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })); tick(); const t = setInterval(tick, 30000); return () => clearInterval(t); }, []);
   useEffect(() => {
     if (!running) return;
-    const t = setInterval(() => setStaff((current) => current.map((person) => {
-      if (person.status === "Away") return person;
-      const target = waypoints[Math.floor(Math.random() * waypoints.length)];
-      return { ...person, x: target.x, y: target.y };
-    })), 2200);
+    const t = setInterval(() => {
+      const now = Math.floor(Date.now() / 1000);
+      setStaff((current) => current.map((person) => {
+        if (person.status === "Away") return person;
+        const target = targetRoomForStaff(person.department, person.status, now);
+        const next = advanceActor(person, target, 2.4);
+        const arrived = next.location === target && Math.hypot(next.x - officeNodes[target].x, next.y - officeNodes[target].y) < 0.1;
+        return {
+          ...person,
+          ...next,
+          task: arrived ? (
+            person.status === "Meeting" ? "Team sync" :
+            person.status === "Break" ? "Taking a break" :
+            person.task
+          ) : person.task,
+        };
+      }));
+    }, 450);
     return () => clearInterval(t);
   }, [running]);
 
@@ -297,7 +319,7 @@ export default function Home() {
 
   const content = useMemo(() => {
     if (page === "dashboard") return <Dashboard staff={staff} running={running} setRunning={setRunning} onSelect={setSelected} onAdd={() => setAdding(true)} setPage={setPage} />;
-    if (page === "office") return <div className="content"><section className="panel office-page"><div className="section-toolbar"><div><h2>Live office</h2><p>{running ? "Simulation running — staff are moving through their routines." : "Simulation paused."}</p></div><button className={running ? "secondary" : "primary"} onClick={() => setRunning(!running)}><Icon name={running ? "pause" : "play"} /> {running ? "Pause simulation" : "Resume simulation"}</button></div><OfficeScene staff={staff} running={running} onSelect={setSelected}/></section></div>;
+    if (page === "office") return <div className="content"><section className="panel office-page"><div className="section-toolbar"><div><h2>Live office</h2><p>{running ? "Simulation running — staff follow role-based routines and room routes." : "Simulation paused."}</p></div><div className="office-actions">{selectedRoom && <span className="room-selected"><Icon name="pin"/> {selectedRoom}</span>}<button className={running ? "secondary" : "primary"} onClick={() => setRunning(!running)}><Icon name={running ? "pause" : "play"} /> {running ? "Pause simulation" : "Resume simulation"}</button></div></div><OfficeScene staff={staff} running={running} onSelect={setSelected} onRoomSelect={setSelectedRoom} selectedRoom={selectedRoom}/>{selectedRoom && <div className="room-inspector"><div><strong>{selectedRoom}</strong><span>{selectedRoom === "Meeting Room" ? "3 meetings scheduled today" : selectedRoom === "Break Room" ? "Staff wellness area" : `${staff.filter((s) => (s.location ?? homeRoomForDepartment(s.department)) === selectedRoom).length} staff linked to this room`}</span></div><button className="secondary" onClick={() => setSelectedRoom(null)}>Close</button></div>}</section></div>;
     if (page === "staff") return <StaffPage staff={staff} onSelect={setSelected} onAdd={() => setAdding(true)} />;
     if (page === "tasks") return <TasksPage staff={staff} />;
     return <SimplePage page={page} staff={staff} />;
