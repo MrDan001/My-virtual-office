@@ -6,7 +6,7 @@ export async function GET() {
   if (!db) return NextResponse.json({ configured: false, staff: [] });
 
   const result = await db.execute(
-    "SELECT id, name, role, department, status, task, x, y, color FROM employees ORDER BY id DESC",
+    "SELECT id, name, role, department, status, task, x, y, color, location FROM employees ORDER BY id DESC",
   );
 
   return NextResponse.json({ configured: true, staff: result.rows });
@@ -22,19 +22,20 @@ export async function POST(request: Request) {
   const name = String(body.name ?? "").trim();
   const role = String(body.role ?? "").trim();
   const department = String(body.department ?? "").trim();
+  const location = String(body.location ?? "Open Office").trim() || "Open Office";
 
   if (!name || !role || !department) {
     return NextResponse.json({ error: "Name, role and department are required" }, { status: 400 });
   }
 
   const result = await db.execute({
-    sql: `INSERT INTO employees (name, role, department, status, task, x, y, color)
-           VALUES (?, ?, ?, 'Working', 'Getting started', 46, 58, '#3b82f6')`,
-    args: [name, role, department],
+    sql: `INSERT INTO employees (name, role, department, status, task, x, y, color, location)
+           VALUES (?, ?, ?, 'Working', 'Getting started', 46, 58, '#3b82f6', ?)`,
+    args: [name, role, department, location],
   });
 
   const created = await db.execute({
-    sql: "SELECT id, name, role, department, status, task, x, y, color FROM employees WHERE id = ?",
+    sql: "SELECT id, name, role, department, status, task, x, y, color, location FROM employees WHERE id = ?",
     args: [result.lastInsertRowid],
   });
 
