@@ -159,9 +159,9 @@ function SimplePage({ page, staff }: { page: Exclude<Page, "dashboard" | "office
   return <div className="content"><section className="panel simple-page"><h2>{data.title}</h2><p>{data.desc}</p><div className="simple-cards">{data.cards.map(([a,b]) => <div key={a} className="simple-card"><span>{a}</span><strong>{b}</strong></div>)}</div><div className="placeholder-banner"><Icon name="spark"/><div><strong>{staff.length} teammates are currently connected.</strong><span>This area is ready for the next layer of real business data.</span></div></div></section></div>;
 }
 
-function StaffModal({ onClose, onSave }: { onClose: () => void; onSave: (s: Omit<Staff, "id" | "x" | "y">) => void }) {
+function StaffModal({ onClose, onSave }: { onClose: () => void; onSave: (s: Omit<Staff, "id" | "x" | "y">) => void | Promise<void> }) {
   const [name, setName] = useState(""); const [role, setRole] = useState(""); const [department, setDepartment] = useState("Operations");
-  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-head"><div><h2>Add new employee</h2><p>Give a teammate a place in the virtual office.</p></div><button className="close-button" onClick={onClose}>×</button></div><div className="avatar-upload"><div className="upload-avatar">+</div><div><strong>Profile photo</strong><span>Optional for now</span></div></div><label>Full name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex Morgan" /></label><label>Role<input value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Sales Manager" /></label><label>Department<select value={department} onChange={(e) => setDepartment(e.target.value)}>{["Management","Design","Marketing","Finance","Support","Operations"].map((x) => <option key={x}>{x}</option>)}</select></label><div className="modal-actions"><button onClick={onClose} className="secondary">Cancel</button><button disabled={!name.trim() || !role.trim()} className="primary" onClick={() => { onSave({ name: name.trim(), role: role.trim(), department, status: "Working", task: "Getting started", color: "#3b82f6" }); onClose(); }}>Add employee</button></div></div></div>;
+  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-head"><div><h2>Add new employee</h2><p>Give a teammate a place in the virtual office.</p></div><button className="close-button" onClick={onClose}>×</button></div><div className="avatar-upload"><div className="upload-avatar">+</div><div><strong>Profile photo</strong><span>Optional for now</span></div></div><label>Full name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex Morgan" /></label><label>Role<input value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Sales Manager" /></label><label>Department<select value={department} onChange={(e) => setDepartment(e.target.value)}>{["Management","Design","Marketing","Finance","Support","Operations"].map((x) => <option key={x}>{x}</option>)}</select></label><div className="modal-actions"><button onClick={onClose} className="secondary">Cancel</button><button disabled={!name.trim() || !role.trim()} className="primary" onClick={() => { void onSave({ name: name.trim(), role: role.trim(), department, status: "Working", task: "Getting started", color: "#3b82f6" }); onClose(); }}>Add employee</button></div></div></div>;
 }
 
 function StaffDrawer({ staff, onClose }: { staff: Staff | null; onClose: () => void }) {
@@ -177,7 +177,22 @@ export default function Home() {
   const [selected, setSelected] = useState<Staff | null>(null);
   const [adding, setAdding] = useState(false);
   const [clock, setClock] = useState("09:42 AM");
+  const [dbConfigured, setDbConfigured] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("officehub:staff");
+      if (saved) setStaff(JSON.parse(saved) as Staff[]);
+    } catch {}
+    void fetch("/api/staff").then(async (res) => {
+      if (!res.ok) return;
+      const data = await res.json();
+      setDbConfigured(Boolean(data.configured));
+      if (Array.isArray(data.staff) && data.staff.length > 0) setStaff(data.staff as unknown as Staff[]);
+    }).catch(() => {}).finally(() => setHydrated(true));
+  }, []);
+  useEffect(() => { if (hydrated) localStorage.setItem("officehub:staff", JSON.stringify(staff)); }, [staff, hydrated]);
   useEffect(() => { const tick = () => setClock(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })); tick(); const t = setInterval(tick, 30000); return () => clearInterval(t); }, []);
   useEffect(() => {
     if (!running) return;
@@ -189,6 +204,18 @@ export default function Home() {
     return () => clearInterval(t);
   }, [running]);
 
+  const addEmployee = async (newStaff: Omit<Staff, "id" | "x" | "y">) => {
+    try {
+      const res = await fetch("/api/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newStaff) });
+      if (res.ok) {
+        const data = await res.json();
+        setDbConfigured(Boolean(data.configured));
+        if (data.staff) { setStaff((current) => [{ ...(data.staff as Staff) }, ...current]); return; }
+      }
+    } catch {}
+    setStaff((current) => [...current, { ...newStaff, id: Date.now(), x: 46, y: 58 }]);
+  };
+
   const content = useMemo(() => {
     if (page === "dashboard") return <Dashboard staff={staff} running={running} setRunning={setRunning} onSelect={setSelected} onAdd={() => setAdding(true)} setPage={setPage} />;
     if (page === "office") return <div className="content"><section className="panel office-page"><div className="section-toolbar"><div><h2>Live office</h2><p>{running ? "Simulation running — staff are moving through their routines." : "Simulation paused."}</p></div><button className={running ? "secondary" : "primary"} onClick={() => setRunning(!running)}><Icon name={running ? "pause" : "play"} /> {running ? "Pause simulation" : "Resume simulation"}</button></div><OfficeScene staff={staff} running={running} onSelect={setSelected}/></section></div>;
@@ -198,8 +225,8 @@ export default function Home() {
   }, [page, staff, running]);
   return <div className={`app-shell theme-${theme}`}>
     <Sidebar page={page} setPage={setPage} theme={theme} setTheme={setTheme} onAdd={() => setAdding(true)} />
-    <main className="main"><Topbar page={page} onAdd={() => setAdding(true)} /><div className="clock-strip"><span><i className="live-dot" /> Live office simulation</span><strong>{clock}</strong><span>12 staff capacity · 8 active</span></div>{content}</main>
+    <main className="main"><Topbar page={page} onAdd={() => setAdding(true)} /><div className="clock-strip"><span><i className="live-dot" /> Live office simulation</span><strong>{clock}</strong><span>{dbConfigured ? "SQLite connected" : "Local prototype mode"}</span></div>{content}</main>
     <StaffDrawer staff={selected} onClose={() => setSelected(null)} />
-    {adding && <StaffModal onClose={() => setAdding(false)} onSave={(newStaff) => setStaff((current) => [...current, { ...newStaff, id: Date.now(), x: 46, y: 58 }])} />}
+    {adding && <StaffModal onClose={() => setAdding(false)} onSave={addEmployee} />}
   </div>;
 }
