@@ -90,3 +90,14 @@ export function advanceActor(
     location: start,
   };
 }
+
+
+export function routineForStaff(department: string, id: number, unixSeconds: number) {
+  const cycle = Math.floor(unixSeconds / 12) + id;
+  const phase = cycle % 4;
+
+  if (phase === 1 && department !== "Support") return { status: "Meeting", task: "Team sync" as const };
+  if (phase === 2) return { status: "Break", task: "Taking a short break" as const };
+  if (phase === 3) return { status: "Working", task: department === "Finance" ? "Processing payroll" : department === "Support" ? "Customer inbox" : "Focused work" };
+  return { status: "Working", task: department === "Design" ? "Design review" : department === "Operations" ? "Operations queue" : "Focused work" };
+}
