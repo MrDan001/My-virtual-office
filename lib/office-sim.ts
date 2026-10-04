@@ -87,12 +87,6 @@ export function deskSpotForStaff(department: string, id: number, role = "", seat
   return deskSpotForRoom(homeRoomForDepartment(department, role), seatIndex || Math.max(0, id - 1));
 }
 
-export function targetRoomForStaff(department: string, status: string, role = ""): OfficeRoom {
-  if (status === "Meeting") return "Meeting Room";
-  if (status === "Break") return "Break Room";
-  return homeRoomForDepartment(department, role);
-}
-
 export function routineForStaff(department: string, id: number, unixSeconds: number, role = ""): RoutineState {
   const cycleLength = 900;
   const phase = (unixSeconds + id * 83) % cycleLength;
