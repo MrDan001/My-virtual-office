@@ -222,13 +222,13 @@ function chooseRoute(startRoom: OfficeRoom, startPosition: OfficeSeat, goalRoom:
   if (!best) return [{ id: "final", x: finalPoint.x, y: finalPoint.y }];
 
   const route: { id: string; x: number; y: number }[] = [
-    { id: best.startId, ...point(best.startId) },
+    { ...point(best.startId) },
   ];
 
   const startOut = best.startId.endsWith("In") ? best.startId.replace(/In$/, "Out") : best.startId;
-  route.push({ id: startOut, ...point(startOut) });
-  for (const id of best.route.slice(1)) route.push({ id, ...point(id) });
-  route.push({ id: best.goalId, ...point(best.goalId) });
+  route.push({ ...point(startOut) });
+  for (const id of best.route.slice(1)) route.push({ ...point(id) });
+  route.push({ ...point(best.goalId) });
   route.push({ id: "final", x: finalPoint.x, y: finalPoint.y });
   return route;
 }
@@ -293,7 +293,8 @@ export function advanceActor(
     route = chooseRoute(startRoom, { x: person.x, y: person.y }, goal, target);
     step = 0;
   } else {
-    route = person.navRoute.map((id) => id === "final" ? { id, x: target.x, y: target.y } : { id, ...point(id) });
+    const savedRoute = person.navRoute ?? [];
+    route = savedRoute.map((id) => id === "final" ? { id, x: target.x, y: target.y } : { ...point(id) });
   }
 
   while (step < route.length - 1) {
