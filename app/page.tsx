@@ -44,6 +44,31 @@ function seatIndexForRoom(staff: Staff[], room: OfficeRoom) {
   }).length;
 }
 
+function firedIdsFromStorage() {
+  const keys = [
+    "officehub:firedIds",
+    "officehub:archived",
+    "officehub:v2:archived",
+    "officehub:v3:archived",
+    "officehub:v5:archived",
+    "officehub:v6:archived",
+  ];
+  const ids = new Set<number>();
+  for (const key of keys) {
+    try {
+      const raw = localStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        parsed.forEach((value) => {
+          const id = Number(value);
+          if (Number.isInteger(id) && id > 0) ids.add(id);
+        });
+      }
+    } catch {}
+  }
+  return ids;
+}
+
 function normalizeStaffRecord(person: Staff): Staff {
   const role = String(person.role ?? "");
   const department = String(person.department ?? "Operations");
@@ -531,10 +556,11 @@ export default function Home() {
   const [allHandsActive, setAllHandsActive] = useState(false);
 
   useEffect(() => {
+    const fired = firedIdsFromStorage();
     try {
       const saved = localStorage.getItem("officehub:staff");
       if (saved) {
-        const restored = JSON.parse(saved) as Staff[];
+        const restored = (JSON.parse(saved) as Staff[]).filter((person) => !fired.has(person.id));
         setStaff(restored.map(normalizeStaffRecord));
       }
     } catch {}
@@ -543,10 +569,12 @@ export default function Home() {
       const data = await res.json();
       setDbConfigured(Boolean(data.configured));
       if (Array.isArray(data.staff) && data.staff.length > 0) {
-        setStaff((data.staff as unknown as Staff[]).map(normalizeStaffRecord));
+        const active = (data.staff as unknown as Staff[]).filter((person) => !fired.has(person.id));
+        setStaff(active.map(normalizeStaffRecord));
       }
     }).catch(() => {}).finally(() => setHydrated(true));
   }, []);
+
   useEffect(() => { if (hydrated) localStorage.setItem("officehub:staff", JSON.stringify(staff)); }, [staff, hydrated]);
   useEffect(() => { const tick = () => setClock(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })); tick(); const t = setInterval(tick, 30000); return () => clearInterval(t); }, []);
   useEffect(() => {
@@ -620,6 +648,14 @@ export default function Home() {
   };
 
     const fireEmployee = async (person: Staff): Promise<{ ok: boolean; error?: string }> => {
+    const archiveLocally = () => {
+      try {
+        const ids = Array.from(firedIdsFromStorage());
+        if (!ids.includes(person.id)) ids.push(person.id);
+        localStorage.setItem("officehub:firedIds", JSON.stringify(ids));
+      } catch {}
+    };
+
     const removeLocally = () => {
       setStaff((current) => current.filter((item) => item.id !== person.id));
       setSelected((current) => (current?.id === person.id ? null : current));
