@@ -281,6 +281,27 @@ function TasksPage({ staff }: { staff: Staff[] }) {
 
   return <div className="content"><section className="panel"><div className="section-toolbar"><div><h2>Tasks</h2><p>Keep work moving across the office.</p></div><button className="primary" onClick={() => setCreating(true)}><Icon name="plus"/> New task</button></div><div className="task-grid">{visibleTasks.map((item) => <div className={`task-card ${item.status === "Completed" ? "task-done" : ""}`} key={item.id}><button className="task-title" onClick={() => toggleTask(item.id)}><span className={`checkbox ${item.status === "Completed" ? "checked" : ""}`}>{item.status === "Completed" ? "✓" : ""}</span><strong>{item.title}</strong><span className={`priority ${item.priority.toLowerCase()}`}>{item.priority}</span></button><p>Assigned to {item.assignee}</p><div className="task-footer"><span>{item.status === "Completed" ? "Completed" : `Due ${item.dueLabel.toLowerCase()}`}</span><span>{item.status === "Completed" ? "✓" : "•"}</span></div></div>)}</div></section>{creating && <div className="modal-backdrop" onMouseDown={() => setCreating(false)}><div className="modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-head"><div><h2>New task</h2><p>Create work and assign it directly to a teammate.</p></div><button className="close-button" onClick={() => setCreating(false)}>×</button></div><label>Task title<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Review customer requests" /></label><label>Assignee<select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value ? Number(e.target.value) : "")}><option value="">Unassigned</option>{staff.map((person) => <option value={person.id} key={person.id}>{person.name}</option>)}</select></label><label>Priority<select value={priority} onChange={(e) => setPriority(e.target.value as Task["priority"])}>{["High","Medium","Low"].map((x) => <option key={x}>{x}</option>)}</select></label><div className="modal-actions"><button onClick={() => setCreating(false)} className="secondary">Cancel</button><button onClick={createTask} disabled={!title.trim()} className="primary">Create task</button></div></div></div>}</div>;
 }
+
+function SchedulePage() {
+  const [body, setBody] = useState("");
+  const [scheduledFor, setScheduledFor] = useState("");
+  const [notice, setNotice] = useState("");
+  const savePost = async () => {
+    if (!body.trim()) return;
+    try {
+      const response = await fetch("/api/social-posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body, scheduledFor }) });
+      if (!response.ok) throw new Error("Not connected");
+      setNotice(scheduledFor ? "Facebook post scheduled in the workspace queue." : "Facebook post saved as a draft.");
+      setBody(""); setScheduledFor("");
+    } catch {
+      setNotice("Draft kept in this browser. Connect Turso to share it with your team.");
+      const drafts = JSON.parse(localStorage.getItem("officehub:social-drafts") ?? "[]") as unknown[];
+      localStorage.setItem("officehub:social-drafts", JSON.stringify([...drafts, { body, scheduledFor }]));
+      setBody(""); setScheduledFor("");
+    }
+  };
+  return <div className="content"><section className="panel simple-page"><div className="section-toolbar"><div><h2>Content & schedule</h2><p>Prepare work for your Facebook Page from the virtual office.</p></div><span className="status-pill status-working"><i/> Facebook queue</span></div><div className="placeholder-banner"><Icon name="spark"/><div><strong>Publishing is intentionally disconnected.</strong><span>Connect a Meta app and Page permissions before enabling real publishing.</span></div></div><div className="social-composer"><label>Facebook post copy<textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="Write an update for your customers…" /></label><label>Schedule for <input type="datetime-local" value={scheduledFor} onChange={(event) => setScheduledFor(event.target.value)} /></label><button className="primary" disabled={!body.trim()} onClick={() => void savePost()}>{scheduledFor ? "Schedule post" : "Save draft"}</button>{notice && <p className="form-notice">{notice}</p>}</div></section></div>;
+}
 function SimplePage({ page, staff }: { page: Exclude<Page, "dashboard" | "office" | "staff" | "tasks">; staff: Staff[] }) {
   const copy: Record<typeof page, { title: string; desc: string; cards: [string, string][] }> = {
     schedule: { title: "Schedule", desc: "Plan meetings, shifts and focused work blocks.", cards: [["Today", "3 meetings · 6 staff blocks"], ["Tomorrow", "2 meetings · 4 staff blocks"], ["This week", "14 scheduled activities · 82% coverage"]] },
@@ -339,9 +360,16 @@ function StaffModal({ onClose, onSave }: { onClose: () => void; onSave: (s: Omit
   </div>;
 }
 
-function StaffDrawer({ staff, onClose }: { staff: Staff | null; onClose: () => void }) {
+function StaffDrawer({ staff, onClose, onSave }: { staff: Staff | null; onClose: () => void; onSave: (staff: Staff, role: string, department: string) => void }) {
   if (!staff) return null;
-  return <div className="drawer-backdrop" onMouseDown={onClose}><aside className="drawer" onMouseDown={(e) => e.stopPropagation()}><button className="drawer-close" onClick={onClose}>×</button><div className="drawer-profile"><div className="big-avatar" style={{ background: staff.color }}>{avatar(staff.name)}</div><h2>{staff.name}</h2><p>{staff.role} · {staff.department}</p><StatusPill status={staff.status}/></div><div className="drawer-actions"><button><Icon name="chat"/> Message</button><button><Icon name="calendar"/> Schedule</button></div><div className="drawer-section"><span>Current task</span><strong>{staff.task}</strong><small>Updated just now</small></div><div className="drawer-section"><span>Today's schedule</span><div className="mini-timeline"><b>09:00</b><span>Team standup</span><b>11:00</b><span>Focus block</span><b>14:00</b><span>Project review</span></div></div><div className="drawer-section"><span>Location</span><strong><Icon name="pin"/> {staff.status === "Meeting" ? "Meeting Room" : staff.status === "Break" ? "Break Room" : "Assigned desk"}</strong></div></aside></div>;
+  return <StaffDrawerContent key={staff.id} staff={staff} onClose={onClose} onSave={onSave} />;
+}
+
+function StaffDrawerContent({ staff, onClose, onSave }: { staff: Staff; onClose: () => void; onSave: (staff: Staff, role: string, department: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [role, setRole] = useState(staff.role);
+  const [department, setDepartment] = useState(staff.department);
+  return <div className="drawer-backdrop" onMouseDown={onClose}><aside className="drawer" onMouseDown={(e) => e.stopPropagation()}><button className="drawer-close" onClick={onClose}>×</button><div className="drawer-profile"><div className="big-avatar" style={{ background: staff.color }}>{avatar(staff.name)}</div><h2>{staff.name}</h2><p>{staff.role} · {staff.department}</p><StatusPill status={staff.status}/></div><div className="drawer-actions"><button onClick={() => setEditing(!editing)}><Icon name="settings"/> {editing ? "Cancel edit" : "Edit role"}</button><button><Icon name="calendar"/> Schedule</button></div>{editing && <div className="drawer-section role-editor"><span>Role & department</span><label>Role<input value={role} onChange={(event) => setRole(event.target.value)} /></label><label>Department<select value={department} onChange={(event) => setDepartment(event.target.value)}>{["Management","Design","Marketing","Finance","Support","Operations"].map((item) => <option key={item}>{item}</option>)}</select></label><button className="primary" disabled={!role.trim()} onClick={() => { onSave(staff, role.trim(), department); setEditing(false); }}>Save assignment</button></div>}<div className="drawer-section"><span>Current task</span><strong>{staff.task}</strong><small>Updated just now</small></div><div className="drawer-section"><span>Today's schedule</span><div className="mini-timeline"><b>09:00</b><span>Team standup</span><b>11:00</b><span>Focus block</span><b>14:00</b><span>Project review</span></div></div><div className="drawer-section"><span>Location</span><strong><Icon name="pin"/> {staff.status === "Meeting" ? "Meeting Room" : staff.status === "Break" ? "Break Room" : "Assigned desk"}</strong></div></aside></div>;
 }
 
 export default function Home() {
@@ -355,6 +383,7 @@ export default function Home() {
   const [dbConfigured, setDbConfigured] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<OfficeRoom | null>(null);
+  const [allHandsActive, setAllHandsActive] = useState(false);
 
   useEffect(() => {
     try {
@@ -384,7 +413,9 @@ export default function Home() {
           if (person.status === "Away") {
             return { person, status: "Away" as const, targetRoom: (person.location ?? "Open Office") as OfficeRoom, task: person.task };
           }
-          const routine = routineForStaff(person.department, person.id, now, person.role);
+          const routine = allHandsActive
+            ? { status: "Meeting" as const, task: "All-hands meeting" }
+            : routineForStaff(person.department, person.id, now, person.role);
           return {
             person,
             status: routine.status,
@@ -428,7 +459,20 @@ export default function Home() {
       });
     }, 250);
     return () => clearInterval(t);
-  }, [running]);
+  }, [running, allHandsActive]);
+
+  const updateAssignment = async (person: Staff, role: string, department: string) => {
+    const updated = { ...person, role, department, location: homeRoomForDepartment(department, role) };
+    setStaff((current) => current.map((item) => item.id === person.id ? updated : item));
+    setSelected(updated);
+    if (person.id <= 0 || person.id > 1000000000000) return;
+    try {
+      const response = await fetch("/api/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: person.id, role, department }) });
+      if (!response.ok) throw new Error("Could not save assignment");
+    } catch {
+      // Local prototype mode intentionally keeps the owner change in browser storage.
+    }
+  };
 
   const addEmployee = async (newStaff: Omit<Staff, "id" | "x" | "y">) => {
     const addLocally = () => {
@@ -484,6 +528,9 @@ export default function Home() {
           </div>
           <div className="office-actions">
             {activeRoom && <span className="room-selected"><Icon name="pin"/> {activeRoom}</span>}
+            <button className={allHandsActive ? "primary" : "secondary"} onClick={() => setAllHandsActive(!allHandsActive)}>
+              <Icon name="people" /> {allHandsActive ? "End all-hands" : "Summon all to meeting"}
+            </button>
             <button className={running ? "secondary" : "primary"} onClick={() => setRunning(!running)}>
               <Icon name={running ? "pause" : "play"} /> {running ? "Pause simulation" : "Resume simulation"}
             </button>
@@ -501,12 +548,13 @@ export default function Home() {
     }
     if (page === "staff") return <StaffPage staff={staff} onSelect={setSelected} onAdd={() => setAdding(true)} />;
     if (page === "tasks") return <TasksPage staff={staff} />;
+    if (page === "schedule") return <SchedulePage />;
     return <SimplePage page={page} staff={staff} />;
-  }, [page, staff, running, selectedRoom]);
+  }, [page, staff, running, selectedRoom, allHandsActive]);
   return <div className={`app-shell theme-${theme}`}>
     <Sidebar page={page} setPage={setPage} theme={theme} setTheme={setTheme} onAdd={() => setAdding(true)} />
     <main className="main"><Topbar page={page} onAdd={() => setAdding(true)} /><div className="clock-strip"><span><i className="live-dot" /> Live office simulation</span><strong>{clock}</strong><span>{dbConfigured ? "SQLite connected" : "Local prototype mode"}</span></div>{content}</main>
-    <StaffDrawer staff={selected} onClose={() => setSelected(null)} />
+    <StaffDrawer staff={selected} onClose={() => setSelected(null)} onSave={updateAssignment} />
     {adding && <StaffModal onClose={() => setAdding(false)} onSave={addEmployee} />}
   </div>;
 }

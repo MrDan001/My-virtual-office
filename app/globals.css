@@ -690,3 +690,14 @@
   .office-3d-help { left: 10px; bottom: 10px; }
   .office-3d-badge { top: 10px; right: 10px; }
 }
+.social-composer {
+  display: grid;
+  gap: 14px;
+  max-width: 680px;
+  margin-top: 22px;
+}
+.social-composer label { display: grid; gap: 7px; font-size: 12px; font-weight: 750; color: #455466; }
+.social-composer textarea { min-height: 130px; resize: vertical; padding: 12px; font: inherit; border: 1px solid #d8e0e8; border-radius: 10px; background: #fff; }
+.social-composer input { max-width: 290px; padding: 10px; border: 1px solid #d8e0e8; border-radius: 10px; background: #fff; }
+.social-composer .primary { justify-self: start; }
+.form-notice { margin: 0; color: #39745f; font-size: 12px; }

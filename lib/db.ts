@@ -43,6 +43,14 @@ export async function ensureSchema(db: Client) {
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL
       )`,
+      `CREATE TABLE IF NOT EXISTS social_posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        body TEXT NOT NULL,
+        platform TEXT NOT NULL DEFAULT 'Facebook',
+        scheduled_for TEXT,
+        status TEXT NOT NULL DEFAULT 'Draft',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`,
       `CREATE INDEX IF NOT EXISTS idx_employees_department ON employees(department)`,
       `CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`,
       `CREATE INDEX IF NOT EXISTS idx_events_created_at ON office_events(created_at)`
