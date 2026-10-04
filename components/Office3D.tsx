@@ -213,6 +213,20 @@ function addStaff(scene: THREE.Scene, person: Staff) {
   return group;
 }
 
+function buildWall(
+  scene: THREE.Scene,
+  width: number,
+  height: number,
+  depth: number,
+  x: number,
+  z: number,
+  wallMat: THREE.Material,
+) {
+  const wall = roundedBox(width, height, depth, wallMat);
+  wall.position.set(x, height / 2, z);
+  scene.add(wall);
+}
+
 function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
   const mat = new THREE.MeshStandardMaterial({ color: room.color, roughness: 0.8, metalness: 0.02 });
   const floor = roundedBox(room.w, 0.12, room.d, mat);
@@ -223,16 +237,51 @@ function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
   const wallMat = new THREE.MeshStandardMaterial({ color: 0xd5c7b4, roughness: 0.85 });
   const wallH = 2.35;
   const thickness = 0.16;
-  const walls = [
-    [room.w, wallH, thickness, room.x, wallH / 2, room.z - room.d / 2],
-    [room.w, wallH, thickness, room.x, wallH / 2, room.z + room.d / 2],
-    [thickness, wallH, room.d, room.x - room.w / 2, wallH / 2, room.z],
-    [thickness, wallH, room.d, room.x + room.w / 2, wallH / 2, room.z],
-  ];
-  for (const [w, h, d, x, y, z] of walls) {
-    const wall = roundedBox(w, h, d, wallMat);
-    wall.position.set(x, y, z);
-    scene.add(wall);
+  const doorWidth = 2.2;
+
+  // Every room has a deliberate entrance facing the shared circulation space.
+  // Walls are built as segments around the opening rather than as sealed boxes.
+  const doorSide: Record<OfficeRoom, "top" | "bottom" | "left" | "right"> = {
+    Reception: "top",
+    "Manager Office": "bottom",
+    "Meeting Room": "bottom",
+    "Design Studio": "right",
+    Finance: "bottom",
+    Support: "bottom",
+    "Break Room": "left",
+    "Open Office": "top",
+  };
+
+  const side = doorSide[room.name];
+
+  if (side === "top" || side === "bottom") {
+    const wallZ = room.z + (side === "top" ? -room.d / 2 : room.d / 2);
+    const available = room.w - doorWidth;
+    const segment = available / 2;
+    const edgeX = room.x - room.w / 2;
+    buildWall(scene, segment, wallH, thickness, edgeX + segment / 2, wallZ, wallMat);
+    buildWall(scene, segment, wallH, thickness, room.x + room.w / 2 - segment / 2, wallZ, wallMat);
+
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x8f7762, roughness: 0.7 });
+    const leftFrame = roundedBox(0.12, wallH * 0.72, thickness * 1.6, frameMat);
+    leftFrame.position.set(room.x - doorWidth / 2, wallH * 0.36, wallZ);
+    const rightFrame = roundedBox(0.12, wallH * 0.72, thickness * 1.6, frameMat);
+    rightFrame.position.set(room.x + doorWidth / 2, wallH * 0.36, wallZ);
+    scene.add(leftFrame, rightFrame);
+  } else {
+    const wallX = room.x + (side === "left" ? -room.w / 2 : room.w / 2);
+    const available = room.d - doorWidth;
+    const segment = available / 2;
+    const edgeZ = room.z - room.d / 2;
+    buildWall(scene, thickness, wallH, segment, wallX, edgeZ + segment / 2, wallMat);
+    buildWall(scene, thickness, wallH, segment, wallX, room.z + room.d / 2 - segment / 2, wallMat);
+
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x8f7762, roughness: 0.7 });
+    const frontFrame = roundedBox(thickness * 1.6, wallH * 0.72, 0.12, frameMat);
+    frontFrame.position.set(wallX, wallH * 0.36, room.z - doorWidth / 2);
+    const backFrame = roundedBox(thickness * 1.6, wallH * 0.72, 0.12, frameMat);
+    backFrame.position.set(wallX, wallH * 0.36, room.z + doorWidth / 2);
+    scene.add(frontFrame, backFrame);
   }
 
   const label = makeTextSprite(room.name, "#475569");
