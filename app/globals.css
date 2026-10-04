@@ -10,9 +10,7 @@
   overflow: hidden;
   isolation: isolate;
   border-radius: 18px;
-  background: #d9e0d7;
-  perspective: 1100px;
-}
+  background: #d9e0d7;}
 
 .scene-floor {
   position: absolute;
