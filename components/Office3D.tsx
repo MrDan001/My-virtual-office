@@ -405,7 +405,7 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
           group.rotation.x += (0 - group.rotation.x) * Math.min(1, delta * 8);
         }
 
-        group.traverse((child) => {
+        group.traverse((child: THREE.Object3D) => {
           if (child instanceof THREE.Mesh && child.userData.selected) child.scale.setScalar(1.12);
         });
       });
@@ -433,10 +433,10 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
       renderer.domElement.removeEventListener("pointerup", handlePointer);
       controls.dispose();
       renderer.dispose();
-      scene.traverse((obj) => {
+      scene.traverse((obj: THREE.Object3D) => {
         if (obj instanceof THREE.Mesh) {
           obj.geometry.dispose();
-          if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+          if (Array.isArray(obj.material)) obj.material.forEach((m: THREE.Material) => m.dispose());
           else obj.material.dispose();
         }
       });
