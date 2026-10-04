@@ -634,3 +634,59 @@
   from { transform: rotate(-25deg); }
   to { transform: rotate(12deg); }
 }
+
+
+/* True 3D Office Viewer */
+.office-3d-viewer {
+  position: relative;
+  width: 100%;
+  min-height: 620px;
+  height: min(72vh, 760px);
+  overflow: hidden;
+  border-radius: 24px;
+  background: #dce8e5;
+  box-shadow: inset 0 0 0 1px rgba(15,23,42,.08), 0 18px 45px rgba(15,23,42,.12);
+  touch-action: none;
+}
+.office-3d-viewer canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.office-3d-help {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255,255,255,.75);
+  border-radius: 14px;
+  background: rgba(255,255,255,.88);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 25px rgba(15,23,42,.12);
+  pointer-events: none;
+}
+.office-3d-help strong { font-size: 13px; color: #172033; }
+.office-3d-help span { font-size: 11px; color: #64748b; }
+.office-3d-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 5;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: rgba(20,35,45,.84);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  pointer-events: none;
+}
+@media (max-width: 800px) {
+  .office-3d-viewer { min-height: 520px; height: 68vh; border-radius: 18px; }
+  .office-3d-help { left: 10px; bottom: 10px; }
+  .office-3d-badge { top: 10px; right: 10px; }
+}
