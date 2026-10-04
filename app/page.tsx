@@ -19,6 +19,8 @@ type Staff = {
   color: string;
   location?: OfficeRoom;
   walking?: boolean;
+  navGoal?: OfficeRoom;
+  navStep?: number;
 };
 
 type Task = {
@@ -69,6 +71,8 @@ function normalizeStaffRecord(person: Staff): Staff {
     x: targetPoint.x,
     y: targetPoint.y,
     walking: false,
+    navGoal: undefined,
+    navStep: undefined,
   };
 
 }
