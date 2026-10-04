@@ -515,6 +515,82 @@ function addVerticalRoomDividers(scene: THREE.Scene) {
   }
 }
 
+function validateDoorwayClearance(scene: THREE.Scene, rooms: RoomData[]) {
+  type Rect = { minX: number; maxX: number; minZ: number; maxZ: number };
+
+  const rect = (object: THREE.Object3D): Rect | null => {
+    const box = new THREE.Box3().setFromObject(object);
+    if (!Number.isFinite(box.min.x) || !Number.isFinite(box.max.x)) return null;
+    return { minX: box.min.x, maxX: box.max.x, minZ: box.min.z, maxZ: box.max.z };
+  };
+
+  const hit = (a: Rect, b: Rect) =>
+    a.minX < b.maxX && a.maxX > b.minX && a.minZ < b.maxZ && a.maxZ > b.minZ;
+
+  const objects: Array<{ kind: string; box: Rect }> = [];
+  scene.traverse((object) => {
+    const kind = object.userData.clearanceObstacle;
+    const box = kind ? rect(object) : null;
+    if (kind && box) objects.push({ kind, box });
+  });
+
+  const issues: string[] = [];
+
+  for (const room of rooms) {
+    for (const door of room.doors) {
+      const p = worldFromPercent(door.x, door.y);
+      const opening: Rect = {
+        minX: p.x - 0.56,
+        maxX: p.x + 0.56,
+        minZ: p.z - 0.58,
+        maxZ: p.z + 0.58,
+      };
+      for (const object of objects) {
+        if (hit(opening, object.box)) {
+          issues.push("Entrance " + room.name + " (" + door.x + "," + door.y + ") intersects " + object.kind);
+        }
+      }
+    }
+  }
+
+  const nearSegment = (
+    box: Rect,
+    a: { x: number; y: number },
+    b: { x: number; y: number },
+  ) => {
+    const p1 = worldFromPercent(a.x, a.y);
+    const p2 = worldFromPercent(b.x, b.y);
+    const pad = 0.32;
+    const expanded: Rect = {
+      minX: box.minX - pad,
+      maxX: box.maxX + pad,
+      minZ: box.minZ - pad,
+      maxZ: box.maxZ + pad,
+    };
+    for (let i = 0; i <= 20; i += 1) {
+      const t = i / 20;
+      const x = p1.x + (p2.x - p1.x) * t;
+      const z = p1.z + (p2.z - p1.z) * t;
+      if (x >= expanded.minX && x <= expanded.maxX && z >= expanded.minZ && z <= expanded.maxZ) return true;
+    }
+    return false;
+  };
+
+  staffRouteSegments.forEach((segment, index) => {
+    objects.forEach((object) => {
+      if (nearSegment(object.box, segment[0], segment[1])) {
+        issues.push("Staff route segment " + index + " intersects " + object.kind);
+      }
+    });
+  });
+
+  if (issues.length > 0) {
+    console.error("[OfficeHub clearance check]", issues);
+  } else {
+    console.info("[OfficeHub clearance check] All entrances and staff route segments are clear.");
+  }
+}
+
 function addOfficeFurniture(scene: THREE.Scene) {
   const colors: Record<string, number> = {
     "Office 1": 0x596f7d,
@@ -542,6 +618,7 @@ function addMeetingAndBreakFurniture(scene: THREE.Scene) {
   );
   table.position.set(meetingCenter.x, 0.98, meetingCenter.z);
   table.castShadow = true;
+  table.userData.clearanceObstacle = "furniture";
   scene.add(table);
 
   for (const seat of deskSpots["Meeting Room"]) {
@@ -571,6 +648,7 @@ function addMeetingAndBreakFurniture(scene: THREE.Scene) {
   );
   roundTable.position.set(breakCenter.x, 1.0, breakCenter.z);
   roundTable.castShadow = true;
+  roundTable.userData.clearanceObstacle = "furniture";
   scene.add(roundTable);
 
   for (const seat of deskSpots["Break Room"]) {
