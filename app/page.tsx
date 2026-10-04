@@ -19,6 +19,8 @@ type Staff = {
   color: string;
   location?: OfficeRoom;
   walking?: boolean;
+  // Keep every character camera-facing while walking so nobody side-shuffles.
+  facing?: "front" | "back";
 };
 
 type Task = {
@@ -149,7 +151,7 @@ function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom, lay
         const seated = !person.walking && person.status !== "Away";
         return <button
           key={person.id}
-          className={`staff-token status-${person.status.toLowerCase()} ${seated ? "is-sitting" : "is-walking"}`}
+          className={`staff-token status-${person.status.toLowerCase()} ${seated ? "is-sitting" : "is-walking"} walk-facing-${person.facing ?? "front"}`}
           style={{ left: `${person.x}%`, top: `${person.y}%`, "--staff-color": person.color } as CSSProperties}
           onClick={(event) => { event.stopPropagation(); onSelect(person); }}
           aria-label={`Open ${person.name}`}
@@ -157,8 +159,8 @@ function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom, lay
           <span className="staff-shadow" />
           <span className="staff-chair" />
           <span className="staff-legs"><i/><i/></span>
-          <span className="staff-body"><i className="staff-arm arm-left"/><i className="staff-arm arm-right"/><i className="staff-badge"/></span>
-          <span className="staff-head"><i className="staff-hair"/><i className="staff-ear ear-left"/><i className="staff-ear ear-right"/><i className="staff-eye eye-left"/><i className="staff-eye eye-right"/><i className="staff-mouth"/></span>
+          <span className="staff-body"><i className="staff-arm arm-left"/><i className="staff-arm arm-right"/><i className="staff-collar collar-left"/><i className="staff-collar collar-right"/><i className="staff-badge"/></span>
+          <span className="staff-head"><i className="staff-hair"/><i className="staff-ear ear-left"/><i className="staff-ear ear-right"/><i className="staff-brow brow-left"/><i className="staff-brow brow-right"/><i className="staff-eye eye-left"/><i className="staff-eye eye-right"/><i className="staff-nose"/><i className="staff-mouth"/><i className="staff-cheek cheek-left"/><i className="staff-cheek cheek-right"/></span>
           <span className="staff-name">{person.name.split(" ")[0]}</span>
           <span className="staff-role">{person.role}</span>
           <span className="staff-state">{person.walking ? `Walking to ${person.location ?? "desk"}` : person.status === "Working" ? "At workstation" : person.status}</span>
@@ -379,18 +381,25 @@ export default function Home() {
         const routine = routineForStaff(person.department, person.id, now);
         const targetRoom = targetRoomForStaff(person.department, routine.status);
         const targetPoint = activitySpotForStaff(person.department, routine.status, person.id);
-        const next = advanceActor(person, targetRoom, 0.42, targetPoint);
+        // Faster than the original prototype, but still eased by the CSS transition.
+        const next = advanceActor(person, targetRoom, 1.25, targetPoint);
         const arrived = next.location === targetRoom && isAtTarget(next, targetPoint, 0.9);
+        const dx = next.x - person.x;
+        const dy = next.y - person.y;
+        const facing: Staff["facing"] = Math.abs(dy) > Math.abs(dx) * 0.85
+          ? (dy < 0 ? "back" : "front")
+          : (person.facing ?? "front");
 
         return {
           ...person,
           status: routine.status as StaffStatus,
           ...next,
           walking: !arrived,
+          facing,
           task: arrived ? routine.task : `Walking to ${targetRoom}`,
         };
       }));
-    }, 700);
+    }, 650);
     return () => clearInterval(t);
   }, [running]);
 
