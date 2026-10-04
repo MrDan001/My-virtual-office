@@ -17,14 +17,15 @@ const leadershipPattern = /\b(owner|founder|ceo|cto|cfo|coo|director|manager|hea
 export function isLeadershipRole(role = "") { return leadershipPattern.test(role); }
 
 export const officeNodes: Record<OfficeRoom, OfficeNode> = {
+  // Nodes sit at doorways/entrances so staff visibly pass through doors instead of walking through walls.
   Reception: { room: "Reception", x: 50, y: 91, neighbors: ["Open Office", "Support"] },
-  "Manager Office": { room: "Manager Office", x: 17, y: 28, neighbors: ["Open Office", "Meeting Room"] },
-  "Meeting Room": { room: "Meeting Room", x: 52, y: 28, neighbors: ["Manager Office", "Open Office", "Support"] },
-  "Design Studio": { room: "Design Studio", x: 21, y: 70, neighbors: ["Open Office", "Support"] },
-  Finance: { room: "Finance", x: 55, y: 70, neighbors: ["Open Office", "Meeting Room", "Break Room"] },
-  Support: { room: "Support", x: 85, y: 31, neighbors: ["Reception", "Meeting Room", "Design Studio", "Break Room"] },
-  "Break Room": { room: "Break Room", x: 85, y: 78, neighbors: ["Support", "Finance", "Open Office"] },
-  "Open Office": { room: "Open Office", x: 37, y: 59, neighbors: ["Reception", "Manager Office", "Meeting Room", "Design Studio", "Finance", "Break Room"] },
+  "Manager Office": { room: "Manager Office", x: 16.5, y: 33, neighbors: ["Open Office", "Meeting Room"] },
+  "Meeting Room": { room: "Meeting Room", x: 51, y: 33, neighbors: ["Manager Office", "Open Office", "Support"] },
+  "Design Studio": { room: "Design Studio", x: 22, y: 67, neighbors: ["Open Office", "Support"] },
+  Finance: { room: "Finance", x: 56.5, y: 67, neighbors: ["Open Office", "Meeting Room", "Break Room"] },
+  Support: { room: "Support", x: 84.5, y: 49, neighbors: ["Reception", "Meeting Room", "Design Studio", "Break Room"] },
+  "Break Room": { room: "Break Room", x: 84.5, y: 96, neighbors: ["Support", "Finance", "Open Office"] },
+  "Open Office": { room: "Open Office", x: 52, y: 34, neighbors: ["Reception", "Manager Office", "Meeting Room", "Design Studio", "Finance", "Break Room"] },
 };
 
 export function findPath(start: OfficeRoom, goal: OfficeRoom): OfficeRoom[] {
@@ -76,16 +77,16 @@ export function targetRoomForStaff(department: string, status: string, role = ""
 }
 
 export function routineForStaff(department: string, id: number, unixSeconds: number, role = ""): RoutineState {
-  const cycleLength = 300;
+  const cycleLength = 600;
   const phase = unixSeconds % cycleLength;
   const meetingSlot = Math.floor(phase / 30);
-  const meetingWindow = phase < 150 && (phase % 30) < 22;
+  const meetingWindow = phase < 210 && (phase % 42) < 24;
   const departmentSlot = departmentMeetingOrder[meetingSlot % departmentMeetingOrder.length];
   const leadershipMeeting = (department === "Management" || isLeadershipRole(role)) && (meetingSlot % 2 === 0);
   const scheduledMeeting = meetingWindow && (department === departmentSlot || leadershipMeeting);
   if (scheduledMeeting) return { status: "Meeting", task: leadershipMeeting ? "Leadership sync" : "Department sync" };
   const personalPhase = (unixSeconds + id * 47) % cycleLength;
-  if (personalPhase >= 270) return { status: "Break", task: "Taking a short break" };
+  if (personalPhase >= 520) return { status: "Break", task: "Taking a short break" };
   const taskByDepartment: Record<string, string> = { Finance: "Processing payroll", Support: "Customer inbox", Design: "Design review", Marketing: "Campaign work", Operations: "Operations queue", Management: "Team management" };
   return { status: "Working", task: taskByDepartment[department] ?? "Focused work" };
 }
