@@ -391,6 +391,10 @@ function addDoor(scene: THREE.Scene, room: RoomData) {
   }
 
   group.add(hinge);
+  const wayfinding = labelSprite("ENTRY / EXIT", "#365267");
+  wayfinding.position.set(width / 2, height + 0.46, 0.03);
+  wayfinding.scale.set(0.74, 0.17, 1);
+  group.add(wayfinding);
   group.userData.room = room.name;
   group.userData.hinge = hinge;
   group.userData.closed = hinge.rotation.y;
@@ -400,6 +404,39 @@ function addDoor(scene: THREE.Scene, room: RoomData) {
 
   scene.add(group);
   return group;
+}
+
+function addLobbyAndWayfinding(scene: THREE.Scene) {
+  const entrance = worldFromPercent(50, 96);
+  const welcome = labelSprite("OFFICEHUB  •  MAIN ENTRANCE", "#1e3a4a");
+  welcome.position.set(entrance.x, 2.75, entrance.z);
+  welcome.scale.set(2.7, 0.48, 1);
+  scene.add(welcome);
+
+  const mat = new THREE.MeshStandardMaterial({ color: 0x31526a, roughness: 0.28, metalness: 0.34 });
+  const glass = new THREE.MeshStandardMaterial({ color: 0x9bc9d8, transparent: true, opacity: 0.58, roughness: 0.14, metalness: 0.08 });
+  const frame = new THREE.Group();
+  frame.position.set(entrance.x, 0, entrance.z - 0.12);
+  const postLeft = roundedBox(0.13, 2.35, 0.14, mat);
+  postLeft.position.set(-1.02, 1.17, 0);
+  const postRight = postLeft.clone();
+  postRight.position.x = 1.02;
+  const lintel = roundedBox(2.16, 0.14, 0.14, mat);
+  lintel.position.set(0, 2.3, 0);
+  frame.add(postLeft, postRight, lintel);
+  for (const x of [-0.5, 0.5]) {
+    const panel = roundedBox(0.9, 2.1, 0.06, glass);
+    panel.position.set(x, 1.05, 0);
+    frame.add(panel);
+  }
+  scene.add(frame);
+
+  const carpet = new THREE.Mesh(
+    new THREE.BoxGeometry(2.8, 0.018, 1.55),
+    new THREE.MeshStandardMaterial({ color: 0x34546b, roughness: 0.9 }),
+  );
+  carpet.position.set(entrance.x, 0.075, entrance.z - 0.84);
+  scene.add(carpet);
 }
 
 function addRoom(
@@ -662,7 +699,7 @@ function addHuman(
     roughness: 0.9,
   });
   const shirt = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(person.color),
+    color: new THREE.Color(person.color).lerp(new THREE.Color(0x1f2c3a), 0.45),
     roughness: 0.74,
   });
   const pants = new THREE.MeshStandardMaterial({
@@ -719,6 +756,23 @@ function addHuman(
   torso.scale.set(1.04, 1.05, 0.88);
   torso.castShadow = true;
   group.add(torso);
+
+  // A consistent business wardrobe: jacket, shirt panel and tie/lanyard make
+  // every avatar read as a real team member rather than a moving marker.
+  const shirtFront = roundedBox(0.18, 0.44, 0.035, new THREE.MeshStandardMaterial({ color: 0xf3f5f7, roughness: 0.7 }));
+  shirtFront.position.set(0, 1.36, 0.35);
+  group.add(shirtFront);
+  const lapelMaterial = new THREE.MeshStandardMaterial({ color: shirt.color, roughness: 0.62 });
+  for (const side of [-1, 1]) {
+    const lapel = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.33, 3), lapelMaterial);
+    lapel.position.set(side * 0.16, 1.48, 0.36);
+    lapel.rotation.z = side * 0.58;
+    lapel.rotation.x = Math.PI / 2;
+    group.add(lapel);
+  }
+  const tie = roundedBox(0.06, 0.27, 0.025, new THREE.MeshStandardMaterial({ color: Math.abs(person.id) % 2 ? 0x9c3043 : 0x315d8c, roughness: 0.64 }));
+  tie.position.set(0, 1.38, 0.39);
+  group.add(tie);
 
   const neck = new THREE.Mesh(
     new THREE.CylinderGeometry(0.1, 0.12, 0.16, 12),
@@ -809,6 +863,24 @@ function addHuman(
   const mouth = roundedBox(0.12, 0.026, 0.018, lip);
   mouth.position.set(0, -0.18, 0.345);
   head.add(mouth);
+
+  if (Math.abs(person.id) % 3 === 0) {
+    const glasses = new THREE.MeshStandardMaterial({ color: 0x263640, metalness: 0.6, roughness: 0.24 });
+    for (const x of [-0.14, 0.14]) {
+      const lens = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.012, 6, 12), glasses);
+      lens.position.set(x, 0.03, 0.385);
+      head.add(lens);
+    }
+    const bridge = roundedBox(0.12, 0.018, 0.018, glasses);
+    bridge.position.set(0, 0.03, 0.385);
+    head.add(bridge);
+  }
+
+  if (style === 3) {
+    const bun = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), hair);
+    bun.position.set(0.2, 0.18, -0.27);
+    head.add(bun);
+  }
 
   const earL = new THREE.Mesh(
     new THREE.SphereGeometry(0.085, 12, 10),
@@ -1172,6 +1244,8 @@ export default function Office3D({
     for (const room of ROOM_DATA) {
       addRoom(scene, room, doors);
     }
+
+    addLobbyAndWayfinding(scene);
 
     addOfficeFurniture(scene);
     addMeetingAndBreakFurniture(scene);
