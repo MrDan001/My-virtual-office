@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
+import Office3D from "../components/Office3D";
 import { activitySpotForStaff, advanceActor, homeRoomForDepartment, isAtTarget, officeNodes, targetRoomForStaff, routineForStaff, type OfficeRoom } from "../lib/office-sim";
 
 type Page = "dashboard" | "office" | "staff" | "tasks" | "schedule" | "reports" | "settings";
@@ -93,6 +94,7 @@ function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom, lay
   layout?: Record<OfficeRoom, RoomLayout>;
   editing?: boolean;
 }) {
+  return <Office3D staff={staff} running={running} onSelect={onSelect} onRoomSelect={onRoomSelect} selectedRoom={selectedRoom} />;
   const rooms: { room: OfficeRoom; cls: string; furniture: string }[] = [
     { room: "Manager Office", cls: "manager-room", furniture: "manager-furniture" },
     { room: "Meeting Room", cls: "meeting-room", furniture: "meeting-furniture" },
