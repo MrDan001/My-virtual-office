@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { deskSpots, type OfficeRoom } from "../lib/office-sim";
+import { deskSpots, staffRouteSegments, type OfficeRoom } from "../lib/office-sim";
 
 type StaffStatus = "Working" | "Meeting" | "Break" | "Away";
 
@@ -401,6 +401,7 @@ function addRoom(
     wall.position.set(x, wallH / 2, z);
     wall.castShadow = true;
     wall.receiveShadow = true;
+    wall.userData.clearanceObstacle = "wall";
     scene.add(wall);
   };
 
@@ -508,6 +509,7 @@ function addVerticalRoomDividers(scene: THREE.Scene) {
       wall.position.set(center, wallH / 2, (roomTop + roomBottom) / 2);
       wall.castShadow = true;
       wall.receiveShadow = true;
+      wall.userData.clearanceObstacle = "divider";
       scene.add(wall);
     }
   }
