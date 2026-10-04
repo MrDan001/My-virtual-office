@@ -57,16 +57,20 @@ function normalizeStaffRecord(person: Staff): Staff {
     0,
     role,
   );
+
+  // Always place persisted staff on the rebuilt floor plan. Old coordinates can
+  // point into walls or old furniture positions, so they are intentionally ignored.
   return {
     ...person,
     role,
     department,
     status,
-    location: status === "Working" || !person.location ? targetRoom : person.location,
-    x: status === "Working" || !person.location ? targetPoint.x : person.x,
-    y: status === "Working" || !person.location ? targetPoint.y : person.y,
+    location: targetRoom,
+    x: targetPoint.x,
+    y: targetPoint.y,
     walking: false,
   };
+
 }
 
 const seedStaff: Staff[] = [
