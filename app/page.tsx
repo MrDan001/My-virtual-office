@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Office3D from "../components/Office3D";
+import OfficeView from "../components/OfficeView";
 import { activitySpotForStaff, advanceActor, homeRoomForDepartment, isAtTarget, officeNodes, targetRoomForStaff, routineForStaff, type OfficeRoom } from "../lib/office-sim";
 
 type Page = "dashboard" | "office" | "staff" | "tasks" | "schedule" | "reports" | "settings";
@@ -89,7 +89,7 @@ function Sidebar({ page, setPage, theme, setTheme, onAdd }: { page: Page; setPag
   ];
   return (
     <aside className="sidebar">
-      <div className="brand"><div className="brand-mark">⌂</div><div><strong>OfficeHub</strong><span>Your business in motion.</span></div></div>
+      <div className="brand"><div className="brand-mark">⌂</div><div><strong>My Virtual Office</strong><span>Your business in motion.</span></div></div>
       <nav>{items.map(([key, label, icon]) => <button key={key} onClick={() => setPage(key)} className={page === key ? "active" : ""}><Icon name={icon} /><span>{label}</span></button>)}</nav>
       <button className="sidebar-add" onClick={onAdd}><span className="add-mini">+</span><span>Add employee</span></button>
       <div className="sidebar-bottom">
