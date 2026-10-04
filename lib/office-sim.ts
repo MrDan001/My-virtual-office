@@ -52,9 +52,11 @@ export const deskSpots: Record<OfficeRoom, OfficeSeat[]> = {
   "Office 3": [{ x: 56, y: 12 }, { x: 67, y: 12 }, { x: 56, y: 23 }, { x: 67, y: 23 }],
   "Office 4": [{ x: 80, y: 12 }, { x: 92, y: 12 }, { x: 80, y: 23 }, { x: 92, y: 23 }],
   "Manager Office": [{ x: 10, y: 51 }],
+  // Keep every meeting seat clearly outside the tabletop so avatars sit in
+  // chairs instead of visually landing on the meeting table.
   "Meeting Room": [
-    { x: 39, y: 46 }, { x: 46, y: 46 }, { x: 54, y: 46 }, { x: 61, y: 46 },
-    { x: 39, y: 58 }, { x: 46, y: 58 }, { x: 54, y: 58 }, { x: 61, y: 58 },
+    { x: 39, y: 44 }, { x: 46, y: 44 }, { x: 54, y: 44 }, { x: 61, y: 44 },
+    { x: 39, y: 60 }, { x: 46, y: 60 }, { x: 54, y: 60 }, { x: 61, y: 60 },
   ],
   "Break Room": [{ x: 78, y: 49 }, { x: 91, y: 49 }, { x: 78, y: 58 }, { x: 91, y: 58 }],
   Reception: [{ x: 50, y: 87 }],
