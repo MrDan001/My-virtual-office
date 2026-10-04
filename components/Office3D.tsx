@@ -95,7 +95,7 @@ const ROOM_DATA: RoomData[] = [
     floor: 0xdcebed,
     doorSide: "bottom",
     doorX: 84.5,
-    doorY: 49,
+    doorY: 40.5,
   },
   {
     name: "Design Studio",
@@ -106,7 +106,7 @@ const ROOM_DATA: RoomData[] = [
     floor: 0xeee8f5,
     doorSide: "top",
     doorX: 22,
-    doorY: 38,
+    doorY: 45.5,
   },
   {
     name: "Finance",
@@ -117,14 +117,14 @@ const ROOM_DATA: RoomData[] = [
     floor: 0xe8e6df,
     doorSide: "top",
     doorX: 56.5,
-    doorY: 38,
+    doorY: 45.5,
   },
   {
     name: "Break Room",
     x: 7.55,
     z: 4.65,
     w: 5.35,
-    d: 6.2,
+    d: 8.2,
     floor: 0xf1eadf,
     doorSide: "top",
     doorX: 84.5,
@@ -133,9 +133,9 @@ const ROOM_DATA: RoomData[] = [
   {
     name: "Open Office",
     x: 0.0,
-    z: 7.75,
+    z: 4.7,
     w: 8.0,
-    d: 4.0,
+    d: 7.2,
     floor: 0xe4ede3,
     doorSide: "top",
     doorX: 52,
@@ -496,6 +496,31 @@ function addRoom(
   floor.userData.room = room.name;
   scene.add(floor);
 
+  if (room.name === "Open Office") {
+    const rug = new THREE.Mesh(
+      new THREE.BoxGeometry(room.w * 0.9, 0.035, room.d * 0.86),
+      new THREE.MeshStandardMaterial({
+        color: 0xcbd8cd,
+        roughness: 1,
+      }),
+    );
+    rug.position.set(room.x, 0.12, room.z);
+    rug.receiveShadow = true;
+    rug.userData.room = room.name;
+    scene.add(rug);
+
+    const label = makeTextSprite("Open Office", "#5d6b77");
+    label.position.set(room.x, 2.82, room.z - room.d / 2 + 0.72);
+    label.scale.set(2.0, 0.47, 1);
+    label.userData.room = room.name;
+    scene.add(label);
+
+    const light = new THREE.PointLight(0xfff2d1, 0.46, 8);
+    light.position.set(room.x, 2.25, room.z);
+    scene.add(light);
+    return;
+  }
+
   const wallMat = new THREE.MeshStandardMaterial({
     color: 0xd1c5b6,
     roughness: 0.86,
@@ -525,15 +550,14 @@ function addRoom(
     scene.add(wall);
   };
 
+  const gapHalf = doorW / 2 + 0.02;
+  const sideW = Math.max(0.25, room.w / 2 - gapHalf);
+
   if (room.doorSide === "bottom") {
-    const gapHalf = doorW / 2 + 0.02;
-    const sideW = Math.max(0.25, room.w / 2 - gapHalf);
     addWall(sideW, wallH, wallT, leftX + sideW / 2, wallH / 2, frontZ);
     addWall(sideW, wallH, wallT, rightX - sideW / 2, wallH / 2, frontZ);
     addWall(room.w, wallH, wallT, room.x, wallH / 2, backZ);
   } else {
-    const gapHalf = doorW / 2 + 0.02;
-    const sideW = Math.max(0.25, room.w / 2 - gapHalf);
     addWall(sideW, wallH, wallT, leftX + sideW / 2, wallH / 2, backZ);
     addWall(sideW, wallH, wallT, rightX - sideW / 2, wallH / 2, backZ);
     addWall(room.w, wallH, wallT, room.x, wallH / 2, frontZ);
@@ -542,25 +566,24 @@ function addRoom(
   addWall(wallT, wallH, room.d, leftX, wallH / 2, room.z);
   addWall(wallT, wallH, room.d, rightX, wallH / 2, room.z);
 
-  // Upper glass strip gives the office a brighter, modern interior.
-  const windowMat = new THREE.MeshStandardMaterial({
-    color: 0xc6e0e6,
+  // Interior window panels make the offices feel like real rooms rather than boxes.
+  const glass = new THREE.MeshStandardMaterial({
+    color: 0xc3dfe6,
     transparent: true,
     opacity: 0.58,
     roughness: 0.2,
     metalness: 0.15,
   });
+
+  const windowZ =
+    room.doorSide === "bottom" ? backZ - 0.09 : frontZ + 0.09;
   const window = roundedBox(
-    Math.min(room.w * 0.5, 2.3),
+    Math.min(room.w * 0.48, 2.35),
     0.72,
     0.05,
-    windowMat,
+    glass,
   );
-  window.position.set(
-    room.x,
-    1.8,
-    room.doorSide === "bottom" ? backZ - 0.09 : frontZ + 0.09,
-  );
+  window.position.set(room.x, 1.78, windowZ);
   scene.add(window);
 
   const door = addDoor(scene, room);
@@ -571,9 +594,9 @@ function addRoom(
   tag.scale.set(2.0, 0.47, 1);
   scene.add(tag);
 
-  const ceilingLight = new THREE.PointLight(0xfff2d1, 0.42, 7.5);
-  ceilingLight.position.set(room.x, 2.3, room.z);
-  scene.add(ceilingLight);
+  const light = new THREE.PointLight(0xfff2d1, 0.43, 7.5);
+  light.position.set(room.x, 2.3, room.z);
+  scene.add(light);
 }
 
 function addOfficeFurniture(scene: THREE.Scene) {
