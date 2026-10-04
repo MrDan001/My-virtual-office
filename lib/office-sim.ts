@@ -168,6 +168,24 @@ const roomPortals: Record<OfficeRoom, string[]> = {
   "Break Room": ["bTopIn", "bBotIn"],
 };
 
+
+// Static circulation edges used by the visual clearance validator.
+// They mirror the staff navigation graph without changing route behavior.
+export const staffRouteSegments: Array<[{ x: number; y: number }, { x: number; y: number }]> =
+  navPoints.flatMap((node) =>
+    node.neighbors
+      .map((neighborId) => pointByIdSafe(navPoints, neighborId))
+      .filter((neighbor): neighbor is NavPoint => Boolean(neighbor))
+      .map((neighbor) => [
+        { x: node.x, y: node.y },
+        { x: neighbor.x, y: neighbor.y },
+      ] as [{ x: number; y: number }, { x: number; y: number }]),
+  );
+
+function pointByIdSafe(points: NavPoint[], id: string) {
+  return points.find((item) => item.id === id);
+}
+
 const pointById = new Map(navPoints.map((item) => [item.id, item]));
 
 function point(id: string) {
