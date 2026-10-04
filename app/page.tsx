@@ -200,31 +200,65 @@ function Topbar({ page, onAdd }: { page: Page; onAdd: () => void }) {
 
 function Dashboard({ staff, running, setRunning, onSelect, onAdd, setPage }: { staff: Staff[]; running: boolean; setRunning: (v: boolean) => void; onSelect: (s: Staff) => void; onAdd: () => void; setPage: (p: Page) => void }) {
   const working = staff.filter((s) => s.status === "Working").length;
-  return <div className="content">
-    <div className="stats-grid">
-      <StatCard label="Total staff" value={String(staff.length)} note="+2 from last week" icon="people" tone="blue" />
-      <StatCard label="Active today" value={String(working)} note="+5 pending" icon="briefcase" tone="green" />
-      <StatCard label="Meetings today" value="3" note="1 upcoming" icon="calendar" tone="purple" />
-      <StatCard label="Office occupancy" value="85%" note="10 of 12 desks" icon="office" tone="orange" />
+  const meetings = staff.filter((s) => s.status === "Meeting").length;
+  const onBreak = staff.filter((s) => s.status === "Break").length;
+
+  return <div className="world-office">
+    <header className="world-hud">
+      <div className="world-brand">
+        <div className="world-brand-mark">⌂</div>
+        <div>
+          <strong>OFFICEHUB</strong>
+          <span>VIRTUAL OFFICE</span>
+        </div>
+      </div>
+      <div className="world-hud-center">
+        <span className="world-live"><i /> LIVE OFFICE</span>
+        <span className="world-clock">{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+      </div>
+      <div className="world-hud-actions">
+        <button className="world-hud-button" onClick={() => setRunning(!running)}><Icon name={running ? "pause" : "play"} /> {running ? "Pause" : "Run"}</button>
+        <button className="world-hud-button primary" onClick={onAdd}><Icon name="plus" /> Add employee</button>
+      </div>
+    </header>
+
+    <div className="world-canvas">
+      <OfficeScene staff={staff} running={running} onSelect={onSelect} />
+      <div className="world-stat-cluster">
+        <div className="world-stat"><b>{staff.length}</b><span>People</span></div>
+        <div className="world-stat working"><b>{working}</b><span>Working</span></div>
+        <div className="world-stat meeting"><b>{meetings}</b><span>In meeting</span></div>
+        <div className="world-stat break"><b>{onBreak}</b><span>On break</span></div>
+      </div>
+      <div className="world-camera-chip"><span className="world-camera-dot" /> Floor 01 · Main office</div>
+      <div className="world-help-chip"><Icon name="pin" /> Tap a person to inspect them</div>
     </div>
-    <div className="dashboard-grid">
-      <section className="panel office-panel">
-        <div className="panel-head"><div><h2>Office View</h2><p>See your people and workplace activity live.</p></div><div className="scene-controls"><span className="live-tag"><i />Live</span><button onClick={() => setRunning(!running)}>{<Icon name={running ? "pause" : "play"} />} {running ? "Pause" : "Run"} </button><button onClick={() => setPage("office")} className="view-link">Open full view <Icon name="arrow" /></button></div></div>
-        <OfficeScene staff={staff} running={running} onSelect={onSelect} />
-      </section>
-      <aside className="side-stack">
-        <section className="panel schedule-panel"><div className="panel-head compact"><div><h2>Today’s schedule</h2><p>Monday, Apr 28</p></div><button className="text-button" onClick={() => setPage("schedule")}>View all</button></div>
-          {[["09:00", "Team Standup", "Meeting Room", "6 attendees"], ["11:00", "Client Call", "Conference Room", "4 attendees"], ["14:00", "Project Review", "Meeting Room", "5 attendees"]].map(([time, title, room, people]) => <div className="timeline-row" key={title}><div className="timeline-time">{time}</div><div className="timeline-line"><span/></div><div><strong>{title}</strong><small>{room} · {people}</small></div></div>)}
-        </section>
-        <section className="panel activity-panel"><div className="panel-head compact"><div><h2>Recent activity</h2><p>Live updates</p></div></div>
-          {staff.slice(0, 4).map((person, i) => <div className="activity-row" key={person.id}><div className="person-avatar" style={{ background: person.color }}>{avatar(person.name)}</div><div><strong>{person.name}</strong><span>{["completed a task", "joined the meeting", "updated a project", "started a work block"][i]}</span><small>{i + 2}m ago</small></div></div>)}
-        </section>
-      </aside>
-    </div>
-    <div className="quick-row"><button onClick={onAdd}><span className="quick-icon"><Icon name="plus" /></span><div><strong>Add a new employee</strong><span>Bring another teammate into the office.</span></div><Icon name="arrow" /></button><button onClick={() => setPage("tasks")}><span className="quick-icon green"><Icon name="tasks" /></span><div><strong>Review today’s tasks</strong><span>4 tasks need attention.</span></div><Icon name="arrow" /></button><button onClick={() => setPage("reports")}><span className="quick-icon purple"><Icon name="reports" /></span><div><strong>See performance</strong><span>Weekly productivity is up 12%.</span></div><Icon name="arrow" /></button></div>
+
+    <footer className="world-command-bar">
+      <div className="world-command-status">
+        <span className={running ? "pulse-dot" : "pause-dot"} />
+        <div>
+          <strong>{running ? "Simulation running" : "Simulation paused"}</strong>
+          <span>{running ? "Staff follow calm routines and work from assigned desks." : "Resume the office to continue staff routines."}</span>
+        </div>
+      </div>
+      <div className="world-command-actions">
+        <button onClick={() => setPage("staff")}><Icon name="people" /> Staff</button>
+        <button onClick={() => setPage("tasks")}><Icon name="tasks" /> Tasks</button>
+        <button onClick={() => setPage("schedule")}><Icon name="calendar" /> Schedule</button>
+        <button onClick={() => setPage("reports")}><Icon name="reports" /> Reports</button>
+      </div>
+    </footer>
+
+    <nav className="world-mobile-nav">
+      <button className="active"><Icon name="office" /><span>Office</span></button>
+      <button onClick={() => setPage("staff")}><Icon name="people" /><span>Staff</span></button>
+      <button onClick={() => setPage("tasks")}><Icon name="tasks" /><span>Tasks</span></button>
+      <button onClick={() => setPage("schedule")}><Icon name="calendar" /><span>Schedule</span></button>
+      <button onClick={onAdd}><Icon name="plus" /><span>Add</span></button>
+    </nav>
   </div>;
 }
-
 function StaffPage({ staff, onSelect, onAdd }: { staff: Staff[]; onSelect: (s: Staff) => void; onAdd: () => void }) {
   const departments = Array.from(new Set(staff.map((s) => s.department)));
   return <div className="content"><section className="panel"><div className="section-toolbar"><div><h2>Staff directory</h2><p>Manage team members, roles and current activity.</p></div><button className="primary" onClick={onAdd}><Icon name="plus" /> Add staff</button></div><div className="filter-row"><button className="filter active">All {staff.length}</button>{departments.map((d) => <button className="filter" key={d}>{d} {staff.filter((s) => s.department === d).length}</button>)}<label className="table-search"><Icon name="search"/><input placeholder="Search staff..." /></label></div><div className="staff-table"><div className="table-row head"><span>Name</span><span>Role</span><span>Department</span><span>Status</span><span>Task</span></div>{staff.map((person) => <button className="table-row" key={person.id} onClick={() => onSelect(person)}><span className="name-cell"><span className="person-avatar" style={{ background: person.color }}>{avatar(person.name)}</span><strong>{person.name}</strong></span><span>{person.role}</span><span>{person.department}</span><span><StatusPill status={person.status}/></span><span>{person.task}</span></button>)}</div></section></div>;
@@ -468,7 +502,7 @@ export default function Home() {
     if (page === "tasks") return <TasksPage staff={staff} />;
     return <SimplePage page={page} staff={staff} />;
   }, [page, staff, running, selectedRoom, layout, editingLayout]);
-  return <div className={`app-shell theme-${theme}`}>
+  return <div className={`app-shell theme-${theme} ${(page === "dashboard" || page === "office") ? "world-mode" : ""}`}>
     <Sidebar page={page} setPage={setPage} theme={theme} setTheme={setTheme} onAdd={() => setAdding(true)} />
     <main className="main"><Topbar page={page} onAdd={() => setAdding(true)} /><div className="clock-strip"><span><i className="live-dot" /> Live office simulation</span><strong>{clock}</strong><span>{dbConfigured ? "SQLite connected" : "Local prototype mode"}</span></div>{content}</main>
     <StaffDrawer staff={selected} onClose={() => setSelected(null)} />
