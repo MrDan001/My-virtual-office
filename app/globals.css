@@ -701,3 +701,37 @@
 .social-composer input { max-width: 290px; padding: 10px; border: 1px solid #d8e0e8; border-radius: 10px; background: #fff; }
 .social-composer .primary { justify-self: start; }
 .form-notice { margin: 0; color: #39745f; font-size: 12px; }
+
+
+/* Staff employment controls */
+.staff-danger-section {
+  border-top: 1px solid rgba(239, 68, 68, 0.16);
+  margin-top: 8px;
+  padding-top: 18px;
+}
+.staff-danger-section p {
+  margin: 6px 0 12px;
+  color: #7a8594;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.danger-button {
+  width: 100%;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  border-radius: 11px;
+  padding: 10px 13px;
+  background: rgba(220, 38, 38, 0.08);
+  color: #b42318;
+  font-weight: 750;
+  cursor: pointer;
+}
+.danger-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.danger-error {
+  display: block;
+  margin-top: 8px;
+  color: #b42318;
+  font-size: 11px;
+}
