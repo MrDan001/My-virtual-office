@@ -503,3 +503,134 @@
   .staff-token{width:74px !important;height:92px !important}
   .staff-name{font-size:6.5px;min-width:74px}.staff-role,.staff-state{font-size:5px}
 }
+
+
+/* Surgical staff polish: preserve the existing 2.5D office scene. */
+.staff-token {
+  transform-style: preserve-3d;
+  will-change: left, top, transform;
+}
+.staff-token.is-sitting { animation: human-breathe 2.6s ease-in-out infinite; }
+.staff-head {
+  width: 26px;
+  height: 27px;
+  left: 30px;
+  border-radius: 48% 48% 45% 45%;
+}
+.staff-hair { width: 26px; height: 11px; left: -2px; top: -4px; }
+.staff-eye { width: 3px; height: 3px; top: 11px; }
+.eye-left { left: 7px; }
+.eye-right { right: 7px; }
+.staff-brow {
+  position: absolute;
+  top: 7px;
+  width: 6px;
+  height: 2px;
+  border-radius: 2px;
+  background: #513d34;
+}
+.brow-left { left: 4px; transform: rotate(4deg); }
+.brow-right { right: 4px; transform: rotate(-4deg); }
+.staff-mouth { width: 7px; height: 3px; bottom: 4px; }
+.staff-ear { top: 10px; width: 5px; height: 8px; }
+.ear-left { left: -5px; }
+.ear-right { right: -5px; }
+
+.face-0 .staff-head { background: #f1c6a5; }
+.face-1 .staff-head { background: #d9a27d; }
+.face-2 .staff-head { background: #b97851; }
+.face-3 .staff-head { background: #8d573f; }
+.face-4 .staff-head { background: #6e4434; }
+.face-0 .staff-hair { background: #2e2927; }
+.face-1 .staff-hair { background: #46342c; }
+.face-2 .staff-hair { background: #1f252d; height: 13px; }
+.face-3 .staff-hair { background: #35231e; width: 29px; left: -3px; border-radius: 14px 14px 7px 7px; }
+.face-4 .staff-hair { background: #241c1b; height: 8px; border-radius: 9px; }
+
+.is-leader .staff-body {
+  box-shadow: 0 6px 12px rgba(88,64,31,.27), 0 0 0 1px rgba(215,174,87,.28);
+}
+.staff-rank {
+  position: absolute;
+  left: 33px;
+  top: 12px;
+  transform: translateX(-50%);
+  z-index: 18;
+  font-size: 4.5px;
+  line-height: 1;
+  letter-spacing: .14em;
+  font-weight: 900;
+  color: #72521d;
+  background: rgba(245,219,151,.96);
+  border: 1px solid rgba(155,115,48,.28);
+  padding: 3px 5px;
+  border-radius: 999px;
+  box-shadow: 0 4px 8px rgba(106,78,35,.12);
+}
+.staff-token.is-sitting .staff-body {
+  top: 42px;
+  height: 23px;
+  transform: rotateX(2deg);
+}
+.staff-token.is-sitting .staff-head { top: 17px; }
+.staff-token.is-sitting .staff-legs { top: 60px; }
+.staff-token.is-sitting .staff-shadow { top: 75px; transform: scale(.92); }
+
+.staff-token.is-walking .staff-head,
+.staff-token.is-walking .staff-body {
+  animation: human-walk-bob .42s ease-in-out infinite alternate;
+}
+.staff-token.is-walking .staff-arm.arm-left { animation: human-arm-left .42s ease-in-out infinite alternate; }
+.staff-token.is-walking .staff-arm.arm-right { animation: human-arm-right .42s ease-in-out infinite alternate; }
+.staff-token.is-walking .staff-head { transform-origin: 50% 85%; }
+
+.person-preview {
+  position: relative;
+  overflow: hidden;
+  background: #eef3f9;
+}
+.person-preview .preview-head {
+  position: absolute;
+  width: 16px;
+  height: 18px;
+  left: 14px;
+  top: 8px;
+  border-radius: 50%;
+  background: #d9a27d;
+  border: 1px solid rgba(95,65,47,.2);
+}
+.person-preview .preview-head::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: -3px;
+  width: 18px;
+  height: 7px;
+  border-radius: 9px 9px 4px 4px;
+  background: #302823;
+}
+.person-preview .preview-body {
+  position: absolute;
+  left: 11px;
+  top: 26px;
+  width: 22px;
+  height: 22px;
+  border-radius: 9px 9px 5px 5px;
+  background: linear-gradient(#78aaf7,#3976e6);
+}
+@keyframes human-breathe {
+  0%,100% { transform: translate(-50%,-72%) translateY(0); }
+  50% { transform: translate(-50%,-72%) translateY(-1px); }
+}
+@keyframes human-walk-bob {
+  from { transform: translateY(0); }
+  to { transform: translateY(-2px) rotateZ(.8deg); }
+}
+@keyframes human-arm-left {
+  from { transform: rotate(25deg); }
+  to { transform: rotate(-12deg); }
+}
+@keyframes human-arm-right {
+  from { transform: rotate(-25deg); }
+  to { transform: rotate(12deg); }
+}
