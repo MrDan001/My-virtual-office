@@ -920,21 +920,21 @@ function applyPose(
     const stride = Math.sin(phase);
 
     rig.group.position.y =
-      0.02 + Math.abs(Math.sin(phase)) * 0.018;
-    rig.torso.position.set(0, 1.36, 0);
-    rig.head.position.set(0, 2.2, 0);
+      0.018 + Math.abs(Math.sin(phase)) * 0.038;
+    rig.torso.position.set(0, 1.36 + Math.abs(Math.sin(phase)) * 0.018, 0);
+    rig.head.position.set(0, 2.2 + Math.abs(Math.sin(phase)) * 0.012, 0);
 
-    rig.leftArm.rotation.z = -0.06 - stride * 0.48;
-    rig.rightArm.rotation.z = 0.06 + stride * 0.48;
-    rig.leftArm.rotation.x = 0.04;
-    rig.rightArm.rotation.x = -0.04;
-    rig.leftForearm.rotation.x = -0.08;
-    rig.rightForearm.rotation.x = -0.08;
+    rig.leftArm.rotation.z = -0.04 - stride * 0.64;
+    rig.rightArm.rotation.z = 0.04 + stride * 0.64;
+    rig.leftArm.rotation.x = 0.06;
+    rig.rightArm.rotation.x = -0.06;
+    rig.leftForearm.rotation.x = -0.12;
+    rig.rightForearm.rotation.x = -0.12;
 
-    rig.leftUpperLeg.rotation.x = stride * 0.62;
-    rig.rightUpperLeg.rotation.x = -stride * 0.62;
-    rig.leftLowerLeg.rotation.x = Math.max(0, -stride) * 0.32;
-    rig.rightLowerLeg.rotation.x = Math.max(0, stride) * 0.32;
+    rig.leftUpperLeg.rotation.x = stride * 0.82;
+    rig.rightUpperLeg.rotation.x = -stride * 0.82;
+    rig.leftLowerLeg.rotation.x = Math.max(0, -stride) * 0.48;
+    rig.rightLowerLeg.rotation.x = Math.max(0, stride) * 0.48;
 
     rig.hands[0].position.set(-0.43, 0.79, 0);
     rig.hands[1].position.set(0.43, 0.79, 0);
