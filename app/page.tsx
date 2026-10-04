@@ -148,10 +148,12 @@ function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom, lay
       <div className="reception"><span className="front-desk" /><strong>RECEPTION</strong><small>Welcome</small></div>
 
       {staff.map((person) => {
-        const seated = !person.walking && person.status !== "Away";
+        const moving = person.walking === true;
+        const seated = !moving && person.status !== "Away";
+        const idle = !moving && !seated;
         return <button
           key={person.id}
-          className={`staff-token status-${person.status.toLowerCase()} ${seated ? "is-sitting" : "is-walking"} walk-facing-${person.facing ?? "front"}`}
+          className={`staff-token status-${person.status.toLowerCase()} ${moving ? "is-walking" : seated ? "is-sitting" : "is-idle"} walk-facing-${person.facing ?? "front"}`}
           style={{ left: `${person.x}%`, top: `${person.y}%`, "--staff-color": person.color } as CSSProperties}
           onClick={(event) => { event.stopPropagation(); onSelect(person); }}
           aria-label={`Open ${person.name}`}
