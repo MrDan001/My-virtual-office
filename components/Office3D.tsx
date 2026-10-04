@@ -1,5 +1,15 @@
 "use client";
 
+type OfficeRoom =
+  | "Reception"
+  | "Manager Office"
+  | "Meeting Room"
+  | "Design Studio"
+  | "Finance"
+  | "Support"
+  | "Break Room"
+  | "Open Office";
+
 type StaffStatus = "Working" | "Meeting" | "Break" | "Away";
 
 type Staff = {
@@ -12,7 +22,7 @@ type Staff = {
   x: number;
   y: number;
   color: string;
-  location?: string;
+  location?: OfficeRoom;
   walking?: boolean;
 };
 
@@ -20,8 +30,8 @@ type Props = {
   staff: Staff[];
   running: boolean;
   onSelect: (staff: Staff) => void;
-  onRoomSelect?: (room: string) => void;
-  selectedRoom?: string | null;
+  onRoomSelect?: (room: OfficeRoom) => void;
+  selectedRoom?: OfficeRoom | null;
 };
 
 /**
