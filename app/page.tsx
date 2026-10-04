@@ -383,7 +383,8 @@ export default function Home() {
         const routine = routineForStaff(person.department, person.id, now);
         const targetRoom = targetRoomForStaff(person.department, routine.status);
         const targetPoint = activitySpotForStaff(person.department, routine.status, person.id);
-        const next = advanceActor(person, targetRoom, 0.42, targetPoint);
+        // Keep office traffic deliberately calm: short, purposeful steps between activities.
+        const next = advanceActor(person, targetRoom, 0.34, targetPoint);
         const arrived = next.location === targetRoom && isAtTarget(next, targetPoint, 0.9);
         const dx = next.x - person.x;
         const dy = next.y - person.y;
