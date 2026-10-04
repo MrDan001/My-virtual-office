@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
-import { advanceActor, officeNodes, homeRoomForDepartment, targetRoomForStaff, routineForStaff, type OfficeRoom } from "../lib/office-sim";
+import { activitySpotForStaff, advanceActor, homeRoomForDepartment, isAtTarget, officeNodes, targetRoomForStaff, routineForStaff, type OfficeRoom } from "../lib/office-sim";
 
 type Page = "dashboard" | "office" | "staff" | "tasks" | "schedule" | "reports" | "settings";
 type StaffStatus = "Working" | "Meeting" | "Break" | "Away";
@@ -18,6 +18,7 @@ type Staff = {
   y: number;
   color: string;
   location?: OfficeRoom;
+  walking?: boolean;
 };
 
 type Task = {
@@ -31,12 +32,12 @@ type Task = {
 };
 
 const seedStaff: Staff[] = [
-  { id: 1, name: "Sarah Johnson", role: "Team Lead", department: "Management", status: "Meeting", task: "Weekly standup", x: 69, y: 33, color: "#f59e0b", location: "Meeting Room" },
-  { id: 2, name: "Mike Williams", role: "Product Designer", department: "Design", status: "Working", task: "Landing page", x: 33, y: 37, color: "#22c55e", location: "Design Studio" },
-  { id: 3, name: "Emma Davis", role: "Marketing", department: "Marketing", status: "Working", task: "Campaign review", x: 52, y: 70, color: "#a855f7", location: "Open Office" },
-  { id: 4, name: "James Brown", role: "Accountant", department: "Finance", status: "Away", task: "Payroll", x: 82, y: 70, color: "#ef4444", location: "Finance" },
-  { id: 5, name: "Lina Wilson", role: "Support Agent", department: "Support", status: "Working", task: "Customer inbox", x: 20, y: 76, color: "#06b6d4", location: "Support" },
-  { id: 6, name: "David Miller", role: "Operations", department: "Operations", status: "Break", task: "Inventory check", x: 60, y: 17, color: "#3b82f6", location: "Break Room" },
+  { id: 1, name: "Sarah Johnson", role: "Team Lead", department: "Management", status: "Meeting", task: "Weekly standup", x: 44, y: 25, color: "#f59e0b", location: "Meeting Room" },
+  { id: 2, name: "Mike Williams", role: "Product Designer", department: "Design", status: "Working", task: "Landing page", x: 18, y: 50, color: "#22c55e", location: "Design Studio" },
+  { id: 3, name: "Emma Davis", role: "Marketing", department: "Marketing", status: "Working", task: "Campaign review", x: 42, y: 45, color: "#a855f7", location: "Open Office" },
+  { id: 4, name: "James Brown", role: "Accountant", department: "Finance", status: "Away", task: "Payroll", x: 51, y: 55, color: "#ef4444", location: "Finance" },
+  { id: 5, name: "Lina Wilson", role: "Support Agent", department: "Support", status: "Working", task: "Customer inbox", x: 80, y: 20, color: "#06b6d4", location: "Support" },
+  { id: 6, name: "David Miller", role: "Operations", department: "Operations", status: "Break", task: "Inventory check", x: 86.5, y: 82, color: "#3b82f6", location: "Break Room" },
 ];
 
 const waypoints = [
@@ -92,48 +93,80 @@ function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom, lay
   layout?: Record<OfficeRoom, RoomLayout>;
   editing?: boolean;
 }) {
-  const rooms: { room: OfficeRoom; cls: string; }[] = [
-    { room: "Manager Office", cls: "manager-room" }, { room: "Meeting Room", cls: "meeting-room" },
-    { room: "Design Studio", cls: "design-room" }, { room: "Finance", cls: "finance-room" },
-    { room: "Support", cls: "support-room" }, { room: "Break Room", cls: "break-room" },
+  const rooms: { room: OfficeRoom; cls: string; furniture: string }[] = [
+    { room: "Manager Office", cls: "manager-room", furniture: "manager-furniture" },
+    { room: "Meeting Room", cls: "meeting-room", furniture: "meeting-furniture" },
+    { room: "Design Studio", cls: "design-room", furniture: "design-furniture" },
+    { room: "Finance", cls: "finance-room", furniture: "finance-furniture" },
+    { room: "Support", cls: "support-room", furniture: "support-furniture" },
+    { room: "Break Room", cls: "break-room", furniture: "break-furniture" },
   ];
 
   return (
     <div className={`office-scene ${running ? "is-running" : "is-paused"} ${editing ? "is-editing" : ""}`}>
-      <div className="scene-grid" />
+      <div className="scene-sunlight" />
+      <div className="scene-floor" />
+      <div className="scene-window window-left"><span/><span/><span/></div>
+      <div className="scene-window window-right"><span/><span/><span/></div>
       <div className="wall top-wall" /><div className="wall left-wall" />
 
-      {rooms.map(({ room, cls }) => {
+      <div className="scene-corridor"><span>MAIN CORRIDOR</span></div>
+      <div className="scene-lounge">
+        <span className="lounge-sofa sofa-left" /><span className="lounge-sofa sofa-right" />
+        <span className="lounge-table" /><span className="lounge-rug" />
+        <span className="lounge-lamp" /><span className="lounge-plant">🌿</span>
+      </div>
+
+      {rooms.map(({ room, cls, furniture }) => {
         const box = layout[room];
-        return <button key={room} className={`room ${cls} room-object ${selectedRoom === room ? "room-selected-object" : ""}`} style={{ left: `${box.x}%`, top: `${box.y}%`, width: `${box.w}%`, height: `${box.h}%` }} onClick={() => onRoomSelect?.(room)}>
-          <span className="room-label">{room}</span>
-          {room === "Manager Office" && <span className="desk"><span className="monitor" /><span className="chair" /></span>}
-          {room === "Meeting Room" && <span className="meeting-table"><span/><span/><span/><span/></span>}
-          {room === "Design Studio" && <span className="cluster desks"><span/><span/><span/><span/></span>}
-          {room === "Finance" && <span className="finance-desks"><span/><span/></span>}
-          {room === "Support" && <span className="support-counters"><span/><span/><span/></span>}
-          {room === "Break Room" && <span className="break-table"><span/><span/><span/></span>}
+        return <button
+          key={room}
+          className={`room ${cls} room-object ${selectedRoom === room ? "room-selected-object" : ""}`}
+          style={{ left: `${box.x}%`, top: `${box.y}%`, width: `${box.w}%`, height: `${box.h}%` }}
+          onClick={() => onRoomSelect?.(room)}
+          aria-label={`Inspect ${room}`}
+        >
+          <span className="room-ceiling" />
+          <span className="room-label"><b>{room}</b><i /></span>
+          {room === "Manager Office" && <span className="room-furniture manager-furniture"><span className="director-desk"><i/><i/></span><span className="guest-chair" /></span>}
+          {room === "Meeting Room" && <span className="room-furniture meeting-furniture"><span className="meeting-table"><i/><i/><i/><i/></span><span className="whiteboard"><b>Q2</b><small>TEAM PLAN</small></span></span>}
+          {room === "Design Studio" && <span className="room-furniture design-furniture"><span className="designer-desk d1" /><span className="designer-desk d2" /><span className="designer-desk d3" /><span className="designer-desk d4" /><span className="design-board">IDEAS</span></span>}
+          {room === "Finance" && <span className="room-furniture finance-furniture"><span className="finance-desk f1" /><span className="finance-desk f2" /><span className="finance-desk f3" /><span className="finance-desk f4" /></span>}
+          {room === "Support" && <span className="room-furniture support-furniture"><span className="support-bar s1" /><span className="support-bar s2" /><span className="support-bar s3" /><span className="support-screen">HELP DESK</span></span>}
+          {room === "Break Room" && <span className="room-furniture break-furniture"><span className="kitchen-line" /><span className="break-counter" /><span className="round-table"><i/><i/><i/><i/></span><span className="coffee-bar">COFFEE</span></span>}
+          <span className={`room-footer-chip ${furniture}`}>{room === "Manager Office" ? "Leadership" : room === "Meeting Room" ? "Collaboration" : room === "Break Room" ? "Wellness" : "Workspace"}</span>
         </button>;
       })}
 
-      <div className="plant plant-1">🌿</div><div className="plant plant-2">🌿</div><div className="plant plant-3">🌿</div>
-      <div className="reception"><span className="front-desk" /><small>Reception</small></div>
+      <div className="plant plant-1">🌿</div>
+      <div className="plant plant-2">🌿</div>
+      <div className="plant plant-3">🌿</div>
+      <div className="floor-art art-1">✦</div>
+      <div className="floor-art art-2">◌</div>
+      <div className="reception"><span className="front-desk" /><strong>RECEPTION</strong><small>Welcome</small></div>
 
-      {staff.map((person) => (
-        <button
+      {staff.map((person) => {
+        const seated = !person.walking && person.status !== "Away";
+        return <button
           key={person.id}
-          className={`staff-token status-${person.status.toLowerCase()}`}
+          className={`staff-token status-${person.status.toLowerCase()} ${seated ? "is-sitting" : "is-walking"}`}
           style={{ left: `${person.x}%`, top: `${person.y}%`, "--staff-color": person.color } as CSSProperties}
           onClick={(event) => { event.stopPropagation(); onSelect(person); }}
           aria-label={`Open ${person.name}`}
         >
-          <span className="staff-shadow" /><span className="staff-head">{avatar(person.name)}</span><span className="staff-body" />
+          <span className="staff-shadow" />
+          <span className="staff-chair" />
+          <span className="staff-legs"><i/><i/></span>
+          <span className="staff-body"><i className="staff-arm arm-left"/><i className="staff-arm arm-right"/><i className="staff-badge"/></span>
+          <span className="staff-head"><i className="staff-hair"/><i className="staff-ear ear-left"/><i className="staff-ear ear-right"/><i className="staff-eye eye-left"/><i className="staff-eye eye-right"/><i className="staff-mouth"/></span>
           <span className="staff-name">{person.name.split(" ")[0]}</span>
-          <span className="staff-activity">{person.location ?? "Open Office"}</span>
-        </button>
-      ))}
+          <span className="staff-role">{person.role}</span>
+          <span className="staff-state">{person.walking ? `Walking to ${person.location ?? "desk"}` : person.status === "Working" ? "At workstation" : person.status}</span>
+        </button>;
+      })}
 
-      <div className="scene-hint"><Icon name="pin" /> {editing ? "Select a room, then move it from the inspector" : "Click a staff member or room"}</div>
+      <div className="scene-hint"><Icon name="pin" /> {editing ? "Select a room, then move it from the inspector" : "Click a staff member or room"} </div>
+      <div className="scene-legend"><span><i className="legend-sit" /> Working</span><span><i className="legend-meet" /> Meeting</span><span><i className="legend-break" /> Break</span></div>
     </div>
   );
 }
@@ -341,19 +374,23 @@ export default function Home() {
     const t = setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
       setStaff((current) => current.map((person) => {
-        if (person.status === "Away") return person;
+        if (person.status === "Away") return { ...person, walking: false };
+
         const routine = routineForStaff(person.department, person.id, now);
-        const target = targetRoomForStaff(person.department, routine.status, now);
-        const next = advanceActor(person, target, 2.4);
-        const arrived = Math.hypot(next.x - officeNodes[target].x, next.y - officeNodes[target].y) < 0.8;
+        const targetRoom = targetRoomForStaff(person.department, routine.status);
+        const targetPoint = activitySpotForStaff(person.department, routine.status, person.id);
+        const next = advanceActor(person, targetRoom, 0.42, targetPoint);
+        const arrived = next.location === targetRoom && isAtTarget(next, targetPoint, 0.9);
+
         return {
           ...person,
           status: routine.status as StaffStatus,
           ...next,
-          task: arrived ? routine.task : `Walking to ${target}`,
+          walking: !arrived,
+          task: arrived ? routine.task : `Walking to ${targetRoom}`,
         };
       }));
-    }, 450);
+    }, 700);
     return () => clearInterval(t);
   }, [running]);
 
@@ -363,10 +400,19 @@ export default function Home() {
       if (res.ok) {
         const data = await res.json();
         setDbConfigured(Boolean(data.configured));
-        if (data.staff) { setStaff((current) => [{ ...(data.staff as Staff) }, ...current]); return; }
+        if (data.staff) {
+          const saved = data.staff as Staff;
+          const position = activitySpotForStaff(saved.department, "Working", saved.id);
+          setStaff((current) => [{ ...saved, x: position.x, y: position.y, location: homeRoomForDepartment(saved.department), walking: false }, ...current]);
+          return;
+        }
       }
     } catch {}
-    setStaff((current) => [...current, { ...newStaff, id: Date.now(), x: 46, y: 58 }]);
+    setStaff((current) => {
+      const id = Date.now();
+      const position = activitySpotForStaff(newStaff.department, "Working", id);
+      return [...current, { ...newStaff, id, x: position.x, y: position.y, location: homeRoomForDepartment(newStaff.department), walking: false }];
+    });
   };
 
   const content = useMemo(() => {
