@@ -31,12 +31,12 @@ export const officeNodes: Record<OfficeRoom, OfficeNode> = {
   Reception: { room: "Reception", x: 50, y: 93, neighbors: ["Open Office", "Support"] },
   "Manager Office": { room: "Manager Office", x: 16.5, y: 33, neighbors: ["Open Office", "Meeting Room"] },
   "Meeting Room": { room: "Meeting Room", x: 51, y: 33, neighbors: ["Manager Office", "Open Office", "Support"] },
-  DesignStudio: { room: "Design Studio", x: 22, y: 38, neighbors: ["Open Office", "Support"] },
+  "Design Studio": { room: "Design Studio", x: 22, y: 38, neighbors: ["Open Office", "Support"] },
   Finance: { room: "Finance", x: 56.5, y: 38, neighbors: ["Open Office", "Meeting Room", "Break Room"] },
   Support: { room: "Support", x: 84.5, y: 49, neighbors: ["Reception", "Meeting Room", "Design Studio", "Break Room"] },
   "Break Room": { room: "Break Room", x: 84.5, y: 53, neighbors: ["Support", "Finance", "Open Office"] },
   "Open Office": { room: "Open Office", x: 52, y: 53, neighbors: ["Reception", "Manager Office", "Meeting Room", "Design Studio", "Finance", "Break Room"] },
-} as unknown as Record<OfficeRoom, OfficeNode>;
+};
 
 export const deskSpots: Record<OfficeRoom, { x: number; y: number }[]> = {
   Reception: [{ x: 50, y: 88 }],
