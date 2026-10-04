@@ -519,6 +519,22 @@ function addRoom(
   doors.set(room.name, addDoor(scene, room));
 }
 
+function addOfficeFurniture(scene: THREE.Scene) {
+  const placeDesks = (room: OfficeRoom) => {
+    for (const point of deskSpots[room]) {
+      const p = worldFromPercent(point.x, point.y);
+      addDesk(scene, p.x, p.z, 0);
+    }
+  };
+
+  placeDesks("Manager Office");
+  placeDesks("Design Studio");
+  placeDesks("Finance");
+  placeDesks("Support");
+  placeDesks("Open Office");
+  // Break Room is intentionally not a workstation room.
+}
+
 function addMeetingAndBreakFurniture(scene: THREE.Scene) {
   const meetingCenter = worldFromPercent(51, 19);
 
@@ -1095,13 +1111,13 @@ export default function Office3D({
 
     // A clean central corridor is the circulation spine connecting all office entrances.
     const corridor = new THREE.Mesh(
-      new THREE.BoxGeometry(20.5, 0.05, 2.15),
+      new THREE.BoxGeometry(20.5, 0.05, 2.65),
       new THREE.MeshStandardMaterial({
         color: 0xd7dfda,
         roughness: 0.94,
       }),
     );
-    corridor.position.set(0, 0.03, -1.55);
+    corridor.position.set(0, 0.03, -1.82);
     corridor.receiveShadow = true;
     scene.add(corridor);
 
@@ -1112,7 +1128,7 @@ export default function Office3D({
         roughness: 0.94,
       }),
     );
-    corridorLine.position.set(0, 0.062, -1.03);
+    corridorLine.position.set(0, 0.062, -1.20);
     scene.add(corridorLine);
 
     const doors = new Map<OfficeRoom, THREE.Group>();
