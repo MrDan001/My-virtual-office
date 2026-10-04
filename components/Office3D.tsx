@@ -3,10 +3,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import {
-  deskSpots,
-  type OfficeRoom,
-} from "../lib/office-sim";
+import { deskSpots, type OfficeRoom } from "../lib/office-sim";
 
 type StaffStatus = "Working" | "Meeting" | "Break" | "Away";
 
@@ -32,121 +29,101 @@ type Props = {
   selectedRoom?: OfficeRoom | null;
 };
 
-type DoorSide = "top" | "bottom";
-
 type RoomData = {
   name: Exclude<OfficeRoom, "Reception">;
   x: number;
-  z: number;
+  y: number;
   w: number;
-  d: number;
-  floor: number;
-  doorSide: DoorSide;
-  doorX: number;
-  doorY: number;
+  h: number;
+  color: number;
+  door: { x: number; y: number; side: "top" | "bottom" };
 };
 
 type HumanRig = {
   group: THREE.Group;
   torso: THREE.Mesh;
-  headGroup: THREE.Group;
+  head: THREE.Group;
   leftArm: THREE.Group;
   rightArm: THREE.Group;
   leftForearm: THREE.Group;
   rightForearm: THREE.Group;
-  leftThigh: THREE.Group;
-  rightThigh: THREE.Group;
-  leftShin: THREE.Group;
-  rightShin: THREE.Group;
+  leftUpperLeg: THREE.Group;
+  rightUpperLeg: THREE.Group;
+  leftLowerLeg: THREE.Group;
+  rightLowerLeg: THREE.Group;
   hands: THREE.Mesh[];
-  eyes: THREE.Mesh[];
-  pupils: THREE.Mesh[];
 };
 
 const ROOM_DATA: RoomData[] = [
   {
     name: "Manager Office",
-    x: -7.35,
-    z: -5.95,
-    w: 5.9,
-    d: 5.45,
-    floor: 0xe8dfcf,
-    doorSide: "bottom",
-    doorX: 16.5,
-    doorY: 33,
+    x: 4,
+    y: 4,
+    w: 25,
+    h: 29,
+    color: 0xe9dfcf,
+    door: { x: 16, y: 33, side: "bottom" },
   },
   {
     name: "Meeting Room",
-    x: 0.15,
-    z: -5.95,
-    w: 7.55,
-    d: 5.45,
-    floor: 0xe1ecea,
-    doorSide: "bottom",
-    doorX: 51,
-    doorY: 33,
+    x: 32,
+    y: 4,
+    w: 37,
+    h: 29,
+    color: 0xe2ecea,
+    door: { x: 51, y: 33, side: "bottom" },
   },
   {
     name: "Support",
-    x: 7.55,
-    z: -5.25,
-    w: 5.35,
-    d: 6.85,
-    floor: 0xdcebed,
-    doorSide: "bottom",
-    doorX: 84.5,
-    doorY: 40.5,
+    x: 72,
+    y: 4,
+    w: 25,
+    h: 41,
+    color: 0xdcebed,
+    door: { x: 84, y: 45, side: "bottom" },
   },
   {
     name: "Design Studio",
-    x: -6.15,
-    z: 3.05,
-    w: 7.85,
-    d: 7.75,
-    floor: 0xeee8f5,
-    doorSide: "top",
-    doorX: 22,
-    doorY: 45.5,
+    x: 4,
+    y: 45,
+    w: 36,
+    h: 50,
+    color: 0xeee8f5,
+    door: { x: 22, y: 45, side: "top" },
   },
   {
     name: "Finance",
-    x: 1.25,
-    z: 3.05,
-    w: 5.6,
-    d: 7.75,
-    floor: 0xe8e6df,
-    doorSide: "top",
-    doorX: 56.5,
-    doorY: 45.5,
-  },
-  {
-    name: "Break Room",
-    x: 7.55,
-    z: 4.65,
-    w: 5.35,
-    d: 8.2,
-    floor: 0xf1eadf,
-    doorSide: "top",
-    doorX: 84.5,
-    doorY: 53,
+    x: 41,
+    y: 45,
+    w: 28,
+    h: 50,
+    color: 0xe8e6df,
+    door: { x: 56, y: 45, side: "top" },
   },
   {
     name: "Open Office",
-    x: 0.0,
-    z: 4.7,
-    w: 8.0,
-    d: 7.2,
-    floor: 0xe4ede3,
-    doorSide: "top",
-    doorX: 52,
-    doorY: 53,
+    x: 70,
+    y: 45,
+    w: 27,
+    h: 28,
+    color: 0xe4ede3,
+    door: { x: 77, y: 45, side: "top" },
+  },
+  {
+    name: "Break Room",
+    x: 70,
+    y: 73,
+    w: 27,
+    h: 22,
+    color: 0xf1eadf,
+    door: { x: 84, y: 73, side: "top" },
   },
 ];
 
 const FACE_TONES = [0xf2c5a3, 0xdca27f, 0xb87953, 0x925b43, 0x704437];
 const HAIR_TONES = [0x221b1a, 0x3b2b25, 0x161a20, 0x35231e, 0x24191a];
-const PANTS_TONES = [0x293646, 0x3b4554, 0x252c35];
-const SHOE_TONES = [0x171b21, 0x222a34, 0x343434];
+const PANTS_TONES = [0x283746, 0x3b4554, 0x252c35, 0x4a3b36];
+const SHOE_TONES = [0x171b21, 0x222a34, 0x30343a];
 
 function worldFromPercent(x: number, y: number) {
   return {
@@ -155,11 +132,11 @@ function worldFromPercent(x: number, y: number) {
   };
 }
 
-function percentDistance(
-  a: { x: number; y: number },
-  b: { x: number; y: number },
-) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
+function percentFromWorld(x: number, z: number) {
+  return {
+    x: ((x + 11) / 22) * 100,
+    y: ((z + 9.5) / 19) * 100,
+  };
 }
 
 function roundedBox(
@@ -174,26 +151,29 @@ function roundedBox(
   );
 }
 
-function capsule(radius: number, length: number, material: THREE.Material) {
+function capsule(
+  radius: number,
+  length: number,
+  material: THREE.Material,
+) {
   return new THREE.Mesh(
     new THREE.CapsuleGeometry(radius, length, 5, 10),
     material,
   );
 }
 
-function makeTextSprite(text: string, color = "#263445") {
+function labelSprite(text: string, color = "#465767") {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 128;
   const ctx = canvas.getContext("2d");
   if (!ctx) return new THREE.Group();
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "rgba(255,255,255,.96)";
-  ctx.roundRect(10, 25, 492, 76, 23);
+  ctx.clearRect(0, 0, 512, 128);
+  ctx.fillStyle = "rgba(255,255,255,.95)";
+  ctx.roundRect(10, 25, 492, 76, 22);
   ctx.fill();
-
-  ctx.font = "800 34px Arial";
+  ctx.font = "800 32px Arial";
   ctx.fillStyle = color;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -201,7 +181,6 @@ function makeTextSprite(text: string, color = "#263445") {
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-
   const sprite = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: texture,
@@ -209,7 +188,7 @@ function makeTextSprite(text: string, color = "#263445") {
       depthWrite: false,
     }),
   );
-  sprite.scale.set(2.2, 0.54, 1);
+  sprite.scale.set(2.05, 0.48, 1);
   return sprite;
 }
 
@@ -219,32 +198,29 @@ function addPlant(scene: THREE.Scene, x: number, z: number, scale = 1) {
   group.scale.setScalar(scale);
 
   const pot = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.25, 0.33, 0.42, 16),
-    new THREE.MeshStandardMaterial({
-      color: 0xb87452,
-      roughness: 0.78,
-    }),
+    new THREE.CylinderGeometry(0.24, 0.31, 0.4, 16),
+    new THREE.MeshStandardMaterial({ color: 0xb87452, roughness: 0.8 }),
   );
-  pot.position.y = 0.21;
+  pot.position.y = 0.2;
   group.add(pot);
 
-  const green = new THREE.MeshStandardMaterial({
-    color: 0x3e7b54,
+  const leaves = new THREE.MeshStandardMaterial({
+    color: 0x3d7a51,
     roughness: 0.86,
   });
 
   for (let i = 0; i < 6; i += 1) {
     const leaf = new THREE.Mesh(
-      new THREE.SphereGeometry(0.21, 10, 8),
-      green,
+      new THREE.SphereGeometry(0.2, 10, 8),
+      leaves,
     );
-    const angle = (i / 6) * Math.PI * 2;
+    const a = (i / 6) * Math.PI * 2;
     leaf.position.set(
-      Math.cos(angle) * 0.18,
-      0.62 + (i % 2) * 0.12,
-      Math.sin(angle) * 0.18,
+      Math.cos(a) * 0.17,
+      0.57 + (i % 2) * 0.1,
+      Math.sin(a) * 0.17,
     );
-    leaf.scale.set(0.7, 1.6, 0.7);
+    leaf.scale.set(0.7, 1.55, 0.7);
     group.add(leaf);
   }
 
@@ -255,107 +231,365 @@ function addDesk(
   scene: THREE.Scene,
   seatX: number,
   seatZ: number,
-  rotation: number,
-  label: string,
+  rotation = 0,
 ) {
   const group = new THREE.Group();
+
+  // The seat point is the employee's exact chair centre.
+  // The desk is placed in front of the employee, never behind them.
   const facing = new THREE.Vector3(
     Math.sin(rotation),
     0,
     Math.cos(rotation),
   );
+
   group.position.set(
-    seatX - facing.x * 0.98,
+    seatX + facing.x * 0.98,
     0,
-    seatZ - facing.z * 0.98,
+    seatZ + facing.z * 0.98,
   );
   group.rotation.y = rotation;
 
   const wood = new THREE.MeshStandardMaterial({
-    color: 0xa26d49,
-    roughness: 0.62,
-  });
-  const dark = new THREE.MeshStandardMaterial({
-    color: 0x1f2630,
-    roughness: 0.35,
+    color: 0xa36d48,
+    roughness: 0.63,
   });
   const metal = new THREE.MeshStandardMaterial({
-    color: 0xadb7c0,
+    color: 0xaeb9c2,
     metalness: 0.72,
-    roughness: 0.24,
+    roughness: 0.28,
+  });
+  const dark = new THREE.MeshStandardMaterial({
+    color: 0x1e2730,
+    roughness: 0.34,
+  });
+  const chairMat = new THREE.MeshStandardMaterial({
+    color: 0x41586d,
+    roughness: 0.68,
   });
 
-  const top = roundedBox(2.15, 0.18, 1.1, wood);
-  top.position.y = 1.18;
+  const top = roundedBox(2.18, 0.18, 1.08, wood);
+  top.position.y = 1.2;
   top.castShadow = true;
   group.add(top);
 
-  for (const x of [-0.78, 0.78]) {
+  for (const px of [-0.78, 0.78]) {
     const leg = roundedBox(0.11, 1.12, 0.11, metal);
-    leg.position.set(x, 0.55, 0.38);
+    leg.position.set(px, 0.55, 0.35);
     leg.castShadow = true;
     group.add(leg);
   }
 
-  const monitor = roundedBox(0.86, 0.52, 0.08, dark);
-  monitor.position.set(0, 1.58, -0.17);
-  monitor.castShadow = true;
+  const monitor = roundedBox(0.8, 0.5, 0.08, dark);
+  monitor.position.set(0, 1.56, -0.18);
   group.add(monitor);
 
   const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.68, 0.35),
+    new THREE.PlaneGeometry(0.64, 0.34),
     new THREE.MeshStandardMaterial({
-      color: 0x89b9c7,
-      emissive: 0x17343b,
-      emissiveIntensity: 0.45,
+      color: 0x8bbdca,
+      emissive: 0x16333b,
+      emissiveIntensity: 0.44,
       side: THREE.DoubleSide,
     }),
   );
-  screen.position.set(0, 1.58, -0.215);
+  screen.position.set(0, 1.56, -0.23);
   screen.rotation.y = Math.PI;
   group.add(screen);
 
-  const keyboard = roundedBox(0.76, 0.045, 0.27, metal);
-  keyboard.position.set(0, 1.38, 0.18);
+  const keyboard = roundedBox(0.74, 0.045, 0.25, metal);
+  keyboard.position.set(0, 1.37, 0.18);
   group.add(keyboard);
 
-  const chairMat = new THREE.MeshStandardMaterial({
-    color: 0x41586c,
-    roughness: 0.67,
-  });
+  // Chair is behind the desk and exactly under the employee's seat point.
   const chair = new THREE.Group();
-  chair.position.set(0, 0, 0.98);
+  chair.position.set(0, 0, -0.98);
 
-  const seat = roundedBox(0.82, 0.18, 0.82, chairMat);
-  seat.position.y = 0.63;
+  const seat = roundedBox(0.8, 0.17, 0.8, chairMat);
+  seat.position.y = 0.62;
   chair.add(seat);
 
-  const back = roundedBox(0.8, 0.96, 0.15, chairMat);
-  back.position.set(0, 1.03, -0.3);
+  const back = roundedBox(0.78, 0.92, 0.14, chairMat);
+  back.position.set(0, 1.03, -0.29);
   chair.add(back);
 
-  const stem = roundedBox(0.09, 0.58, 0.09, metal);
+  const stem = roundedBox(0.09, 0.56, 0.09, metal);
   stem.position.y = 0.3;
   chair.add(stem);
 
-  const base = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.45, 0.5, 0.05, 16),
+  const star = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.42, 0.48, 0.05, 12),
     metal,
   );
-  base.position.y = 0.03;
-  chair.add(base);
-
+  star.position.y = 0.04;
+  chair.add(star);
   group.add(chair);
 
-  if (label) {
-    const tag = makeTextSprite(label, "#5a6876");
-    tag.position.set(0, 2.13, 0);
-    tag.scale.set(1.25, 0.31, 1);
-    group.add(tag);
+  group.userData.type = "desk";
+  scene.add(group);
+}
+
+function addDoor(scene: THREE.Scene, room: RoomData) {
+  const group = new THREE.Group();
+  const hinge = new THREE.Group();
+  const width = Math.min(1.28, (room.w / 100) * 22 * 0.34);
+  const height = 2.08;
+
+  const frameMat = new THREE.MeshStandardMaterial({
+    color: 0x735d4b,
+    roughness: 0.56,
+  });
+  const panelMat = new THREE.MeshStandardMaterial({
+    color: 0x966f51,
+    roughness: 0.58,
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0xa9ccd5,
+    transparent: true,
+    opacity: 0.54,
+    roughness: 0.2,
+    metalness: 0.12,
+  });
+  const gold = new THREE.MeshStandardMaterial({
+    color: 0xd5b36d,
+    metalness: 0.8,
+    roughness: 0.18,
+  });
+
+  const panel = roundedBox(width, height, 0.08, panelMat);
+  panel.position.set(width / 2, height / 2, 0);
+  panel.castShadow = true;
+  hinge.add(panel);
+
+  const glass = roundedBox(width * 0.55, height * 0.42, 0.09, glassMat);
+  glass.position.set(width / 2, height * 0.66, -0.05);
+  hinge.add(glass);
+
+  const knob = new THREE.Mesh(
+    new THREE.SphereGeometry(0.055, 12, 10),
+    gold,
+  );
+  knob.position.set(width * 0.82, height * 0.48, -0.09);
+  hinge.add(knob);
+
+  const leftPost = roundedBox(0.13, height + 0.18, 0.2, frameMat);
+  leftPost.position.set(-0.08, height / 2, 0);
+  const rightPost = roundedBox(0.13, height + 0.18, 0.2, frameMat);
+  rightPost.position.set(width + 0.08, height / 2, 0);
+  group.add(leftPost, rightPost);
+
+  const lintel = roundedBox(width + 0.3, 0.13, 0.2, frameMat);
+  lintel.position.set(width / 2, height + 0.08, 0);
+  group.add(lintel);
+
+  const wp = worldFromPercent(room.door.x, room.door.y);
+  if (room.door.side === "bottom") {
+    group.position.set(wp.x - width / 2, 0, wp.z + 0.02);
+  } else {
+    group.position.set(wp.x - width / 2, 0, wp.z - 0.02);
+    hinge.rotation.y = Math.PI;
   }
+
+  group.add(hinge);
+  group.userData.room = room.name;
+  group.userData.hinge = hinge;
+  group.userData.closed = hinge.rotation.y;
+  group.userData.open =
+    hinge.rotation.y +
+    (room.door.side === "bottom" ? -Math.PI * 0.5 : Math.PI * 0.5);
 
   scene.add(group);
   return group;
+}
+
+function addRoom(
+  scene: THREE.Scene,
+  room: RoomData,
+  doors: Map<OfficeRoom, THREE.Group>,
+) {
+  const topLeft = worldFromPercent(room.x, room.y);
+  const bottomRight = worldFromPercent(
+    room.x + room.w,
+    room.y + room.h,
+  );
+  const center = worldFromPercent(
+    room.x + room.w / 2,
+    room.y + room.h / 2,
+  );
+
+  const roomW = bottomRight.x - topLeft.x;
+  const roomD = bottomRight.z - topLeft.z;
+
+  const floor = new THREE.Mesh(
+    new THREE.BoxGeometry(roomW, 0.12, roomD),
+    new THREE.MeshStandardMaterial({
+      color: room.color,
+      roughness: 0.84,
+    }),
+  );
+  floor.position.set(center.x, 0.06, center.z);
+  floor.receiveShadow = true;
+  floor.userData.room = room.name;
+  scene.add(floor);
+
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: 0xd0c5b7,
+    roughness: 0.88,
+  });
+  const wallH = 2.5;
+  const wallT = 0.16;
+
+  const addWall = (
+    w: number,
+    h: number,
+    d: number,
+    x: number,
+    z: number,
+  ) => {
+    const wall = roundedBox(w, h, d, wallMat);
+    wall.position.set(x, h / 2, z);
+    wall.castShadow = true;
+    wall.receiveShadow = true;
+    scene.add(wall);
+  };
+
+  const leftX = topLeft.x;
+  const rightX = bottomRight.x;
+  const topZ = topLeft.z;
+  const bottomZ = bottomRight.z;
+  const doorPoint = worldFromPercent(room.door.x, room.door.y);
+  const doorW = Math.min(1.28, roomW * 0.3);
+  const gap = doorW + 0.04;
+
+  if (room.door.side === "bottom") {
+    const side = Math.max(0.25, (roomW - gap) / 2);
+    addWall(side, wallH, wallT, leftX + side / 2, bottomZ);
+    addWall(side, wallH, wallT, rightX - side / 2, bottomZ);
+    addWall(roomW, wallH, wallT, center.x, topZ);
+
+    // Door threshold.
+    const threshold = new THREE.Mesh(
+      new THREE.BoxGeometry(doorW * 1.05, 0.035, 0.32),
+      new THREE.MeshStandardMaterial({ color: 0xb7a28a, roughness: 0.84 }),
+    );
+    threshold.position.set(doorPoint.x, 0.075, bottomZ + 0.12);
+    scene.add(threshold);
+  } else {
+    const side = Math.max(0.25, (roomW - gap) / 2);
+    addWall(side, wallH, wallT, leftX + side / 2, topZ);
+    addWall(side, wallH, wallT, rightX - side / 2, topZ);
+    addWall(roomW, wallH, wallT, center.x, bottomZ);
+
+    const threshold = new THREE.Mesh(
+      new THREE.BoxGeometry(doorW * 1.05, 0.035, 0.32),
+      new THREE.MeshStandardMaterial({ color: 0xb7a28a, roughness: 0.84 }),
+    );
+    threshold.position.set(doorPoint.x, 0.075, topZ - 0.12);
+    scene.add(threshold);
+  }
+
+  addWall(wallT, wallH, roomD, leftX, center.z);
+  addWall(wallT, wallH, roomD, rightX, center.z);
+
+  const windowZ =
+    room.door.side === "bottom" ? topZ + 0.08 : bottomZ - 0.08;
+  const window = roundedBox(
+    Math.min(roomW * 0.46, 2.4),
+    0.72,
+    0.05,
+    new THREE.MeshStandardMaterial({
+      color: 0xc6e1e7,
+      transparent: true,
+      opacity: 0.5,
+      roughness: 0.22,
+      metalness: 0.12,
+    }),
+  );
+  window.position.set(center.x, 1.8, windowZ);
+  scene.add(window);
+
+  const tag = labelSprite(room.name);
+  tag.position.set(center.x, 2.78, room.door.side === "bottom" ? topZ + 0.65 : bottomZ - 0.65);
+  scene.add(tag);
+
+  const light = new THREE.PointLight(0xfff2d1, 0.4, 8);
+  light.position.set(center.x, 2.25, center.z);
+  scene.add(light);
+
+  doors.set(room.name, addDoor(scene, room));
+}
+
+function addMeetingAndBreakFurniture(scene: THREE.Scene) {
+  const meetingCenter = worldFromPercent(51, 19);
+
+  const table = roundedBox(
+    5.1,
+    0.28,
+    2.25,
+    new THREE.MeshStandardMaterial({
+      color: 0x9c6849,
+      roughness: 0.66,
+    }),
+  );
+  table.position.set(meetingCenter.x, 1.04, meetingCenter.z);
+  table.castShadow = true;
+  scene.add(table);
+
+  for (const x of [39.5, 45, 51, 57, 63]) {
+    const pTop = worldFromPercent(x, 28);
+    const pBottom = worldFromPercent(x, 10);
+    addMeetingChair(scene, pTop.x, pTop.z, Math.PI);
+    addMeetingChair(scene, pBottom.x, pBottom.z, 0);
+  }
+
+  const board = roundedBox(
+    2.8,
+    1.25,
+    0.08,
+    new THREE.MeshStandardMaterial({
+      color: 0xf9fafb,
+      roughness: 0.44,
+    }),
+  );
+  board.position.set(
+    worldFromPercent(63, 8).x,
+    1.62,
+    worldFromPercent(63, 8).z,
+  );
+  scene.add(board);
+
+  const break = worldFromPercent(83.5, 84.5);
+  const roundTable = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.15, 1.15, 0.18, 32),
+    new THREE.MeshStandardMaterial({
+      color: 0x9b7556,
+      roughness: 0.72,
+    }),
+  );
+  roundTable.position.set(break.x, 1.0, break.z);
+  scene.add(roundTable);
+
+  for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
+    addMeetingChair(
+      scene,
+      break.x + Math.cos(a) * 1.6,
+      break.z + Math.sin(a) * 1.6,
+      a,
+    );
+  }
+
+  const counter = roundedBox(
+    2.6,
+    0.75,
+    0.52,
+    new THREE.MeshStandardMaterial({
+      color: 0xc4b5a2,
+      roughness: 0.82,
+    }),
+  );
+  const counterPoint = worldFromPercent(74, 81);
+  counter.position.set(counterPoint.x, 0.54, counterPoint.z);
+  scene.add(counter);
 }
 
 function addMeetingChair(
@@ -368,635 +602,270 @@ function addMeetingChair(
   group.position.set(x, 0, z);
   group.rotation.y = rotation;
 
-  const chairMat = new THREE.MeshStandardMaterial({
-    color: 0x50697c,
-    roughness: 0.63,
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x506a7d,
+    roughness: 0.66,
   });
-
-  const seat = roundedBox(0.78, 0.18, 0.78, chairMat);
+  const seat = roundedBox(0.78, 0.18, 0.78, mat);
   seat.position.y = 0.62;
   group.add(seat);
-
-  const back = roundedBox(0.76, 0.9, 0.14, chairMat);
-  back.position.set(0, 1.01, -0.3);
+  const back = roundedBox(0.76, 0.9, 0.14, mat);
+  back.position.set(0, 1.0, -0.3);
   group.add(back);
-
   const leg = roundedBox(
     0.09,
     0.58,
     0.09,
     new THREE.MeshStandardMaterial({
-      color: 0x9da7b1,
-      metalness: 0.62,
-      roughness: 0.33,
+      color: 0x9aa6af,
+      metalness: 0.6,
+      roughness: 0.35,
     }),
   );
   leg.position.y = 0.3;
   group.add(leg);
-
   scene.add(group);
 }
 
-function addDoor(scene: THREE.Scene, room: RoomData) {
-  const group = new THREE.Group();
-  const hinge = new THREE.Group();
-
-  const doorW = Math.min(1.28, room.w * 0.3);
-  const doorH = 2.08;
-
-  const frame = new THREE.MeshStandardMaterial({
-    color: 0x745e4c,
-    roughness: 0.58,
-  });
-
-  const panelMat = new THREE.MeshStandardMaterial({
-    color: 0x9d7657,
-    roughness: 0.58,
-  });
-
-  const glassMat = new THREE.MeshStandardMaterial({
-    color: 0xa9ccd6,
-    transparent: true,
-    opacity: 0.55,
-    roughness: 0.2,
-    metalness: 0.1,
-  });
-
-  const panel = roundedBox(doorW, doorH, 0.08, panelMat);
-  panel.position.set(doorW / 2, doorH / 2, 0.02);
-  panel.castShadow = true;
-  hinge.add(panel);
-
-  const glass = roundedBox(
-    doorW * 0.54,
-    doorH * 0.42,
-    0.09,
-    glassMat,
-  );
-  glass.position.set(doorW / 2, doorH * 0.66, -0.05);
-  hinge.add(glass);
-
-  const handle = new THREE.Mesh(
-    new THREE.SphereGeometry(0.055, 12, 10),
-    new THREE.MeshStandardMaterial({
-      color: 0xd8b873,
-      metalness: 0.8,
-      roughness: 0.2,
-    }),
-  );
-  handle.position.set(doorW * 0.8, doorH * 0.48, -0.09);
-  hinge.add(handle);
-
-  const leftPost = roundedBox(0.13, doorH + 0.18, 0.2, frame);
-  const rightPost = roundedBox(0.13, doorH + 0.18, 0.2, frame);
-  leftPost.position.set(-0.08, doorH / 2, 0);
-  rightPost.position.set(doorW + 0.08, doorH / 2, 0);
-  group.add(leftPost, rightPost);
-
-  const top = roundedBox(doorW + 0.29, 0.13, 0.2, frame);
-  top.position.set(doorW / 2, doorH + 0.08, 0);
-  group.add(top);
-
-  const edge = room.doorSide === "bottom"
-    ? room.z + room.d / 2 + 0.09
-    : room.z - room.d / 2 - 0.09;
-
-  if (room.doorSide === "bottom") {
-    group.position.set(room.x + 0.01 - doorW / 2, 0, edge);
-  } else {
-    group.position.set(room.x + 0.01 - doorW / 2, 0, edge);
-    hinge.rotation.y = Math.PI;
-  }
-
-  group.add(hinge);
-  group.userData.room = room.name;
-  group.userData.hinge = hinge;
-  group.userData.closed = hinge.rotation.y;
-  group.userData.open =
-    hinge.rotation.y + (room.doorSide === "bottom" ? -Math.PI * 0.48 : Math.PI * 0.48);
-
-  scene.add(group);
-  return group;
-}
-
-function addRoom(
+function addHuman(
   scene: THREE.Scene,
-  room: RoomData,
-  doors: Map<OfficeRoom, THREE.Group>,
-) {
-  const floorMat = new THREE.MeshStandardMaterial({
-    color: room.floor,
-    roughness: 0.82,
-    metalness: 0.01,
-  });
-
-  const floor = roundedBox(room.w, 0.12, room.d, floorMat);
-  floor.position.set(room.x, 0.06, room.z);
-  floor.receiveShadow = true;
-  floor.userData.room = room.name;
-  scene.add(floor);
-
-  if (room.name === "Open Office") {
-    const rug = new THREE.Mesh(
-      new THREE.BoxGeometry(room.w * 0.9, 0.035, room.d * 0.86),
-      new THREE.MeshStandardMaterial({
-        color: 0xcbd8cd,
-        roughness: 1,
-      }),
-    );
-    rug.position.set(room.x, 0.12, room.z);
-    rug.receiveShadow = true;
-    rug.userData.room = room.name;
-    scene.add(rug);
-
-    const label = makeTextSprite("Open Office", "#5d6b77");
-    label.position.set(room.x, 2.82, room.z - room.d / 2 + 0.72);
-    label.scale.set(2.0, 0.47, 1);
-    label.userData.room = room.name;
-    scene.add(label);
-
-    const light = new THREE.PointLight(0xfff2d1, 0.46, 8);
-    light.position.set(room.x, 2.25, room.z);
-    scene.add(light);
-    return;
-  }
-
-  const wallMat = new THREE.MeshStandardMaterial({
-    color: 0xd1c5b6,
-    roughness: 0.86,
-  });
-
-  const wallH = 2.55;
-  const wallT = 0.16;
-  const doorW = Math.min(1.28, room.w * 0.3);
-
-  const frontZ = room.z + room.d / 2;
-  const backZ = room.z - room.d / 2;
-  const leftX = room.x - room.w / 2;
-  const rightX = room.x + room.w / 2;
-
-  const addWall = (
-    width: number,
-    height: number,
-    depth: number,
-    x: number,
-    y: number,
-    z: number,
-  ) => {
-    const wall = roundedBox(width, height, depth, wallMat);
-    wall.position.set(x, y, z);
-    wall.castShadow = true;
-    wall.receiveShadow = true;
-    scene.add(wall);
-  };
-
-  const gapHalf = doorW / 2 + 0.02;
-  const sideW = Math.max(0.25, room.w / 2 - gapHalf);
-
-  if (room.doorSide === "bottom") {
-    addWall(sideW, wallH, wallT, leftX + sideW / 2, wallH / 2, frontZ);
-    addWall(sideW, wallH, wallT, rightX - sideW / 2, wallH / 2, frontZ);
-    addWall(room.w, wallH, wallT, room.x, wallH / 2, backZ);
-  } else {
-    addWall(sideW, wallH, wallT, leftX + sideW / 2, wallH / 2, backZ);
-    addWall(sideW, wallH, wallT, rightX - sideW / 2, wallH / 2, backZ);
-    addWall(room.w, wallH, wallT, room.x, wallH / 2, frontZ);
-  }
-
-  addWall(wallT, wallH, room.d, leftX, wallH / 2, room.z);
-  addWall(wallT, wallH, room.d, rightX, wallH / 2, room.z);
-
-  // Interior window panels make the offices feel like real rooms rather than boxes.
-  const glass = new THREE.MeshStandardMaterial({
-    color: 0xc3dfe6,
-    transparent: true,
-    opacity: 0.58,
-    roughness: 0.2,
-    metalness: 0.15,
-  });
-
-  const windowZ =
-    room.doorSide === "bottom" ? backZ - 0.09 : frontZ + 0.09;
-  const window = roundedBox(
-    Math.min(room.w * 0.48, 2.35),
-    0.72,
-    0.05,
-    glass,
-  );
-  window.position.set(room.x, 1.78, windowZ);
-  scene.add(window);
-
-  const door = addDoor(scene, room);
-  doors.set(room.name, door);
-
-  const tag = makeTextSprite(room.name, "#5d6b77");
-  tag.position.set(room.x, 2.82, room.doorSide === "bottom" ? backZ + 0.62 : backZ + 0.62);
-  tag.scale.set(2.0, 0.47, 1);
-  scene.add(tag);
-
-  const light = new THREE.PointLight(0xfff2d1, 0.43, 7.5);
-  light.position.set(room.x, 2.3, room.z);
-  scene.add(light);
-}
-
-function addOfficeFurniture(scene: THREE.Scene) {
-  const toWorld = (p: { x: number; y: number }) => worldFromPercent(p.x, p.y);
-
-  for (const point of deskSpots["Manager Office"]) {
-    const p = toWorld(point);
-    addDesk(scene, p.x, p.z, Math.PI, "Manager");
-  }
-
-  for (const point of deskSpots["Design Studio"]) {
-    const p = toWorld(point);
-    addDesk(scene, p.x, p.z, 0, "Design");
-  }
-
-  for (const point of deskSpots.Finance) {
-    const p = toWorld(point);
-    addDesk(scene, p.x, p.z, 0, "Finance");
-  }
-
-  for (const point of deskSpots.Support) {
-    const p = toWorld(point);
-    addDesk(scene, p.x, p.z, Math.PI, "Support");
-  }
-
-  for (const point of deskSpots["Open Office"]) {
-    const p = toWorld(point);
-    addDesk(scene, p.x, p.z, 0, "Open");
-  }
-
-  const meeting = new THREE.Group();
-  const table = roundedBox(
-    5.0,
-    0.28,
-    2.2,
-    new THREE.MeshStandardMaterial({
-      color: 0x9b684a,
-      roughness: 0.66,
-    }),
-  );
-  table.position.set(0.15, 1.04, -5.95);
-  table.castShadow = true;
-  meeting.add(table);
-
-  const tableBase = roundedBox(
-    0.45,
-    0.92,
-    1.05,
-    new THREE.MeshStandardMaterial({
-      color: 0x6a7782,
-      roughness: 0.62,
-    }),
-  );
-  tableBase.position.set(0.15, 0.48, -5.95);
-  meeting.add(tableBase);
-
-  [-1.9, -0.65, 0.65, 1.9].forEach((x) => {
-    addMeetingChair(scene, 0.15 + x, -4.25, Math.PI);
-    addMeetingChair(scene, 0.15 + x, -7.65, 0);
-  });
-
-  const board = roundedBox(
-    2.9,
-    1.35,
-    0.08,
-    new THREE.MeshStandardMaterial({
-      color: 0xf9fafb,
-      roughness: 0.42,
-    }),
-  );
-  board.position.set(2.85, 1.63, -8.6);
-  meeting.add(board);
-
-  const boardText = makeTextSprite("TEAM PLAN", "#678096");
-  boardText.position.set(2.85, 1.67, -8.66);
-  boardText.scale.set(1.35, 0.34, 1);
-  meeting.add(boardText);
-
-  scene.add(meeting);
-
-  const breakTable = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.25, 1.25, 0.18, 32),
-    new THREE.MeshStandardMaterial({
-      color: 0x9b7556,
-      roughness: 0.72,
-    }),
-  );
-  breakTable.position.set(7.55, 1, 5.0);
-  breakTable.castShadow = true;
-  scene.add(breakTable);
-
-  for (const angle of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
-    addMeetingChair(
-      scene,
-      7.55 + Math.cos(angle) * 1.72,
-      5 + Math.sin(angle) * 1.72,
-      angle,
-    );
-  }
-
-  const counter = roundedBox(
-    3.0,
-    0.78,
-    0.55,
-    new THREE.MeshStandardMaterial({
-      color: 0xc5b7a4,
-      roughness: 0.82,
-    }),
-  );
-  counter.position.set(7.55, 0.55, 2.1);
-  scene.add(counter);
-
-  const coffee = makeTextSprite("COFFEE", "#6c5e50");
-  coffee.position.set(7.55, 1.36, 1.74);
-  coffee.scale.set(1.0, 0.27, 1);
-  scene.add(coffee);
-
-  addPlant(scene, -9.65, -8.15, 1.05);
-  addPlant(scene, 9.45, -8.05, 0.9);
-  addPlant(scene, -9.25, 8.2, 1.0);
-  addPlant(scene, 4.45, 9.0, 0.86);
-
-  const rug = new THREE.Mesh(
-    new THREE.BoxGeometry(6.8, 0.035, 2.45),
-    new THREE.MeshStandardMaterial({
-      color: 0xcdd8cb,
-      roughness: 1,
-    }),
-  );
-  rug.position.set(0, 0.12, 7.75);
-  scene.add(rug);
-}
-
-function addHuman(scene: THREE.Scene, person: Staff): HumanRig {
+  person: Staff,
+): HumanRig {
   const group = new THREE.Group();
   const p = worldFromPercent(person.x, person.y);
   group.position.set(p.x, 0, p.z);
   group.userData.staffId = person.id;
 
+  const skin = new THREE.MeshStandardMaterial({
+    color: FACE_TONES[Math.abs(person.id) % FACE_TONES.length],
+    roughness: 0.8,
+  });
+  const hair = new THREE.MeshStandardMaterial({
+    color: HAIR_TONES[Math.abs(person.id * 3) % HAIR_TONES.length],
+    roughness: 0.9,
+  });
   const shirt = new THREE.MeshStandardMaterial({
     color: new THREE.Color(person.color),
     roughness: 0.74,
   });
   const pants = new THREE.MeshStandardMaterial({
     color: PANTS_TONES[Math.abs(person.id) % PANTS_TONES.length],
-    roughness: 0.83,
+    roughness: 0.84,
   });
-  const shoe = new THREE.MeshStandardMaterial({
-    color: SHOE_TONES[Math.abs(person.id * 2) % SHOE_TONES.length],
+  const shoes = new THREE.MeshStandardMaterial({
+    color: SHOE_TONES[Math.abs(person.id) % SHOE_TONES.length],
     roughness: 0.74,
   });
-  const skin = new THREE.MeshStandardMaterial({
-    color: FACE_TONES[Math.abs(person.id) % FACE_TONES.length],
-    roughness: 0.78,
-  });
-  const hair = new THREE.MeshStandardMaterial({
-    color: HAIR_TONES[Math.abs(person.id * 3) % HAIR_TONES.length],
-    roughness: 0.9,
-  });
   const eyeWhite = new THREE.MeshStandardMaterial({
-    color: 0xf7f7f4,
+    color: 0xf6f6f1,
     roughness: 0.45,
   });
-  const pupilMat = new THREE.MeshStandardMaterial({
-    color: 0x17151a,
+  const pupil = new THREE.MeshStandardMaterial({
+    color: 0x17161a,
     roughness: 0.5,
   });
-  const lipMat = new THREE.MeshStandardMaterial({
-    color: 0x814b48,
-    roughness: 0.75,
+  const lip = new THREE.MeshStandardMaterial({
+    color: 0x824a47,
+    roughness: 0.76,
+  });
+  const browMat = new THREE.MeshStandardMaterial({
+    color: 0x47342d,
+    roughness: 0.9,
   });
 
   const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(0.53, 26),
+    new THREE.CircleGeometry(0.5, 24),
     new THREE.MeshBasicMaterial({
       color: 0x000000,
       transparent: true,
-      opacity: 0.14,
+      opacity: 0.15,
     }),
   );
   shadow.rotation.x = -Math.PI / 2;
-  shadow.position.y = 0.015;
+  shadow.position.y = 0.014;
   group.add(shadow);
 
-  const hips = new THREE.Group();
-  hips.position.y = 0.84;
+  const hips = roundedBox(
+    0.55,
+    0.32,
+    0.32,
+    new THREE.MeshStandardMaterial({
+      color: pants.color,
+      roughness: 0.84,
+    }),
+  );
+  hips.position.set(0, 0.86, 0);
   group.add(hips);
 
-  const torso = capsule(0.4, 0.55, shirt) as THREE.Mesh;
-  torso.scale.set(1.02, 1.08, 0.86);
+  const torso = capsule(0.39, 0.56, shirt);
   torso.position.y = 1.36;
+  torso.scale.set(1.04, 1.05, 0.88);
   torso.castShadow = true;
   group.add(torso);
 
   const neck = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.105, 0.125, 0.16, 12),
+    new THREE.CylinderGeometry(0.1, 0.12, 0.16, 12),
     skin,
   );
-  neck.position.y = 1.84;
+  neck.position.y = 1.86;
   group.add(neck);
 
-  const headGroup = new THREE.Group();
-  headGroup.position.y = 2.2;
-  group.add(headGroup);
+  const head = new THREE.Group();
+  head.position.y = 2.2;
+  group.add(head);
 
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.365, 24, 18),
+  const face = new THREE.Mesh(
+    new THREE.SphereGeometry(0.37, 24, 18),
     skin,
   );
-  head.scale.set(0.96, 1.06, 0.92);
-  head.castShadow = true;
-  headGroup.add(head);
+  face.scale.set(0.95, 1.06, 0.92);
+  face.castShadow = true;
+  head.add(face);
 
-  const hairCap = new THREE.Mesh(
+  const cap = new THREE.Mesh(
     new THREE.SphereGeometry(
-      0.382,
+      0.385,
       24,
       14,
       0,
       Math.PI * 2,
       0,
-      Math.PI * 0.53,
+      Math.PI * 0.52,
     ),
     hair,
   );
-  hairCap.scale.set(1.01, 0.9, 0.98);
-  hairCap.position.y = 0.12;
-  headGroup.add(hairCap);
+  cap.scale.set(1.01, 0.9, 0.97);
+  cap.position.y = 0.12;
+  head.add(cap);
 
-  // Hairline/fringe varies slightly by employee.
-  const hairStyle = Math.abs(person.id) % 4;
-  const fringeCount = hairStyle === 0 ? 4 : hairStyle === 1 ? 3 : 2;
+  const style = Math.abs(person.id) % 4;
+  const fringeCount = style === 0 ? 4 : style === 1 ? 3 : 2;
   for (let i = 0; i < fringeCount; i += 1) {
     const fringe = new THREE.Mesh(
-      new THREE.SphereGeometry(0.095, 12, 9),
+      new THREE.SphereGeometry(0.095, 11, 9),
       hair,
     );
-    const x = (i - (fringeCount - 1) / 2) * 0.13;
-    fringe.scale.set(0.95, 1.35, 0.8);
-    fringe.position.set(x, 0.1 + (i % 2) * 0.025, 0.3);
-    headGroup.add(fringe);
-  }
-
-  if (hairStyle === 2) {
-    const sideL = new THREE.Mesh(
-      new THREE.SphereGeometry(0.17, 14, 12),
-      hair,
+    fringe.scale.set(0.95, 1.35, 0.78);
+    fringe.position.set(
+      (i - (fringeCount - 1) / 2) * 0.13,
+      0.1 + (i % 2) * 0.025,
+      0.29,
     );
-    sideL.scale.set(0.66, 1.1, 0.7);
-    sideL.position.set(-0.32, -0.02, 0.08);
-    headGroup.add(sideL);
-    const sideR = sideL.clone();
-    sideR.position.x = 0.32;
-    headGroup.add(sideR);
+    head.add(fringe);
   }
 
-  if (hairStyle === 3) {
-    const bun = new THREE.Mesh(
-      new THREE.SphereGeometry(0.16, 14, 12),
-      hair,
-    );
-    bun.position.set(0, 0.15, -0.34);
-    bun.scale.set(1.05, 1.05, 0.8);
-    headGroup.add(bun);
-  }
-
-  const eyes: THREE.Mesh[] = [];
-  const pupils: THREE.Mesh[] = [];
-  for (const x of [-0.135, 0.135]) {
+  for (const sx of [-0.14, 0.14]) {
     const eye = new THREE.Mesh(
-      new THREE.SphereGeometry(0.065, 14, 12),
+      new THREE.SphereGeometry(0.064, 14, 12),
       eyeWhite,
     );
-    eye.scale.set(1, 0.82, 0.65);
-    eye.position.set(x, 0.02, 0.34);
-    headGroup.add(eye);
-    eyes.push(eye);
+    eye.scale.set(1, 0.82, 0.62);
+    eye.position.set(sx, 0.03, 0.335);
+    head.add(eye);
 
-    const pupil = new THREE.Mesh(
+    const ball = new THREE.Mesh(
       new THREE.SphereGeometry(0.027, 10, 8),
-      pupilMat,
+      pupil,
     );
-    pupil.position.set(x, 0.02, 0.378);
-    headGroup.add(pupil);
-    pupils.push(pupil);
+    ball.position.set(sx, 0.03, 0.38);
+    head.add(ball);
   }
 
-  const browMat = new THREE.MeshStandardMaterial({
-    color: 0x46342d,
-    roughness: 0.88,
-  });
-  for (const [x, rz] of [
+  for (const [x, rot] of [
     [-0.14, 0.1],
     [0.14, -0.1],
   ] as const) {
     const brow = roundedBox(0.13, 0.024, 0.018, browMat);
-    brow.position.set(x, 0.13, 0.33);
-    brow.rotation.z = rz;
-    headGroup.add(brow);
+    brow.position.set(x, 0.14, 0.33);
+    brow.rotation.z = rot;
+    head.add(brow);
   }
 
   const nose = new THREE.Mesh(
-    new THREE.ConeGeometry(0.048, 0.13, 8),
+    new THREE.ConeGeometry(0.047, 0.12, 8),
     skin,
   );
   nose.rotation.x = Math.PI / 2;
-  nose.position.set(0, -0.05, 0.375);
-  headGroup.add(nose);
+  nose.position.set(0, -0.05, 0.36);
+  head.add(nose);
 
-  const mouth = roundedBox(0.12, 0.026, 0.018, lipMat);
-  mouth.position.set(0, -0.18, 0.342);
-  headGroup.add(mouth);
+  const mouth = roundedBox(0.12, 0.026, 0.018, lip);
+  mouth.position.set(0, -0.18, 0.345);
+  head.add(mouth);
+
+  const earL = new THREE.Mesh(
+    new THREE.SphereGeometry(0.085, 12, 10),
+    skin,
+  );
+  earL.position.set(-0.34, 0, 0);
+  const earR = earL.clone();
+  earR.position.x = 0.34;
+  head.add(earL, earR);
 
   const collar = new THREE.Mesh(
-    new THREE.TorusGeometry(0.17, 0.032, 8, 18, Math.PI),
+    new THREE.TorusGeometry(0.17, 0.03, 8, 18, Math.PI),
     new THREE.MeshStandardMaterial({
-      color: 0xe0e8ef,
+      color: 0xe0e7ed,
       roughness: 0.66,
     }),
   );
   collar.rotation.x = Math.PI / 2;
-  collar.position.y = 1.75;
+  collar.position.y = 1.76;
   group.add(collar);
 
-  const leftArm = new THREE.Group();
-  leftArm.position.set(-0.44, 1.53, 0);
-  const leftUpper = capsule(0.105, 0.47, shirt);
-  leftUpper.position.y = -0.24;
-  leftArm.add(leftUpper);
+  function arm(side: number) {
+    const upper = new THREE.Group();
+    upper.position.set(side * 0.43, 1.53, 0);
+    const upperMesh = capsule(0.105, 0.46, shirt);
+    upperMesh.position.y = -0.24;
+    upper.add(upperMesh);
 
-  const leftForearm = new THREE.Group();
-  leftForearm.position.y = -0.53;
-  const leftFore = capsule(0.09, 0.41, shirt);
-  leftFore.position.y = -0.21;
-  leftForearm.add(leftFore);
-  leftArm.add(leftForearm);
-  group.add(leftArm);
+    const fore = new THREE.Group();
+    fore.position.y = -0.51;
+    const foreMesh = capsule(0.09, 0.4, shirt);
+    foreMesh.position.y = -0.2;
+    fore.add(foreMesh);
+    upper.add(fore);
 
-  const rightArm = new THREE.Group();
-  rightArm.position.set(0.44, 1.53, 0);
-  const rightUpper = capsule(0.105, 0.47, shirt);
-  rightUpper.position.y = -0.24;
-  rightArm.add(rightUpper);
+    const hand = new THREE.Mesh(
+      new THREE.SphereGeometry(0.092, 12, 10),
+      skin,
+    );
+    hand.position.set(side * 0.43, 0.79, 0);
+    group.add(hand);
 
-  const rightForearm = new THREE.Group();
-  rightForearm.position.y = -0.53;
-  const rightFore = capsule(0.09, 0.41, shirt);
-  rightFore.position.y = -0.21;
-  rightForearm.add(rightFore);
-  rightArm.add(rightForearm);
-  group.add(rightArm);
+    group.add(upper);
 
-  const handL = new THREE.Mesh(
-    new THREE.SphereGeometry(0.095, 12, 10),
-    skin,
-  );
-  handL.position.set(-0.44, 0.79, 0);
-  group.add(handL);
+    return { upper, fore, hand };
+  }
 
-  const handR = handL.clone();
-  handR.position.x = 0.44;
-  group.add(handR);
+  const aL = arm(-1);
+  const aR = arm(1);
 
-  const leftThigh = new THREE.Group();
-  leftThigh.position.set(-0.17, 0.88, 0);
-  const thighMesh = capsule(0.12, 0.46, pants);
-  thighMesh.position.y = -0.26;
-  leftThigh.add(thighMesh);
+  function leg(side: number) {
+    const upper = new THREE.Group();
+    upper.position.set(side * 0.17, 0.9, 0);
+    const thigh = capsule(0.12, 0.43, pants);
+    thigh.position.y = -0.23;
+    upper.add(thigh);
 
-  const leftShin = new THREE.Group();
-  leftShin.position.y = -0.62;
-  const shinMesh = capsule(0.095, 0.37, pants);
-  shinMesh.position.y = -0.22;
-  leftShin.add(shinMesh);
+    const lower = new THREE.Group();
+    lower.position.y = -0.58;
+    const shin = capsule(0.095, 0.36, pants);
+    shin.position.y = -0.22;
+    lower.add(shin);
 
-  const shoeL = roundedBox(0.23, 0.13, 0.45, shoe);
-  shoeL.position.set(0, -0.55, 0.16);
-  leftShin.add(shoeL);
+    const shoe = roundedBox(0.23, 0.13, 0.44, shoes);
+    shoe.position.set(0, -0.53, 0.14);
+    lower.add(shoe);
 
-  leftThigh.add(leftShin);
-  group.add(leftThigh);
+    upper.add(lower);
+    group.add(upper);
+    return { upper, lower };
+  }
 
-  const rightThigh = new THREE.Group();
-  rightThigh.position.set(0.17, 0.88, 0);
-  const thighMeshR = capsule(0.12, 0.46, pants);
-  thighMeshR.position.y = -0.26;
-  rightThigh.add(thighMeshR);
-
-  const rightShin = new THREE.Group();
-  rightShin.position.y = -0.62;
-  const shinMeshR = capsule(0.095, 0.37, pants);
-  shinMeshR.position.y = -0.22;
-  rightShin.add(shinMeshR);
-
-  const shoeR = roundedBox(0.23, 0.13, 0.45, shoe);
-  shoeR.position.set(0, -0.55, 0.16);
-  rightShin.add(shoeR);
-
-  rightThigh.add(rightShin);
-  group.add(rightThigh);
+  const lL = leg(-1);
+  const lR = leg(1);
 
   group.traverse((object) => {
     if (object instanceof THREE.Mesh) {
@@ -1010,22 +879,20 @@ function addHuman(scene: THREE.Scene, person: Staff): HumanRig {
   return {
     group,
     torso,
-    headGroup,
-    leftArm,
-    rightArm,
-    leftForearm,
-    rightForearm,
-    leftThigh,
-    rightThigh,
-    leftShin,
-    rightShin,
-    hands: [handL, handR],
-    eyes,
-    pupils,
+    head,
+    leftArm: aL.upper,
+    rightArm: aR.upper,
+    leftForearm: aL.fore,
+    rightForearm: aR.fore,
+    leftUpperLeg: lL.upper,
+    rightUpperLeg: lR.upper,
+    leftLowerLeg: lL.lower,
+    rightLowerLeg: lR.lower,
+    hands: [aL.hand, aR.hand],
   };
 }
 
-function applyHumanPose(
+function applyPose(
   rig: HumanRig,
   person: Staff,
   time: number,
@@ -1035,110 +902,102 @@ function applyHumanPose(
   const meeting = person.status === "Meeting" && !walking;
   const breaking = person.status === "Break" && !walking;
 
+  rig.torso.rotation.x = 0;
+  rig.torso.rotation.z = 0;
+  rig.head.rotation.x = 0;
+  rig.head.rotation.z = 0;
+
   if (walking) {
-    const phase = time * 8.5 + person.id * 0.7;
+    const phase = time * 9 + person.id * 0.7;
     const stride = Math.sin(phase);
 
-    rig.group.position.y = 0.02 + Math.abs(Math.sin(phase)) * 0.025;
+    rig.group.position.y =
+      0.02 + Math.abs(Math.sin(phase)) * 0.018;
+
     rig.torso.position.y = 1.36;
-    rig.torso.rotation.x = 0;
-    rig.torso.rotation.z = stride * 0.02;
+    rig.head.position.y = 2.2;
 
-    rig.headGroup.position.y = 2.2;
-    rig.headGroup.rotation.x = 0;
-    rig.headGroup.rotation.z = stride * 0.018;
+    rig.leftArm.rotation.z = -0.06 - stride * 0.48;
+    rig.rightArm.rotation.z = 0.06 + stride * 0.48;
+    rig.leftArm.rotation.x = 0.04;
+    rig.rightArm.rotation.x = -0.04;
 
-    rig.leftArm.rotation.x = stride * 0.5;
-    rig.rightArm.rotation.x = -stride * 0.5;
     rig.leftForearm.rotation.x = -0.08;
     rig.rightForearm.rotation.x = -0.08;
 
-    rig.leftThigh.rotation.x = stride * 0.62;
-    rig.rightThigh.rotation.x = -stride * 0.62;
-    rig.leftShin.rotation.x = Math.max(0, -stride) * 0.35;
-    rig.rightShin.rotation.x = Math.max(0, stride) * 0.35;
+    rig.leftUpperLeg.rotation.x = stride * 0.62;
+    rig.rightUpperLeg.rotation.x = -stride * 0.62;
+    rig.leftLowerLeg.rotation.x = Math.max(0, -stride) * 0.32;
+    rig.rightLowerLeg.rotation.x = Math.max(0, stride) * 0.32;
 
-    rig.hands[0].position.set(-0.44, 0.79, 0);
-    rig.hands[1].position.set(0.44, 0.79, 0);
-
-    for (const eye of rig.eyes) eye.scale.y = 0.82;
+    rig.hands[0].position.set(-0.43, 0.79, 0);
+    rig.hands[1].position.set(0.43, 0.79, 0);
     return;
   }
 
-  // Standing, meeting, break and work poses are deliberately height-stable.
-  rig.group.position.y = 0;
-  rig.torso.rotation.x = 0;
-  rig.torso.rotation.z = 0;
-  rig.headGroup.rotation.x = 0;
-  rig.headGroup.rotation.z = 0;
-
+  // Stable seated work pose: the root never bobs and the worker faces +Z,
+  // where the desk is placed.
   if (working) {
-    // Fixed seated work pose: no vertical bobbing.
-    rig.torso.position.y = 1.28;
-    rig.torso.rotation.x = 0.08;
-    rig.headGroup.position.y = 2.05;
-    rig.headGroup.rotation.x = 0.05;
+    rig.group.position.y = 0;
+    rig.torso.position.set(0, 1.27, 0.02);
+    rig.torso.rotation.x = 0.05;
+    rig.head.position.set(0, 2.06, 0.1);
+    rig.head.rotation.x = 0.035;
 
-    rig.leftArm.rotation.z = -0.46;
-    rig.rightArm.rotation.z = 0.46;
-    rig.leftForearm.rotation.x = 1.17;
-    rig.rightForearm.rotation.x = 1.17;
+    rig.leftUpperLeg.rotation.x = -Math.PI / 2;
+    rig.rightUpperLeg.rotation.x = -Math.PI / 2;
+    rig.leftUpperLeg.position.set(-0.17, 0.84, 0);
+    rig.rightUpperLeg.position.set(0.17, 0.84, 0);
 
-    rig.hands[0].position.set(-0.24, 1.18, -0.38);
-    rig.hands[1].position.set(0.24, 1.18, -0.38);
+    rig.leftLowerLeg.position.set(0, -0.02, 0.27);
+    rig.rightLowerLeg.position.set(0, -0.02, 0.27);
+    rig.leftLowerLeg.rotation.x = 0;
+    rig.rightLowerLeg.rotation.x = 0;
 
-    rig.leftThigh.rotation.x = 1.16;
-    rig.rightThigh.rotation.x = 1.16;
-    rig.leftShin.rotation.x = -1.23;
-    rig.rightShin.rotation.x = -1.23;
-    rig.leftThigh.position.y = 0.76;
-    rig.rightThigh.position.y = 0.76;
+    rig.leftArm.rotation.x = -0.48;
+    rig.rightArm.rotation.x = -0.48;
+    rig.leftArm.rotation.z = -0.08;
+    rig.rightArm.rotation.z = 0.08;
+    rig.leftForearm.rotation.x = -0.78;
+    rig.rightForearm.rotation.x = -0.78;
 
-    for (const eye of rig.eyes) eye.scale.y = 0.82;
+    const typeMotion = Math.sin(time * 4.5 + person.id) * 0.025;
+    rig.hands[0].position.set(-0.23, 1.16, 0.43 + typeMotion);
+    rig.hands[1].position.set(0.23, 1.16, 0.43 - typeMotion);
     return;
   }
+
+  rig.group.position.y = 0;
+  rig.torso.position.set(0, 1.36, 0);
+  rig.head.position.set(0, 2.2, 0);
+
+  rig.leftUpperLeg.position.set(-0.17, 0.9, 0);
+  rig.rightUpperLeg.position.set(0.17, 0.9, 0);
+  rig.leftUpperLeg.rotation.x = 0;
+  rig.rightUpperLeg.rotation.x = 0;
+  rig.leftLowerLeg.position.set(0, -0.58, 0);
+  rig.rightLowerLeg.position.set(0, -0.58, 0);
+  rig.leftLowerLeg.rotation.x = 0;
+  rig.rightLowerLeg.rotation.x = 0;
 
   if (meeting) {
-    rig.torso.position.y = 1.36;
-    rig.headGroup.position.y = 2.2;
-
-    rig.leftArm.rotation.z = -0.28;
-    rig.rightArm.rotation.z = 0.28;
-    rig.leftForearm.rotation.x = 0.25;
-    rig.rightForearm.rotation.x = 0.25;
-    rig.hands[0].position.set(-0.36, 0.94, -0.06);
-    rig.hands[1].position.set(0.36, 0.94, -0.06);
-
-    rig.leftThigh.rotation.x = 1.02;
-    rig.rightThigh.rotation.x = 1.02;
-    rig.leftShin.rotation.x = -1.05;
-    rig.rightShin.rotation.x = -1.05;
-    return;
+    rig.leftArm.rotation.z = -0.18;
+    rig.rightArm.rotation.z = 0.18;
+    rig.leftForearm.rotation.x = 0.18;
+    rig.rightForearm.rotation.x = 0.18;
+    rig.hands[0].position.set(-0.3, 0.96, 0.03);
+    rig.hands[1].position.set(0.3, 0.96, 0.03);
+  } else if (breaking) {
+    rig.leftArm.rotation.z = -0.08;
+    rig.rightArm.rotation.z = 0.08;
+    rig.hands[0].position.set(-0.31, 0.86, 0);
+    rig.hands[1].position.set(0.31, 0.86, 0);
+  } else {
+    rig.leftArm.rotation.z = -0.05;
+    rig.rightArm.rotation.z = 0.05;
+    rig.hands[0].position.set(-0.43, 0.79, 0);
+    rig.hands[1].position.set(0.43, 0.79, 0);
   }
-
-  if (breaking) {
-    rig.torso.position.y = 1.36;
-    rig.headGroup.position.y = 2.2;
-    rig.leftArm.rotation.z = -0.12;
-    rig.rightArm.rotation.z = 0.12;
-    rig.leftForearm.rotation.x = 0.35;
-    rig.rightForearm.rotation.x = 0.35;
-    rig.hands[0].position.set(-0.3, 1.02, 0);
-    rig.hands[1].position.set(0.3, 1.02, 0);
-    return;
-  }
-
-  // Away / fallback standing.
-  rig.torso.position.y = 1.36;
-  rig.headGroup.position.y = 2.2;
-  rig.leftArm.rotation.z = -0.06;
-  rig.rightArm.rotation.z = 0.06;
-  rig.leftForearm.rotation.x = 0;
-  rig.rightForearm.rotation.x = 0;
-  rig.leftThigh.rotation.x = 0;
-  rig.rightThigh.rotation.x = 0;
-  rig.leftShin.rotation.x = 0;
-  rig.rightShin.rotation.x = 0;
 }
 
 export default function Office3D({
@@ -1158,19 +1017,15 @@ export default function Office3D({
   useEffect(() => {
     staffRef.current = staff;
   }, [staff]);
-
   useEffect(() => {
     runningRef.current = running;
   }, [running]);
-
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
-
   useEffect(() => {
     onRoomSelectRef.current = onRoomSelect;
   }, [onRoomSelect]);
-
   useEffect(() => {
     selectedRoomRef.current = selectedRoom;
   }, [selectedRoom]);
@@ -1180,16 +1035,17 @@ export default function Office3D({
 
     const mount = mountRef.current;
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xdce8e5);
-    scene.fog = new THREE.Fog(0xdce8e5, 28, 52);
+    scene.background = new THREE.Color(0xdde9e6);
+    scene.fog = new THREE.Fog(0xdde9e6, 31, 53);
 
     const camera = new THREE.PerspectiveCamera(
-      44,
-      Math.max(1, mount.clientWidth) / Math.max(1, mount.clientHeight),
+      46,
+      Math.max(1, mount.clientWidth) /
+        Math.max(1, mount.clientHeight),
       0.1,
       100,
     );
-    camera.position.set(18, 18, 22);
+    camera.position.set(17.5, 15.5, 21.5);
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -1199,27 +1055,25 @@ export default function Office3D({
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.shadowMap.autoUpdate = true;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.toneMappingExposure = 1.06;
     mount.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.065;
     controls.minDistance = 8;
-    controls.maxDistance = 35;
-    controls.minPolarAngle = 0.26;
-    controls.maxPolarAngle = Math.PI * 0.47;
-    controls.target.set(0, 0, 0.7);
+    controls.maxDistance = 34;
+    controls.minPolarAngle = 0.3;
+    controls.maxPolarAngle = Math.PI * 0.48;
+    controls.target.set(0, 0, 1.2);
 
     scene.add(
-      new THREE.HemisphereLight(0xf8fbff, 0x6d756d, 2.3),
+      new THREE.HemisphereLight(0xf8fbff, 0x6e766f, 2.35),
     );
-
-    const sun = new THREE.DirectionalLight(0xfff4dc, 3.15);
-    sun.position.set(-10, 20, 10);
+    const sun = new THREE.DirectionalLight(0xfff3da, 3.15);
+    sun.position.set(-10, 20, 11);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.camera.left = -25;
@@ -1231,39 +1085,43 @@ export default function Office3D({
     const base = new THREE.Mesh(
       new THREE.BoxGeometry(25, 0.38, 22),
       new THREE.MeshStandardMaterial({
-        color: 0xb49a7c,
+        color: 0xb79d7f,
         roughness: 0.92,
       }),
     );
-    base.position.y = -0.2;
+    base.position.y = -0.21;
     base.receiveShadow = true;
     scene.add(base);
 
-    // Clean central circulation floor makes the door-to-door routes readable.
+    // A clean central corridor is the circulation spine connecting all office entrances.
     const corridor = new THREE.Mesh(
-      new THREE.BoxGeometry(20.8, 0.045, 2.1),
+      new THREE.BoxGeometry(20.5, 0.05, 2.15),
       new THREE.MeshStandardMaterial({
-        color: 0xd5ddd8,
-        roughness: 0.93,
+        color: 0xd7dfda,
+        roughness: 0.94,
       }),
     );
-    corridor.position.set(0, 0.02, -0.35);
+    corridor.position.set(0, 0.03, -1.55);
     corridor.receiveShadow = true;
     scene.add(corridor);
 
     const corridorLine = new THREE.Mesh(
-      new THREE.BoxGeometry(20.8, 0.018, 0.045),
+      new THREE.BoxGeometry(20.5, 0.018, 0.05),
       new THREE.MeshStandardMaterial({
-        color: 0xb3c1ba,
-        roughness: 0.92,
+        color: 0xb8c4bd,
+        roughness: 0.94,
       }),
     );
-    corridorLine.position.set(0, 0.05, 0.55);
+    corridorLine.position.set(0, 0.062, -1.03);
     scene.add(corridorLine);
 
     const doors = new Map<OfficeRoom, THREE.Group>();
-    ROOM_DATA.forEach((room) => addRoom(scene, room, doors));
+    for (const room of ROOM_DATA) {
+      addRoom(scene, room, doors);
+    }
+
     addOfficeFurniture(scene);
+    addMeetingAndBreakFurniture(scene);
 
     const rigs = new Map<number, HumanRig>();
     staffRef.current.forEach((person) => {
@@ -1308,12 +1166,10 @@ export default function Office3D({
         }
 
         if (object?.userData.staffId) {
-          const selected = staffRef.current.find(
-            (person) => person.id === object!.userData.staffId,
+          const person = staffRef.current.find(
+            (item) => item.id === object!.userData.staffId,
           );
-          if (selected) {
-            onSelectRef.current(selected);
-          }
+          if (person) onSelectRef.current(person);
           return;
         }
 
@@ -1350,63 +1206,60 @@ export default function Office3D({
         }
 
         const target = worldFromPercent(person.x, person.y);
-        const current = rig.group.position;
-        const dx = target.x - current.x;
-        const dz = target.z - current.z;
+        const dx = target.x - rig.group.position.x;
+        const dz = target.z - rig.group.position.z;
         const distance = Math.hypot(dx, dz);
 
-        // Visual interpolation keeps the fast simulation smooth.
-        if (runningRef.current && distance > 0.004) {
+        if (runningRef.current && distance > 0.003) {
           const blend = Math.min(
             1,
-            delta * (person.walking ? 7.5 : 11),
+            delta * (person.walking ? 9.5 : 13),
           );
-          current.x += dx * blend;
-          current.z += dz * blend;
+          rig.group.position.x += dx * blend;
+          rig.group.position.z += dz * blend;
 
           if (person.walking) {
             const desired = Math.atan2(dx, dz);
             let angle = desired - rig.group.rotation.y;
             angle = Math.atan2(Math.sin(angle), Math.cos(angle));
             rig.group.rotation.y +=
-              angle * Math.min(1, delta * 10);
+              angle * Math.min(1, delta * 12);
           }
         }
 
-        applyHumanPose(rig, person, time);
-
-        // A door opens only for approaching staff or a selected room.
+        // Open only the doorway that a nearby worker is approaching.
         for (const [room, door] of doors) {
-          const node = ROOM_DATA.find((item) => item.name === room);
-          if (!node) continue;
+          const data = ROOM_DATA.find((item) => item.name === room);
+          if (!data) continue;
 
-          const distanceToDoor = percentDistance(
-            { x: person.x, y: person.y },
-            { x: node.doorX, y: node.doorY },
+          const d = Math.hypot(
+            person.x - data.door.x,
+            person.y - data.door.y,
           );
-
-          const open =
-            distanceToDoor < 4.4 ||
+          const shouldOpen =
+            d < 5 ||
             selectedRoomRef.current === room;
 
           const hinge = door.userData.hinge as THREE.Group;
           const closed = Number(door.userData.closed);
-          const openRotation = Number(door.userData.open);
-          const targetRotation = open ? openRotation : closed;
+          const opened = Number(door.userData.open);
+          const targetRotation = shouldOpen ? opened : closed;
 
           hinge.rotation.y +=
             (targetRotation - hinge.rotation.y) *
-            Math.min(1, delta * 8);
+            Math.min(1, delta * 9);
         }
+
+        applyPose(rig, person, time);
       }
 
       renderer.render(scene, camera);
     };
 
-    let raf = 0;
+    let frame = 0;
     const loop = () => {
       animate();
-      raf = requestAnimationFrame(loop);
+      frame = requestAnimationFrame(loop);
     };
     loop();
 
@@ -1422,7 +1275,7 @@ export default function Office3D({
     window.addEventListener("resize", resize);
 
     return () => {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
       renderer.domElement.removeEventListener(
         "pointerdown",
@@ -1439,7 +1292,9 @@ export default function Office3D({
         if (object instanceof THREE.Mesh) {
           object.geometry.dispose();
           if (Array.isArray(object.material)) {
-            object.material.forEach((material) => material.dispose());
+            object.material.forEach((material) =>
+              material.dispose(),
+            );
           } else {
             object.material.dispose();
           }
@@ -1458,7 +1313,7 @@ export default function Office3D({
     <div
       ref={mountRef}
       className="office-3d-viewer"
-      aria-label="Interactive redesigned 3D virtual office"
+      aria-label="Redesigned 3D virtual office"
     >
       <div className="office-3d-help">
         <strong>3D Office</strong>
@@ -1468,3 +1323,4 @@ export default function Office3D({
     </div>
   );
 }
+
