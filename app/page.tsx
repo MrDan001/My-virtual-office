@@ -72,7 +72,7 @@ function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom }: {
   selectedRoom?: OfficeRoom | null;
 }) {
   return (
-    <Office3D
+    <OfficeView
       staff={staff}
       running={running}
       onSelect={onSelect}
