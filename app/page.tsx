@@ -360,16 +360,161 @@ function StaffModal({ onClose, onSave }: { onClose: () => void; onSave: (s: Omit
   </div>;
 }
 
-function StaffDrawer({ staff, onClose, onSave }: { staff: Staff | null; onClose: () => void; onSave: (staff: Staff, role: string, department: string) => void }) {
+function StaffDrawer({
+  staff,
+  onClose,
+  onSave,
+  onFire,
+}: {
+  staff: Staff | null;
+  onClose: () => void;
+  onSave: (staff: Staff, role: string, department: string) => void;
+  onFire: (staff: Staff) => Promise<{ ok: boolean; error?: string }>;
+}) {
   if (!staff) return null;
-  return <StaffDrawerContent key={staff.id} staff={staff} onClose={onClose} onSave={onSave} />;
+  return (
+    <StaffDrawerContent
+      key={staff.id}
+      staff={staff}
+      onClose={onClose}
+      onSave={onSave}
+      onFire={onFire}
+    />
+  );
 }
 
-function StaffDrawerContent({ staff, onClose, onSave }: { staff: Staff; onClose: () => void; onSave: (staff: Staff, role: string, department: string) => void }) {
+function StaffDrawerContent({
+  staff,
+  onClose,
+  onSave,
+  onFire,
+}: {
+  staff: Staff;
+  onClose: () => void;
+  onSave: (staff: Staff, role: string, department: string) => void;
+  onFire: (staff: Staff) => Promise<{ ok: boolean; error?: string }>;
+}) {
   const [editing, setEditing] = useState(false);
   const [role, setRole] = useState(staff.role);
   const [department, setDepartment] = useState(staff.department);
-  return <div className="drawer-backdrop" onMouseDown={onClose}><aside className="drawer" onMouseDown={(e) => e.stopPropagation()}><button className="drawer-close" onClick={onClose}>×</button><div className="drawer-profile"><div className="big-avatar" style={{ background: staff.color }}>{avatar(staff.name)}</div><h2>{staff.name}</h2><p>{staff.role} · {staff.department}</p><StatusPill status={staff.status}/></div><div className="drawer-actions"><button onClick={() => setEditing(!editing)}><Icon name="settings"/> {editing ? "Cancel edit" : "Edit role"}</button><button><Icon name="calendar"/> Schedule</button></div>{editing && <div className="drawer-section role-editor"><span>Role & department</span><label>Role<input value={role} onChange={(event) => setRole(event.target.value)} /></label><label>Department<select value={department} onChange={(event) => setDepartment(event.target.value)}>{["Management","Design","Marketing","Finance","Support","Operations"].map((item) => <option key={item}>{item}</option>)}</select></label><button className="primary" disabled={!role.trim()} onClick={() => { onSave(staff, role.trim(), department); setEditing(false); }}>Save assignment</button></div>}<div className="drawer-section"><span>Current task</span><strong>{staff.task}</strong><small>Updated just now</small></div><div className="drawer-section"><span>Today's schedule</span><div className="mini-timeline"><b>09:00</b><span>Team standup</span><b>11:00</b><span>Focus block</span><b>14:00</b><span>Project review</span></div></div><div className="drawer-section"><span>Location</span><strong><Icon name="pin"/> {staff.status === "Meeting" ? "Meeting Room" : staff.status === "Break" ? "Break Room" : "Assigned desk"}</strong></div></aside></div>;
+  const [firing, setFiring] = useState(false);
+  const [fireError, setFireError] = useState("");
+
+  const handleFire = async () => {
+    if (firing) return;
+
+    const confirmed = window.confirm(
+      "Fire " + staff.name + "? This removes the employee from the active staff directory.",
+    );
+    if (!confirmed) return;
+
+    setFiring(true);
+    setFireError("");
+
+    try {
+      const result = await onFire(staff);
+      if (!result.ok) {
+        setFireError(result.error ?? "Could not fire this employee.");
+      }
+    } finally {
+      setFiring(false);
+    }
+  };
+
+  return (
+    <div className="drawer-backdrop" onMouseDown={onClose}>
+      <aside className="drawer" onMouseDown={(e) => e.stopPropagation()}>
+        <button className="drawer-close" onClick={onClose}>×</button>
+
+        <div className="drawer-profile">
+          <div className="big-avatar" style={{ background: staff.color }}>
+            {avatar(staff.name)}
+          </div>
+          <h2>{staff.name}</h2>
+          <p>{staff.role} · {staff.department}</p>
+          <StatusPill status={staff.status}/>
+        </div>
+
+        <div className="drawer-actions">
+          <button onClick={() => setEditing(!editing)}>
+            <Icon name="settings"/> {editing ? "Cancel edit" : "Edit role"}
+          </button>
+          <button>
+            <Icon name="calendar"/> Schedule
+          </button>
+        </div>
+
+        {editing && (
+          <div className="drawer-section role-editor">
+            <span>Role & department</span>
+            <label>
+              Role
+              <input value={role} onChange={(event) => setRole(event.target.value)} />
+            </label>
+            <label>
+              Department
+              <select value={department} onChange={(event) => setDepartment(event.target.value)}>
+                {["Management","Design","Marketing","Finance","Support","Operations"].map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="primary"
+              disabled={!role.trim()}
+              onClick={() => {
+                onSave(staff, role.trim(), department);
+                setEditing(false);
+              }}
+            >
+              Save assignment
+            </button>
+          </div>
+        )}
+
+        <div className="drawer-section">
+          <span>Current task</span>
+          <strong>{staff.task}</strong>
+          <small>Updated just now</small>
+        </div>
+
+        <div className="drawer-section">
+          <span>Today's schedule</span>
+          <div className="mini-timeline">
+            <b>09:00</b><span>Team standup</span>
+            <b>11:00</b><span>Focus block</span>
+            <b>14:00</b><span>Project review</span>
+          </div>
+        </div>
+
+        <div className="drawer-section">
+          <span>Location</span>
+          <strong>
+            <Icon name="pin"/>
+            {staff.status === "Meeting"
+              ? " Meeting Room"
+              : staff.status === "Break"
+                ? " Break Room"
+                : " Assigned desk"}
+          </strong>
+        </div>
+
+        <div className="drawer-section staff-danger-section">
+          <span>Employment</span>
+          <p>Remove this person from the active office and staff directory.</p>
+          <button
+            type="button"
+            className="danger-button"
+            disabled={firing}
+            onClick={() => { void handleFire(); }}
+          >
+            {firing ? "Firing…" : "Fire employee"}
+          </button>
+          {fireError && <small className="danger-error">{fireError}</small>}
+        </div>
+      </aside>
+    </div>
+  );
 }
 
 export default function Home() {
@@ -474,7 +619,51 @@ export default function Home() {
     }
   };
 
-  const addEmployee = async (newStaff: Omit<Staff, "id" | "x" | "y">) => {
+    const fireEmployee = async (person: Staff): Promise<{ ok: boolean; error?: string }> => {
+    const removeLocally = () => {
+      setStaff((current) => current.filter((item) => item.id !== person.id));
+      setSelected((current) => (current?.id === person.id ? null : current));
+    };
+
+    if (person.id <= 0 || person.id > 1000000000000) {
+      removeLocally();
+      return { ok: true };
+    }
+
+    try {
+      const response = await fetch("/api/staff", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: person.id }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        removeLocally();
+        setDbConfigured(Boolean(data.configured));
+        return { ok: true };
+      }
+
+      if (response.status === 503) {
+        removeLocally();
+        setDbConfigured(false);
+        return { ok: true };
+      }
+
+      return {
+        ok: false,
+        error: String(data.error ?? "The employee could not be removed."),
+      };
+    } catch {
+      return {
+        ok: false,
+        error: "Could not reach the staff service. Try again.",
+      };
+    }
+  };
+
+const addEmployee = async (newStaff: Omit<Staff, "id" | "x" | "y">) => {
     const addLocally = () => {
       setStaff((current) => {
         const id = Math.max(Date.now(), ...current.map((person) => person.id + 1));
@@ -554,7 +743,7 @@ export default function Home() {
   return <div className={`app-shell theme-${theme}`}>
     <Sidebar page={page} setPage={setPage} theme={theme} setTheme={setTheme} onAdd={() => setAdding(true)} />
     <main className="main"><Topbar page={page} onAdd={() => setAdding(true)} /><div className="clock-strip"><span><i className="live-dot" /> Live office simulation</span><strong>{clock}</strong><span>{dbConfigured ? "SQLite connected" : "Local prototype mode"}</span></div>{content}</main>
-    <StaffDrawer staff={selected} onClose={() => setSelected(null)} onSave={updateAssignment} />
+    <StaffDrawer staff={selected} onClose={() => setSelected(null)} onSave={updateAssignment} onFire={fireEmployee} />
     {adding && <StaffModal onClose={() => setAdding(false)} onSave={addEmployee} />}
   </div>;
 }
