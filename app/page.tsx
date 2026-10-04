@@ -407,7 +407,7 @@ export default function Home() {
             seatIndexes.get(person.id) ?? 0,
             person.role,
           );
-          const next = advanceActor(person, plan.targetRoom, 2.8, targetPoint);
+          const next = advanceActor(person, plan.targetRoom, 3.4, targetPoint);
           const arrived = next.location === plan.targetRoom && isAtTarget(next, targetPoint, 1.0);
           return {
             ...person,
@@ -418,7 +418,7 @@ export default function Home() {
           };
         });
       });
-    }, 450);
+    }, 250);
     return () => clearInterval(t);
   }, [running]);
 
