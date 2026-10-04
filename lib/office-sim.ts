@@ -50,31 +50,31 @@ export const officeNodes: Record<OfficeRoom, OfficeNode> = {
   "Design Studio": {
     room: "Design Studio",
     x: 22,
-    y: 40,
+    y: 45,
     neighbors: ["Manager Office", "Finance"],
   },
   Finance: {
     room: "Finance",
     x: 56,
-    y: 40,
+    y: 45,
     neighbors: ["Meeting Room", "Design Studio", "Open Office"],
   },
   Support: {
     room: "Support",
     x: 84,
-    y: 40,
+    y: 45,
     neighbors: ["Meeting Room", "Break Room", "Reception"],
   },
   "Break Room": {
     room: "Break Room",
     x: 84,
-    y: 74,
+    y: 73,
     neighbors: ["Support", "Open Office"],
   },
   "Open Office": {
     room: "Open Office",
     x: 77,
-    y: 40,
+    y: 45,
     neighbors: ["Finance", "Break Room", "Reception"],
   },
 };
