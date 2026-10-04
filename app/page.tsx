@@ -104,10 +104,10 @@ function normalizeStaffRecord(person: Staff): Staff {
 
 const seedStaff: Staff[] = [
   { id: 1, name: "Sarah Johnson", role: "Team Lead", department: "Management", status: "Meeting", task: "Weekly standup", x: 44, y: 25, color: "#f59e0b", location: "Meeting Room" },
-  { id: 2, name: "Mike Williams", role: "Product Designer", department: "Design", status: "Working", task: "Landing page", x: 18, y: 50, color: "#22c55e", location: "Design Studio" },
-  { id: 3, name: "Emma Davis", role: "Marketing", department: "Marketing", status: "Working", task: "Campaign review", x: 42, y: 45, color: "#a855f7", location: "Open Office" },
-  { id: 4, name: "James Brown", role: "Accountant", department: "Finance", status: "Away", task: "Payroll", x: 51, y: 55, color: "#ef4444", location: "Finance" },
-  { id: 5, name: "Lina Wilson", role: "Support Agent", department: "Support", status: "Working", task: "Customer inbox", x: 80, y: 20, color: "#06b6d4", location: "Support" },
+  { id: 2, name: "Mike Williams", role: "Product Designer", department: "Design", status: "Working", task: "Landing page", x: 18, y: 50, color: "#22c55e", location: "Office 1" },
+  { id: 3, name: "Emma Davis", role: "Marketing", department: "Marketing", status: "Working", task: "Campaign review", x: 42, y: 45, color: "#a855f7", location: "Office 1" },
+  { id: 4, name: "James Brown", role: "Accountant", department: "Finance", status: "Away", task: "Payroll", x: 51, y: 55, color: "#ef4444", location: "Office 2" },
+  { id: 5, name: "Lina Wilson", role: "Support Agent", department: "Support", status: "Working", task: "Customer inbox", x: 80, y: 20, color: "#06b6d4", location: "Office 4" },
   { id: 6, name: "David Miller", role: "Operations", department: "Operations", status: "Break", task: "Inventory check", x: 86.5, y: 82, color: "#3b82f6", location: "Break Room" },
 ];
 
