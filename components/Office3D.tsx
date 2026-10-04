@@ -489,12 +489,12 @@ function addMeetingAndBreakFurniture(scene: THREE.Scene) {
   const meetingCenter = worldFromPercent(50, 52);
 
   const table = roundedBox(
-    6.6,
-    0.28,
-    2.6,
+    6.35,
+    0.24,
+    2.3,
     new THREE.MeshStandardMaterial({ color: 0x9c6849, roughness: 0.66 }),
   );
-  table.position.set(meetingCenter.x, 1.04, meetingCenter.z);
+  table.position.set(meetingCenter.x, 0.98, meetingCenter.z);
   table.castShadow = true;
   scene.add(table);
 
@@ -549,18 +549,37 @@ function addMeetingAndBreakFurniture(scene: THREE.Scene) {
 function addReceptionFurniture(scene: THREE.Scene) {
   const p = worldFromPercent(50, 87);
   const wood = new THREE.MeshStandardMaterial({ color: 0xb6805b, roughness: 0.68 });
-  const desk = roundedBox(3.8, 0.65, 0.9, wood);
-  desk.position.set(p.x, 0.5, p.z);
+
+  // A compact reception desk keeps the entrance welcoming without dominating
+  // the open circulation area.
+  const rug = new THREE.Mesh(
+    new THREE.BoxGeometry(4.5, 0.018, 2.1),
+    new THREE.MeshStandardMaterial({ color: 0xcfd8d4, roughness: 0.94 }),
+  );
+  rug.position.set(p.x, 0.075, p.z + 0.1);
+  scene.add(rug);
+
+  const desk = roundedBox(2.75, 0.58, 0.72, wood);
+  desk.position.set(p.x, 0.47, p.z);
   scene.add(desk);
 
-  const screen = roundedBox(0.8, 0.45, 0.08, new THREE.MeshStandardMaterial({ color: 0x263740, roughness: 0.3 }));
-  screen.position.set(p.x, 1.24, p.z - 0.15);
+  const screen = roundedBox(
+    0.62,
+    0.36,
+    0.08,
+    new THREE.MeshStandardMaterial({ color: 0x263740, roughness: 0.3 }),
+  );
+  screen.position.set(p.x, 1.02, p.z - 0.12);
   scene.add(screen);
 
   const sign = labelSprite("RECEPTION  •  MAIN ENTRANCE");
-  sign.position.set(p.x, 1.95, p.z);
-  sign.scale.set(2.3, 0.42, 1);
+  sign.position.set(p.x, 1.72, p.z);
+  sign.scale.set(1.8, 0.34, 1);
   scene.add(sign);
+
+  // Small greenery defines the reception zone without closing off the lobby.
+  addPlant(scene, p.x - 2.45, p.z + 0.2, 0.72);
+  addPlant(scene, p.x + 2.45, p.z + 0.2, 0.72);
 }
 
 function addMeetingChair(
@@ -1239,13 +1258,13 @@ export default function Office3D({
 
         // Seated staff face the center of their actual activity table.
         if (!person.walking && person.status === "Meeting") {
-          const center = worldFromPercent(51, 19);
+          const center = worldFromPercent(50, 52);
           rig.group.rotation.y = Math.atan2(
             center.x - rig.group.position.x,
             center.z - rig.group.position.z,
           );
         } else if (!person.walking && person.status === "Break") {
-          const center = worldFromPercent(84.25, 84.5);
+          const center = worldFromPercent(84.5, 53.5);
           rig.group.rotation.y = Math.atan2(
             center.x - rig.group.position.x,
             center.z - rig.group.position.z,
