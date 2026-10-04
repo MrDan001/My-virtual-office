@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
-import { activitySpotForStaff, advanceActor, homeRoomForDepartment, isAtTarget, officeNodes, targetRoomForStaff, routineForStaff, type OfficeRoom } from "../lib/office-sim";
+import { activitySpotForStaff, advanceActor, homeRoomForDepartment, isAtTarget, targetRoomForStaff, routineForStaff, isLeadershipRole, type OfficeRoom } from "../lib/office-sim";
 
 type Page = "dashboard" | "office" | "staff" | "tasks" | "schedule" | "reports" | "settings";
 type StaffStatus = "Working" | "Meeting" | "Break" | "Away";
@@ -30,6 +30,44 @@ type Task = {
   status: "Pending" | "In Progress" | "Completed";
   dueLabel: string;
 };
+
+function seatIndexForRoom(staff: Staff[], room: OfficeRoom) {
+  return staff.filter((person) => {
+    const target = person.status === "Meeting"
+      ? "Meeting Room"
+      : person.status === "Break"
+        ? "Break Room"
+        : homeRoomForDepartment(person.department, person.role);
+    return target === room;
+  }).length;
+}
+
+function normalizeStaffRecord(person: Staff): Staff {
+  const role = String(person.role ?? "");
+  const department = String(person.department ?? "Operations");
+  const status: StaffStatus =
+    person.status === "Meeting" || person.status === "Break" || person.status === "Away"
+      ? person.status
+      : "Working";
+  const targetRoom = targetRoomForStaff(department, status, role);
+  const targetPoint = activitySpotForStaff(
+    department,
+    status === "Away" ? "Working" : status,
+    person.id,
+    0,
+    role,
+  );
+  return {
+    ...person,
+    role,
+    department,
+    status,
+    location: status === "Working" || !person.location ? targetRoom : person.location,
+    x: status === "Working" || !person.location ? targetPoint.x : person.x,
+    y: status === "Working" || !person.location ? targetPoint.y : person.y,
+    walking: false,
+  };
+}
 
 const seedStaff: Staff[] = [
   { id: 1, name: "Sarah Johnson", role: "Team Lead", department: "Management", status: "Meeting", task: "Weekly standup", x: 44, y: 25, color: "#f59e0b", location: "Meeting Room" },
@@ -149,7 +187,7 @@ function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom, lay
         const seated = !person.walking && person.status !== "Away";
         return <button
           key={person.id}
-          className={`staff-token status-${person.status.toLowerCase()} ${seated ? "is-sitting" : "is-walking"}`}
+          className={`staff-token face-${Math.abs(person.id) % 5} ${isLeadershipRole(person.role) ? "is-leader" : ""} status-${person.status.toLowerCase()} ${seated ? "is-sitting" : "is-walking"}`}
           style={{ left: `${person.x}%`, top: `${person.y}%`, "--staff-color": person.color } as CSSProperties}
           onClick={(event) => { event.stopPropagation(); onSelect(person); }}
           aria-label={`Open ${person.name}`}
@@ -158,7 +196,14 @@ function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom, lay
           <span className="staff-chair" />
           <span className="staff-legs"><i/><i/></span>
           <span className="staff-body"><i className="staff-arm arm-left"/><i className="staff-arm arm-right"/><i className="staff-badge"/></span>
-          <span className="staff-head"><i className="staff-hair"/><i className="staff-ear ear-left"/><i className="staff-ear ear-right"/><i className="staff-eye eye-left"/><i className="staff-eye eye-right"/><i className="staff-mouth"/></span>
+          <span className="staff-head">
+            <i className="staff-hair"/>
+            <i className="staff-ear ear-left"/><i className="staff-ear ear-right"/>
+            <i className="staff-brow brow-left"/><i className="staff-brow brow-right"/>
+            <i className="staff-eye eye-left"/><i className="staff-eye eye-right"/>
+            <i className="staff-mouth"/>
+          </span>
+          {isLeadershipRole(person.role) && <span className="staff-rank">LEAD</span>}
           <span className="staff-name">{person.name.split(" ")[0]}</span>
           <span className="staff-role">{person.role}</span>
           <span className="staff-state">{person.walking ? `Walking to ${person.location ?? "desk"}` : person.status === "Working" ? "At workstation" : person.status}</span>
@@ -329,8 +374,51 @@ function SimplePage({ page, staff }: { page: Exclude<Page, "dashboard" | "office
 }
 
 function StaffModal({ onClose, onSave }: { onClose: () => void; onSave: (s: Omit<Staff, "id" | "x" | "y">) => void | Promise<void> }) {
-  const [name, setName] = useState(""); const [role, setRole] = useState(""); const [department, setDepartment] = useState("Operations");
-  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-head"><div><h2>Add new employee</h2><p>Give a teammate a place in the virtual office.</p></div><button className="close-button" onClick={onClose}>×</button></div><div className="avatar-upload"><div className="upload-avatar">+</div><div><strong>Profile photo</strong><span>Optional for now</span></div></div><label>Full name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex Morgan" /></label><label>Role<input value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Sales Manager" /></label><label>Department<select value={department} onChange={(e) => setDepartment(e.target.value)}>{["Management","Design","Marketing","Finance","Support","Operations"].map((x) => <option key={x}>{x}</option>)}</select></label><div className="modal-actions"><button onClick={onClose} className="secondary">Cancel</button><button disabled={!name.trim() || !role.trim()} className="primary" onClick={() => { void onSave({ name: name.trim(), role: role.trim(), department, status: "Working", task: "Getting started", color: "#3b82f6" }); onClose(); }}>Add employee</button></div></div></div>;
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [department, setDepartment] = useState("Operations");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!name.trim() || !role.trim() || saving) return;
+    setSaving(true);
+    try {
+      await onSave({
+        name: name.trim(),
+        role: role.trim(),
+        department,
+        status: "Working",
+        task: "Getting started",
+        color: "#3b82f6",
+        location: homeRoomForDepartment(department, role.trim()),
+      });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return <div className="modal-backdrop" onMouseDown={onClose}>
+    <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="modal-head">
+        <div><h2>Add new employee</h2><p>Give a teammate a place in the virtual office.</p></div>
+        <button className="close-button" onClick={onClose}>×</button>
+      </div>
+      <div className="avatar-upload">
+        <div className="upload-avatar person-preview"><span className="preview-head"/><span className="preview-body"/></div>
+        <div><strong>3D employee</strong><span>They’ll be seated in their department automatically.</span></div>
+      </div>
+      <label>Full name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex Morgan" autoComplete="name" /></label>
+      <label>Role<input value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Sales Manager" /></label>
+      <label>Department<select value={department} onChange={(e) => setDepartment(e.target.value)}>
+        {["Management","Design","Marketing","Finance","Support","Operations"].map((x) => <option key={x}>{x}</option>)}
+      </select></label>
+      <div className="modal-actions">
+        <button onClick={onClose} className="secondary" disabled={saving}>Cancel</button>
+        <button disabled={!name.trim() || !role.trim() || saving} className="primary" onClick={() => { void handleSave(); }}>{saving ? "Adding…" : "Add employee"}</button>
+      </div>
+    </div>
+  </div>;
 }
 
 function StaffDrawer({ staff, onClose }: { staff: Staff | null; onClose: () => void }) {
@@ -357,13 +445,18 @@ export default function Home() {
       const savedLayout = localStorage.getItem("officehub:layout");
       if (savedLayout) setLayout({ ...DEFAULT_LAYOUT, ...(JSON.parse(savedLayout) as Record<OfficeRoom, RoomLayout>) });
       const saved = localStorage.getItem("officehub:staff");
-      if (saved) setStaff(JSON.parse(saved) as Staff[]);
+      if (saved) {
+        const restored = JSON.parse(saved) as Staff[];
+        setStaff(restored.map(normalizeStaffRecord));
+      }
     } catch {}
     void fetch("/api/staff").then(async (res) => {
       if (!res.ok) return;
       const data = await res.json();
       setDbConfigured(Boolean(data.configured));
-      if (Array.isArray(data.staff) && data.staff.length > 0) setStaff(data.staff as unknown as Staff[]);
+      if (Array.isArray(data.staff) && data.staff.length > 0) {
+        setStaff((data.staff as unknown as Staff[]).map(normalizeStaffRecord));
+      }
     }).catch(() => {}).finally(() => setHydrated(true));
   }, []);
   useEffect(() => { if (hydrated) localStorage.setItem("officehub:staff", JSON.stringify(staff)); }, [staff, hydrated]);
@@ -373,46 +466,95 @@ export default function Home() {
     if (!running) return;
     const t = setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
-      setStaff((current) => current.map((person) => {
-        if (person.status === "Away") return { ...person, walking: false };
+      setStaff((current) => {
+        const plans = current.map((person) => {
+          if (person.status === "Away") {
+            return { person, status: "Away" as const, targetRoom: (person.location ?? "Open Office") as OfficeRoom, task: person.task };
+          }
+          const routine = routineForStaff(person.department, person.id, now, person.role);
+          return {
+            person,
+            status: routine.status,
+            targetRoom: targetRoomForStaff(person.department, routine.status, person.role),
+            task: routine.task,
+          };
+        });
 
-        const routine = routineForStaff(person.department, person.id, now);
-        const targetRoom = targetRoomForStaff(person.department, routine.status);
-        const targetPoint = activitySpotForStaff(person.department, routine.status, person.id);
-        const next = advanceActor(person, targetRoom, 0.42, targetPoint);
-        const arrived = next.location === targetRoom && isAtTarget(next, targetPoint, 0.9);
+        const grouped = new Map<OfficeRoom, typeof plans>();
+        for (const plan of plans) {
+          const list = grouped.get(plan.targetRoom) ?? [];
+          list.push(plan);
+          grouped.set(plan.targetRoom, list);
+        }
 
-        return {
-          ...person,
-          status: routine.status as StaffStatus,
-          ...next,
-          walking: !arrived,
-          task: arrived ? routine.task : `Walking to ${targetRoom}`,
-        };
-      }));
+        const seatIndexes = new Map<number, number>();
+        for (const list of grouped.values()) {
+          list.sort((a, b) => a.person.id - b.person.id).forEach((plan, index) => seatIndexes.set(plan.person.id, index));
+        }
+
+        return current.map((person) => {
+          const plan = plans.find((item) => item.person.id === person.id);
+          if (!plan || plan.status === "Away") return { ...person, walking: false };
+          const targetPoint = activitySpotForStaff(
+            person.department,
+            plan.status,
+            person.id,
+            seatIndexes.get(person.id) ?? 0,
+            person.role,
+          );
+          const next = advanceActor(person, plan.targetRoom, 0.72, targetPoint);
+          const arrived = next.location === plan.targetRoom && isAtTarget(next, targetPoint, 1.0);
+          return {
+            ...person,
+            status: plan.status,
+            ...next,
+            walking: !arrived,
+            task: arrived ? plan.task : "Walking to " + plan.targetRoom,
+          };
+        });
+      });
     }, 700);
     return () => clearInterval(t);
   }, [running]);
 
   const addEmployee = async (newStaff: Omit<Staff, "id" | "x" | "y">) => {
+    const addLocally = () => {
+      setStaff((current) => {
+        const id = Math.max(Date.now(), ...current.map((person) => person.id + 1));
+        const room = homeRoomForDepartment(newStaff.department, newStaff.role);
+        const seatIndex = seatIndexForRoom(current, room);
+        const position = activitySpotForStaff(newStaff.department, "Working", id, seatIndex, newStaff.role);
+        return [...current, { ...newStaff, id, x: position.x, y: position.y, location: room, walking: false }];
+      });
+    };
+
     try {
-      const res = await fetch("/api/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newStaff) });
+      const res = await fetch("/api/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newStaff),
+      });
       if (res.ok) {
         const data = await res.json();
         setDbConfigured(Boolean(data.configured));
         if (data.staff) {
           const saved = data.staff as Staff;
-          const position = activitySpotForStaff(saved.department, "Working", saved.id);
-          setStaff((current) => [{ ...saved, x: position.x, y: position.y, location: homeRoomForDepartment(saved.department), walking: false }, ...current]);
+          const room = homeRoomForDepartment(saved.department, saved.role);
+          setStaff((current) => {
+            const seatIndex = seatIndexForRoom(current, room);
+            const position = activitySpotForStaff(saved.department, "Working", saved.id, seatIndex, saved.role);
+            return [{ ...saved, x: position.x, y: position.y, location: room, walking: false }, ...current];
+          });
           return;
         }
+      } else {
+        setDbConfigured(false);
       }
-    } catch {}
-    setStaff((current) => {
-      const id = Date.now();
-      const position = activitySpotForStaff(newStaff.department, "Working", id);
-      return [...current, { ...newStaff, id, x: position.x, y: position.y, location: homeRoomForDepartment(newStaff.department), walking: false }];
-    });
+    } catch {
+      setDbConfigured(false);
+    }
+
+    addLocally();
   };
 
   const content = useMemo(() => {
