@@ -381,8 +381,7 @@ export default function Home() {
         const routine = routineForStaff(person.department, person.id, now);
         const targetRoom = targetRoomForStaff(person.department, routine.status);
         const targetPoint = activitySpotForStaff(person.department, routine.status, person.id);
-        // Faster than the original prototype, but still eased by the CSS transition.
-        const next = advanceActor(person, targetRoom, 1.25, targetPoint);
+        const next = advanceActor(person, targetRoom, 0.42, targetPoint);
         const arrived = next.location === targetRoom && isAtTarget(next, targetPoint, 0.9);
         const dx = next.x - person.x;
         const dy = next.y - person.y;
@@ -399,7 +398,7 @@ export default function Home() {
           task: arrived ? routine.task : `Walking to ${targetRoom}`,
         };
       }));
-    }, 650);
+    }, 700);
     return () => clearInterval(t);
   }, [running]);
 
