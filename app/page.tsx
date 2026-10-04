@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { CSSProperties } from "react";
 import Office3D from "../components/Office3D";
 import { activitySpotForStaff, advanceActor, homeRoomForDepartment, isAtTarget, targetRoomForStaff, routineForStaff, isLeadershipRole, type OfficeRoom } from "../lib/office-sim";
 
@@ -79,27 +78,7 @@ const seedStaff: Staff[] = [
   { id: 6, name: "David Miller", role: "Operations", department: "Operations", status: "Break", task: "Inventory check", x: 86.5, y: 82, color: "#3b82f6", location: "Break Room" },
 ];
 
-const waypoints = [
-  { x: 19, y: 74, room: "Support" }, { x: 32, y: 37, room: "Design" },
-  { x: 53, y: 70, room: "Open Office" }, { x: 79, y: 69, room: "Finance" },
-  { x: 68, y: 34, room: "Meeting Room" }, { x: 60, y: 17, room: "Break Room" },
-  { x: 43, y: 17, room: "Corridor" }, { x: 83, y: 33, room: "Manager" },
-];
-
 const avatar = (name: string) => name.split(" ").map((part) => part[0]).join("").slice(0, 2);
-
-type RoomLayout = { x: number; y: number; w: number; h: number };
-
-const DEFAULT_LAYOUT: Record<OfficeRoom, RoomLayout> = {
-  Reception: { x: 35, y: 84, w: 8, h: 10 },
-  "Manager Office": { x: 3, y: 5, w: 27, h: 28 },
-  "Meeting Room": { x: 34, y: 5, w: 34, h: 28 },
-  "Design Studio": { x: 3, y: 38, w: 38, h: 59 },
-  Finance: { x: 45, y: 38, w: 23, h: 59 },
-  Support: { x: 72, y: 5, w: 25, h: 44 },
-  "Break Room": { x: 72, y: 53, w: 25, h: 44 },
-  "Open Office": { x: 35, y: 34, w: 34, h: 61 },
-};
 
 function Icon({ name }: { name: string }) {
   const icons: Record<string, string> = {
@@ -123,14 +102,18 @@ function StatCard({ label, value, note, icon, tone }: { label: string; value: st
   );
 }
 
-function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom, editing = false }: {
+function OfficeScene({
+  staff,
+  running,
+  onSelect,
+  onRoomSelect,
+  selectedRoom,
+}: {
   staff: Staff[];
   running: boolean;
   onSelect: (s: Staff) => void;
   onRoomSelect?: (room: OfficeRoom) => void;
   selectedRoom?: OfficeRoom | null;
-  layout?: Record<OfficeRoom, RoomLayout>;
-  editing?: boolean;
 }) {
   return (
     <Office3D
@@ -363,14 +346,10 @@ export default function Home() {
   const [clock, setClock] = useState("09:42 AM");
   const [dbConfigured, setDbConfigured] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const [layout, setLayout] = useState<Record<OfficeRoom, RoomLayout>>(DEFAULT_LAYOUT);
-  const [editingLayout, setEditingLayout] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<OfficeRoom | null>(null);
 
   useEffect(() => {
     try {
-      const savedLayout = localStorage.getItem("officehub:layout");
-      if (savedLayout) setLayout({ ...DEFAULT_LAYOUT, ...(JSON.parse(savedLayout) as Record<OfficeRoom, RoomLayout>) });
       const saved = localStorage.getItem("officehub:staff");
       if (saved) {
         const restored = JSON.parse(saved) as Staff[];
@@ -387,7 +366,6 @@ export default function Home() {
     }).catch(() => {}).finally(() => setHydrated(true));
   }, []);
   useEffect(() => { if (hydrated) localStorage.setItem("officehub:staff", JSON.stringify(staff)); }, [staff, hydrated]);
-  useEffect(() => { if (hydrated) localStorage.setItem("officehub:layout", JSON.stringify(layout)); }, [layout, hydrated]);
   useEffect(() => { const tick = () => setClock(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })); tick(); const t = setInterval(tick, 30000); return () => clearInterval(t); }, []);
   useEffect(() => {
     if (!running) return;
@@ -429,7 +407,7 @@ export default function Home() {
             seatIndexes.get(person.id) ?? 0,
             person.role,
           );
-          const next = advanceActor(person, plan.targetRoom, 0.72, targetPoint);
+          const next = advanceActor(person, plan.targetRoom, 2.8, targetPoint);
           const arrived = next.location === plan.targetRoom && isAtTarget(next, targetPoint, 1.0);
           return {
             ...person,
@@ -440,7 +418,7 @@ export default function Home() {
           };
         });
       });
-    }, 700);
+    }, 450);
     return () => clearInterval(t);
   }, [running]);
 
@@ -494,38 +472,29 @@ export default function Home() {
         <div className="section-toolbar">
           <div>
             <h2>Live office</h2>
-            <p>{editingLayout ? "Layout editor: select a room and reposition it with the controls." : running ? "Simulation running — staff follow role-based routines and connected room routes." : "Simulation paused."}</p>
+            <p>{running ? "Simulation running — staff work in their departments and travel through office entrances when needed." : "Simulation paused."}</p>
           </div>
           <div className="office-actions">
             {activeRoom && <span className="room-selected"><Icon name="pin"/> {activeRoom}</span>}
-            <button className={editingLayout ? "primary" : "secondary"} onClick={() => setEditingLayout((value) => !value)}>
-              {editingLayout ? "Finish layout" : "Edit layout"}
-            </button>
             <button className={running ? "secondary" : "primary"} onClick={() => setRunning(!running)}>
               <Icon name={running ? "pause" : "play"} /> {running ? "Pause simulation" : "Resume simulation"}
             </button>
           </div>
         </div>
-        <OfficeScene staff={staff} running={running} onSelect={setSelected} onRoomSelect={setSelectedRoom} selectedRoom={activeRoom} layout={layout} editing={editingLayout}/>
+        <OfficeScene staff={staff} running={running} onSelect={setSelected} onRoomSelect={setSelectedRoom} selectedRoom={activeRoom}/>
         {activeRoom && <div className="room-inspector">
           <div>
             <strong>{activeRoom}</strong>
-            <span>{staff.filter((s) => (s.location ?? homeRoomForDepartment(s.department)) === activeRoom).length} staff linked · {editingLayout ? "move the room with the controls" : "inspect room activity"}</span>
+            <span>{staff.filter((s) => (s.status === "Meeting" ? "Meeting Room" : s.status === "Break" ? "Break Room" : homeRoomForDepartment(s.department, s.role)) === activeRoom).length} staff currently assigned to this room</span>
           </div>
-          {editingLayout ? <div className="move-controls">
-            <button className="secondary" onClick={() => setLayout((current) => ({ ...current, [activeRoom]: { ...current[activeRoom], y: Math.max(0, current[activeRoom].y - 2) } }))}>↑</button>
-            <button className="secondary" onClick={() => setLayout((current) => ({ ...current, [activeRoom]: { ...current[activeRoom], x: Math.max(0, current[activeRoom].x - 2) } }))}>←</button>
-            <button className="secondary" onClick={() => setLayout((current) => ({ ...current, [activeRoom]: { ...current[activeRoom], x: Math.min(100 - current[activeRoom].w, current[activeRoom].x + 2) } }))}>→</button>
-            <button className="secondary" onClick={() => setLayout((current) => ({ ...current, [activeRoom]: { ...current[activeRoom], y: Math.min(100 - current[activeRoom].h, current[activeRoom].y + 2) } }))}>↓</button>
-            <button className="secondary" onClick={() => setLayout(DEFAULT_LAYOUT)}>Reset</button>
-          </div> : <button className="secondary" onClick={() => setSelectedRoom(null)}>Close</button>}
+          <button className="secondary" onClick={() => setSelectedRoom(null)}>Close</button>
         </div>}
       </section></div>;
     }
     if (page === "staff") return <StaffPage staff={staff} onSelect={setSelected} onAdd={() => setAdding(true)} />;
     if (page === "tasks") return <TasksPage staff={staff} />;
     return <SimplePage page={page} staff={staff} />;
-  }, [page, staff, running, selectedRoom, layout, editingLayout]);
+  }, [page, staff, running, selectedRoom]);
   return <div className={`app-shell theme-${theme}`}>
     <Sidebar page={page} setPage={setPage} theme={theme} setTheme={setTheme} onAdd={() => setAdding(true)} />
     <main className="main"><Topbar page={page} onAdd={() => setAdding(true)} /><div className="clock-strip"><span><i className="live-dot" /> Live office simulation</span><strong>{clock}</strong><span>{dbConfigured ? "SQLite connected" : "Local prototype mode"}</span></div>{content}</main>
