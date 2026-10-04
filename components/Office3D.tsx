@@ -372,42 +372,6 @@ function addLobbyAndWayfinding(scene: THREE.Scene) {
   scene.add(carpet);
 }
 
-function addBuildingPerimeter(scene: THREE.Scene) {
-  // Exterior shell only: a complete open-roof building envelope around the
-  // existing room layout. Interior furniture, rooms, doors and staff positions
-  // remain untouched. The main entrance stays open at the front.
-  const wallMat = new THREE.MeshStandardMaterial({
-    color: 0xc9c2b6,
-    roughness: 0.9,
-  });
-
-  const wallH = 2.85;
-  const wallT = 0.2;
-  const leftX = -11.05;
-  const rightX = 11.05;
-  const backZ = -9.25;
-  const frontZ = 9.18;
-
-  const addWall = (width: number, x: number, z: number) => {
-    const wall = roundedBox(width, wallH, wallT, wallMat);
-    wall.position.set(x, wallH / 2, z);
-    wall.castShadow = true;
-    wall.receiveShadow = true;
-    scene.add(wall);
-  };
-
-  addWall(frontZ - backZ, leftX, (backZ + frontZ) / 2);
-  addWall(frontZ - backZ, rightX, (backZ + frontZ) / 2);
-  addWall(rightX - leftX, (leftX + rightX) / 2, backZ);
-
-  const entrance = worldFromPercent(50, 96);
-  const entranceWidth = 2.7;
-  const leftEdge = entrance.x - entranceWidth / 2;
-  const rightEdge = entrance.x + entranceWidth / 2;
-  addWall(leftEdge - leftX, (leftX + leftEdge) / 2, frontZ);
-  addWall(rightX - rightEdge, (rightEdge + rightX) / 2, frontZ);
-}
-
 function addRoom(
   scene: THREE.Scene,
   room: RoomData,
@@ -1184,7 +1148,6 @@ export default function Office3D({
     }
 
     addLobbyAndWayfinding(scene);
-    addBuildingPerimeter(scene);
 
     addOfficeFurniture(scene);
     addMeetingAndBreakFurniture(scene);
