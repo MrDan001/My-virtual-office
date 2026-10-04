@@ -36,7 +36,7 @@ type RoomData = {
   w: number;
   h: number;
   color: number;
-  door: { x: number; y: number; side: "top" | "bottom" };
+  doors: { x: number; y: number; side: "top" | "bottom" }[];
 };
 
 type HumanRig = {
@@ -55,68 +55,21 @@ type HumanRig = {
 };
 
 const ROOM_DATA: RoomData[] = [
+  { name: "Office 1", x: 3, y: 4, w: 21, h: 28, color: 0xe6edf2, doors: [{ x: 13.5, y: 32, side: "bottom" }] },
+  { name: "Office 2", x: 27, y: 4, w: 21, h: 28, color: 0xeee6ef, doors: [{ x: 37.5, y: 32, side: "bottom" }] },
+  { name: "Office 3", x: 51, y: 4, w: 21, h: 28, color: 0xe7efe7, doors: [{ x: 61.5, y: 32, side: "bottom" }] },
+  { name: "Office 4", x: 75, y: 4, w: 22, h: 28, color: 0xe9e9f0, doors: [{ x: 86, y: 32, side: "bottom" }] },
   {
-    name: "Manager Office",
-    x: 4,
-    y: 4,
-    w: 25,
-    h: 29,
-    color: 0xe9dfcf,
-    door: { x: 16, y: 33, side: "bottom" },
+    name: "Manager Office", x: 3, y: 39, w: 25, h: 26, color: 0xeee4d7,
+    doors: [{ x: 15.5, y: 39, side: "top" }, { x: 15.5, y: 65, side: "bottom" }],
   },
   {
-    name: "Meeting Room",
-    x: 32,
-    y: 4,
-    w: 37,
-    h: 29,
-    color: 0xe2ecea,
-    door: { x: 51, y: 33, side: "bottom" },
+    name: "Meeting Room", x: 31, y: 39, w: 38, h: 26, color: 0xe3eeec,
+    doors: [{ x: 50, y: 39, side: "top" }, { x: 50, y: 65, side: "bottom" }],
   },
   {
-    name: "Support",
-    x: 72,
-    y: 4,
-    w: 25,
-    h: 41,
-    color: 0xdcebed,
-    door: { x: 84, y: 45, side: "bottom" },
-  },
-  {
-    name: "Design Studio",
-    x: 4,
-    y: 45,
-    w: 36,
-    h: 50,
-    color: 0xeee8f5,
-    door: { x: 22, y: 45, side: "top" },
-  },
-  {
-    name: "Finance",
-    x: 41,
-    y: 45,
-    w: 28,
-    h: 50,
-    color: 0xe8e6df,
-    door: { x: 56, y: 45, side: "top" },
-  },
-  {
-    name: "Open Office",
-    x: 70,
-    y: 45,
-    w: 27,
-    h: 28,
-    color: 0xe4ede3,
-    door: { x: 77, y: 45, side: "top" },
-  },
-  {
-    name: "Break Room",
-    x: 70,
-    y: 73,
-    w: 27,
-    h: 22,
-    color: 0xf1eadf,
-    door: { x: 84, y: 73, side: "top" },
+    name: "Break Room", x: 72, y: 39, w: 25, h: 26, color: 0xf0e8dc,
+    doors: [{ x: 84.5, y: 39, side: "top" }, { x: 84.5, y: 65, side: "bottom" }],
   },
 ];
 
@@ -329,20 +282,14 @@ function addDesk(
   scene.add(group);
 }
 
-function addDoor(scene: THREE.Scene, room: RoomData) {
+function addDoor(scene: THREE.Scene, room: RoomData, doorData: RoomData["doors"][number]) {
   const group = new THREE.Group();
   const hinge = new THREE.Group();
-  const width = Math.min(1.28, (room.w / 100) * 22 * 0.34);
+  const width = 0.9;
   const height = 2.08;
 
-  const frameMat = new THREE.MeshStandardMaterial({
-    color: 0x735d4b,
-    roughness: 0.56,
-  });
-  const panelMat = new THREE.MeshStandardMaterial({
-    color: 0x966f51,
-    roughness: 0.58,
-  });
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x735d4b, roughness: 0.56 });
+  const panelMat = new THREE.MeshStandardMaterial({ color: 0x966f51, roughness: 0.58 });
   const glassMat = new THREE.MeshStandardMaterial({
     color: 0xa9ccd5,
     transparent: true,
@@ -350,11 +297,7 @@ function addDoor(scene: THREE.Scene, room: RoomData) {
     roughness: 0.2,
     metalness: 0.12,
   });
-  const gold = new THREE.MeshStandardMaterial({
-    color: 0xd5b36d,
-    metalness: 0.8,
-    roughness: 0.18,
-  });
+  const gold = new THREE.MeshStandardMaterial({ color: 0xd5b36d, metalness: 0.8, roughness: 0.18 });
 
   const panel = roundedBox(width, height, 0.08, panelMat);
   panel.position.set(width / 2, height / 2, 0);
@@ -365,10 +308,7 @@ function addDoor(scene: THREE.Scene, room: RoomData) {
   glass.position.set(width / 2, height * 0.66, -0.05);
   hinge.add(glass);
 
-  const knob = new THREE.Mesh(
-    new THREE.SphereGeometry(0.055, 12, 10),
-    gold,
-  );
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 10), gold);
   knob.position.set(width * 0.82, height * 0.48, -0.09);
   hinge.add(knob);
 
@@ -376,19 +316,13 @@ function addDoor(scene: THREE.Scene, room: RoomData) {
   leftPost.position.set(-0.08, height / 2, 0);
   const rightPost = roundedBox(0.13, height + 0.18, 0.2, frameMat);
   rightPost.position.set(width + 0.08, height / 2, 0);
-  group.add(leftPost, rightPost);
-
   const lintel = roundedBox(width + 0.3, 0.13, 0.2, frameMat);
   lintel.position.set(width / 2, height + 0.08, 0);
-  group.add(lintel);
+  group.add(leftPost, rightPost, lintel);
 
-  const wp = worldFromPercent(room.door.x, room.door.y);
-  if (room.door.side === "bottom") {
-    group.position.set(wp.x - width / 2, 0, wp.z + 0.02);
-  } else {
-    group.position.set(wp.x - width / 2, 0, wp.z - 0.02);
-    hinge.rotation.y = Math.PI;
-  }
+  const wp = worldFromPercent(doorData.x, doorData.y);
+  group.position.set(wp.x - width / 2, 0, wp.z + (doorData.side === "bottom" ? 0.02 : -0.02));
+  if (doorData.side === "top") hinge.rotation.y = Math.PI;
 
   group.add(hinge);
   const wayfinding = labelSprite("ENTRY / EXIT", "#365267");
@@ -398,10 +332,9 @@ function addDoor(scene: THREE.Scene, room: RoomData) {
   group.userData.room = room.name;
   group.userData.hinge = hinge;
   group.userData.closed = hinge.rotation.y;
-  group.userData.open =
-    hinge.rotation.y +
-    (room.door.side === "bottom" ? -Math.PI * 0.5 : Math.PI * 0.5);
-
+  group.userData.open = hinge.rotation.y + (doorData.side === "bottom" ? -Math.PI * 0.5 : Math.PI * 0.5);
+  group.userData.doorX = doorData.x;
+  group.userData.doorY = doorData.y;
   scene.add(group);
   return group;
 }
@@ -442,95 +375,73 @@ function addLobbyAndWayfinding(scene: THREE.Scene) {
 function addRoom(
   scene: THREE.Scene,
   room: RoomData,
-  doors: Map<OfficeRoom, THREE.Group>,
+  doors: Map<OfficeRoom, THREE.Group[]>,
 ) {
   const topLeft = worldFromPercent(room.x, room.y);
-  const bottomRight = worldFromPercent(
-    room.x + room.w,
-    room.y + room.h,
-  );
-  const center = worldFromPercent(
-    room.x + room.w / 2,
-    room.y + room.h / 2,
-  );
-
+  const bottomRight = worldFromPercent(room.x + room.w, room.y + room.h);
+  const center = worldFromPercent(room.x + room.w / 2, room.y + room.h / 2);
   const roomW = bottomRight.x - topLeft.x;
   const roomD = bottomRight.z - topLeft.z;
 
   const floor = new THREE.Mesh(
     new THREE.BoxGeometry(roomW, 0.12, roomD),
-    new THREE.MeshStandardMaterial({
-      color: room.color,
-      roughness: 0.84,
-    }),
+    new THREE.MeshStandardMaterial({ color: room.color, roughness: 0.84 }),
   );
   floor.position.set(center.x, 0.06, center.z);
   floor.receiveShadow = true;
   floor.userData.room = room.name;
   scene.add(floor);
 
-  const wallMat = new THREE.MeshStandardMaterial({
-    color: 0xd0c5b7,
-    roughness: 0.88,
-  });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xd0c5b7, roughness: 0.88 });
   const wallH = 2.5;
   const wallT = 0.16;
 
-  const addWall = (
-    w: number,
-    h: number,
-    d: number,
-    x: number,
-    z: number,
-  ) => {
-    const wall = roundedBox(w, h, d, wallMat);
-    wall.position.set(x, h / 2, z);
+  const addWall = (w: number, x: number, z: number) => {
+    const wall = roundedBox(w, wallH, wallT, wallMat);
+    wall.position.set(x, wallH / 2, z);
     wall.castShadow = true;
     wall.receiveShadow = true;
     scene.add(wall);
   };
 
-  const leftX = topLeft.x;
-  const rightX = bottomRight.x;
-  const topZ = topLeft.z;
-  const bottomZ = bottomRight.z;
-  const doorPoint = worldFromPercent(room.door.x, room.door.y);
-  const doorW = Math.min(1.28, roomW * 0.3);
-  const gap = doorW + 0.04;
+  const addWallWithDoors = (side: "top" | "bottom") => {
+    const edgeZ = side === "top" ? topLeft.z : bottomRight.z;
+    const wallX = topLeft.x;
+    const sorted = room.doors
+      .filter((door) => door.side === side)
+      .map((door) => ({ ...door, px: worldFromPercent(door.x, door.y).x }))
+      .sort((a, b) => a.px - b.px);
 
-  if (room.door.side === "bottom") {
-    const leftWidth = Math.max(0.25, doorPoint.x - leftX - gap / 2);
-    const rightWidth = Math.max(0.25, rightX - doorPoint.x - gap / 2);
-    addWall(leftWidth, wallH, wallT, leftX + leftWidth / 2, bottomZ);
-    addWall(rightWidth, wallH, wallT, rightX - rightWidth / 2, bottomZ);
-    addWall(roomW, wallH, wallT, center.x, topZ);
+    if (!sorted.length) {
+      addWall(roomW, center.x, edgeZ);
+      return;
+    }
 
-    const threshold = new THREE.Mesh(
-      new THREE.BoxGeometry(doorW * 1.05, 0.035, 0.32),
-      new THREE.MeshStandardMaterial({ color: 0xb7a28a, roughness: 0.84 }),
-    );
-    threshold.position.set(doorPoint.x, 0.075, bottomZ + 0.12);
-    scene.add(threshold);
-  } else {
-    const leftWidth = Math.max(0.25, doorPoint.x - leftX - gap / 2);
-    const rightWidth = Math.max(0.25, rightX - doorPoint.x - gap / 2);
-    addWall(leftWidth, wallH, wallT, leftX + leftWidth / 2, topZ);
-    addWall(rightWidth, wallH, wallT, rightX - rightWidth / 2, topZ);
-    addWall(roomW, wallH, wallT, center.x, bottomZ);
+    const doorWidth = 0.95;
+    let cursor = wallX;
+    for (const door of sorted) {
+      const leftEdge = door.px - doorWidth / 2;
+      const segment = leftEdge - cursor;
+      if (segment > 0.08) addWall(segment, cursor + segment / 2, edgeZ);
+      cursor = door.px + doorWidth / 2;
 
-    const threshold = new THREE.Mesh(
-      new THREE.BoxGeometry(doorW * 1.05, 0.035, 0.32),
-      new THREE.MeshStandardMaterial({ color: 0xb7a28a, roughness: 0.84 }),
-    );
-    threshold.position.set(doorPoint.x, 0.075, topZ - 0.12);
-    scene.add(threshold);
-  }
+      const threshold = new THREE.Mesh(
+        new THREE.BoxGeometry(doorWidth * 1.08, 0.035, 0.34),
+        new THREE.MeshStandardMaterial({ color: 0xb7a28a, roughness: 0.84 }),
+      );
+      threshold.position.set(door.px, 0.075, edgeZ + (side === "top" ? -0.12 : 0.12));
+      scene.add(threshold);
+    }
+    const finalSegment = bottomRight.x - cursor;
+    if (finalSegment > 0.08) addWall(finalSegment, cursor + finalSegment / 2, edgeZ);
+  };
 
-  addWall(wallT, wallH, roomD, leftX, center.z);
-  addWall(wallT, wallH, roomD, rightX, center.z);
+  addWallWithDoors("top");
+  addWallWithDoors("bottom");
+  addWall(wallT, topLeft.x, center.z);
+  addWall(wallT, bottomRight.x, center.z);
 
-  const windowZ =
-    room.door.side === "bottom" ? topZ + 0.08 : bottomZ - 0.08;
+  const windowZ = topLeft.z + 0.08;
   const window = roundedBox(
     Math.min(roomW * 0.46, 2.4),
     0.72,
@@ -547,84 +458,70 @@ function addRoom(
   scene.add(window);
 
   const tag = labelSprite(room.name);
-  tag.position.set(center.x, 2.78, room.door.side === "bottom" ? topZ + 0.65 : bottomZ - 0.65);
+  tag.position.set(center.x, 2.78, center.z);
   scene.add(tag);
 
   const light = new THREE.PointLight(0xfff2d1, 0.4, 8);
   light.position.set(center.x, 2.25, center.z);
   scene.add(light);
 
-  doors.set(room.name, addDoor(scene, room));
+  const roomDoors = room.doors.map((door) => addDoor(scene, room, door));
+  doors.set(room.name, roomDoors);
 }
 
 function addOfficeFurniture(scene: THREE.Scene) {
-  const placeDesks = (room: OfficeRoom) => {
+  const colors: Record<string, number> = {
+    "Office 1": 0x596f7d,
+    "Office 2": 0x71836f,
+    "Office 3": 0x5f6f88,
+    "Office 4": 0x7c687f,
+    "Manager Office": 0x8a684f,
+  };
+  (["Office 1", "Office 2", "Office 3", "Office 4", "Manager Office"] as OfficeRoom[]).forEach((room) => {
     for (const point of deskSpots[room]) {
       const p = worldFromPercent(point.x, point.y);
       addDesk(scene, p.x, p.z, 0);
     }
-  };
-
-  placeDesks("Manager Office");
-  placeDesks("Design Studio");
-  placeDesks("Finance");
-  placeDesks("Support");
-  placeDesks("Open Office");
-  // Break Room is intentionally not a workstation room.
+  });
 }
 
 function addMeetingAndBreakFurniture(scene: THREE.Scene) {
-  const meetingCenter = worldFromPercent(51, 19);
+  const meetingCenter = worldFromPercent(50, 52);
 
   const table = roundedBox(
-    5.1,
+    6.6,
     0.28,
-    2.25,
-    new THREE.MeshStandardMaterial({
-      color: 0x9c6849,
-      roughness: 0.66,
-    }),
+    2.6,
+    new THREE.MeshStandardMaterial({ color: 0x9c6849, roughness: 0.66 }),
   );
   table.position.set(meetingCenter.x, 1.04, meetingCenter.z);
   table.castShadow = true;
   scene.add(table);
 
-  // Six physical meeting chairs for six staff. These coordinates are exactly
-  // the same coordinates returned by activitySpotForStaff("Meeting").
   for (const seat of deskSpots["Meeting Room"]) {
     const p = worldFromPercent(seat.x, seat.y);
-    const facing = Math.atan2(
-      meetingCenter.x - p.x,
-      meetingCenter.z - p.z,
-    );
+    const facing = Math.atan2(meetingCenter.x - p.x, meetingCenter.z - p.z);
     addMeetingChair(scene, p.x, p.z, facing);
   }
 
   const board = roundedBox(
-    2.8,
+    3.6,
     1.25,
     0.08,
-    new THREE.MeshStandardMaterial({
-      color: 0xf9fafb,
-      roughness: 0.44,
-    }),
+    new THREE.MeshStandardMaterial({ color: 0xf9fafb, roughness: 0.44 }),
   );
-  const boardPoint = worldFromPercent(63, 8);
-  board.position.set(boardPoint.x, 1.62, boardPoint.z);
+  const boardPoint = worldFromPercent(50, 42);
+  board.position.set(boardPoint.x, 1.72, boardPoint.z);
   scene.add(board);
-
-  const boardText = labelSprite("TEAM PLAN", "#687f93");
-  boardText.position.set(boardPoint.x, 1.66, boardPoint.z - 0.05);
-  boardText.scale.set(1.28, 0.34, 1);
+  const boardText = labelSprite("EXECUTIVE MEETING  •  DECISIONS / ACTIONS");
+  boardText.position.set(boardPoint.x, 2.45, boardPoint.z + 0.02);
+  boardText.scale.set(2.3, 0.4, 1);
   scene.add(boardText);
 
-  const breakCenter = worldFromPercent(84.25, 84.5);
+  const breakCenter = worldFromPercent(84.5, 53.5);
   const roundTable = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.15, 1.15, 0.18, 32),
-    new THREE.MeshStandardMaterial({
-      color: 0x9b7556,
-      roughness: 0.72,
-    }),
+    new THREE.CylinderGeometry(1.1, 1.1, 0.18, 32),
+    new THREE.MeshStandardMaterial({ color: 0x9b7556, roughness: 0.72 }),
   );
   roundTable.position.set(breakCenter.x, 1.0, breakCenter.z);
   roundTable.castShadow = true;
@@ -632,25 +529,38 @@ function addMeetingAndBreakFurniture(scene: THREE.Scene) {
 
   for (const seat of deskSpots["Break Room"]) {
     const p = worldFromPercent(seat.x, seat.y);
-    const facing = Math.atan2(
-      breakCenter.x - p.x,
-      breakCenter.z - p.z,
-    );
+    const facing = Math.atan2(breakCenter.x - p.x, breakCenter.z - p.z);
     addMeetingChair(scene, p.x, p.z, facing);
   }
 
   const counter = roundedBox(
-    2.6,
+    4.4,
     0.75,
     0.52,
-    new THREE.MeshStandardMaterial({
-      color: 0xc4b5a2,
-      roughness: 0.82,
-    }),
+    new THREE.MeshStandardMaterial({ color: 0xc4b5a2, roughness: 0.82 }),
   );
-  const counterPoint = worldFromPercent(74, 81);
+  const counterPoint = worldFromPercent(84.5, 45);
   counter.position.set(counterPoint.x, 0.54, counterPoint.z);
   scene.add(counter);
+
+  addReceptionFurniture(scene);
+}
+
+function addReceptionFurniture(scene: THREE.Scene) {
+  const p = worldFromPercent(50, 87);
+  const wood = new THREE.MeshStandardMaterial({ color: 0xb6805b, roughness: 0.68 });
+  const desk = roundedBox(3.8, 0.65, 0.9, wood);
+  desk.position.set(p.x, 0.5, p.z);
+  scene.add(desk);
+
+  const screen = roundedBox(0.8, 0.45, 0.08, new THREE.MeshStandardMaterial({ color: 0x263740, roughness: 0.3 }));
+  screen.position.set(p.x, 1.24, p.z - 0.15);
+  scene.add(screen);
+
+  const sign = labelSprite("RECEPTION  •  MAIN ENTRANCE");
+  sign.position.set(p.x, 1.95, p.z);
+  sign.scale.set(2.3, 0.42, 1);
+  scene.add(sign);
 }
 
 function addMeetingChair(
@@ -1199,7 +1109,7 @@ export default function Office3D({
         roughness: 0.94,
       }),
     );
-    corridor.position.set(0, 0.03, -1.82);
+    corridor.position.set(0, 0.03, -2.0);
     corridor.receiveShadow = true;
     scene.add(corridor);
 
@@ -1210,10 +1120,10 @@ export default function Office3D({
         roughness: 0.94,
       }),
     );
-    corridorLine.position.set(0, 0.062, -1.20);
+    corridorLine.position.set(0, 0.062, -1.55);
     scene.add(corridorLine);
 
-    const doors = new Map<OfficeRoom, THREE.Group>();
+    const doors = new Map<OfficeRoom, THREE.Group[]>();
     for (const room of ROOM_DATA) {
       addRoom(scene, room, doors);
     }
@@ -1345,27 +1255,24 @@ export default function Office3D({
         }
 
         // Open only the doorway that a nearby worker is approaching.
-        for (const [room, door] of doors) {
-          const data = ROOM_DATA.find((item) => item.name === room);
-          if (!data) continue;
+        for (const [room, roomDoors] of doors) {
+      const data = ROOM_DATA.find((item) => item.name === room);
+      if (!data) continue;
 
-          const d = Math.hypot(
-            person.x - data.door.x,
-            person.y - data.door.y,
-          );
-          const shouldOpen =
-            d < 5 ||
-            selectedRoomRef.current === room;
+      for (const door of roomDoors) {
+        const dx = person.x - Number(door.userData.doorX);
+        const dy = person.y - Number(door.userData.doorY);
+        const nearby = Math.hypot(dx, dy) < 6;
+        const shouldOpen = nearby || selectedRoomRef.current === room;
 
-          const hinge = door.userData.hinge as THREE.Group;
-          const closed = Number(door.userData.closed);
-          const opened = Number(door.userData.open);
-          const targetRotation = shouldOpen ? opened : closed;
+        const hinge = door.userData.hinge as THREE.Group;
+        const closed = Number(door.userData.closed);
+        const opened = Number(door.userData.open);
+        const targetRotation = shouldOpen ? opened : closed;
 
-          hinge.rotation.y +=
-            (targetRotation - hinge.rotation.y) *
-            Math.min(1, delta * 9);
-        }
+        hinge.rotation.y += (targetRotation - hinge.rotation.y) * Math.min(1, delta * 10);
+      }
+    }
 
         applyPose(rig, person, time);
       }
