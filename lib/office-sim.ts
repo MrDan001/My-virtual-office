@@ -20,6 +20,11 @@ export type RoutineState = {
   task: string;
 };
 
+export type OfficeSeat = {
+  x: number;
+  y: number;
+};
+
 const leadershipPattern =
   /\b(owner|founder|ceo|cto|cfo|coo|director|manager|head|lead|chief|vp|president)\b/i;
 
@@ -27,7 +32,7 @@ export function isLeadershipRole(role = "") {
   return leadershipPattern.test(role);
 }
 
-// Each coordinate is a real entrance/exit point in the rebuilt 3D floor plan.
+// These are actual door thresholds in the rebuilt floor plan.
 export const officeNodes: Record<OfficeRoom, OfficeNode> = {
   Reception: {
     room: "Reception",
@@ -38,13 +43,13 @@ export const officeNodes: Record<OfficeRoom, OfficeNode> = {
   "Manager Office": {
     room: "Manager Office",
     x: 16,
-    y: 34,
+    y: 33,
     neighbors: ["Meeting Room", "Design Studio"],
   },
   "Meeting Room": {
     room: "Meeting Room",
     x: 51,
-    y: 34,
+    y: 33,
     neighbors: ["Manager Office", "Support", "Finance"],
   },
   "Design Studio": {
@@ -79,53 +84,9 @@ export const officeNodes: Record<OfficeRoom, OfficeNode> = {
   },
 };
 
-export function findPath(
-  start: OfficeRoom,
-  goal: OfficeRoom,
-): OfficeRoom[] {
-  if (start === goal) return [start];
-
-  const queue: OfficeRoom[][] = [[start]];
-  const seen = new Set<OfficeRoom>([start]);
-
-  while (queue.length) {
-    const path = queue.shift()!;
-    const current = path[path.length - 1];
-
-    for (const next of officeNodes[current].neighbors) {
-      if (seen.has(next)) continue;
-      const candidate = [...path, next];
-      if (next === goal) return candidate;
-      seen.add(next);
-      queue.push(candidate);
-    }
-  }
-
-  return [start, goal];
-}
-
-export function homeRoomForDepartment(
-  department: string,
-  role = "",
-): OfficeRoom {
-  if (department === "Management" || isLeadershipRole(role)) {
-    return "Manager Office";
-  }
-
-  const map: Record<string, OfficeRoom> = {
-    Design: "Design Studio",
-    Finance: "Finance",
-    Support: "Support",
-    Operations: "Open Office",
-    Marketing: "Open Office",
-  };
-
-  return map[department] ?? "Open Office";
-}
-
-// Coordinates are the FRONT EDGE OF A DESK where the worker's chair belongs.
-// The 3D renderer uses these exact points to place one chair + one worker per desk.
-export const deskSpots: Record<OfficeRoom, { x: number; y: number }[]> = {
+// Every workstation has one exact chair centre. Break/meeting seats are separate
+// so nobody is accidentally sent to a work desk while on a break.
+export const deskSpots: Record<OfficeRoom, OfficeSeat[]> = {
   Reception: [{ x: 50, y: 89 }],
   "Manager Office": [
     { x: 10, y: 22 },
@@ -158,18 +119,20 @@ export const deskSpots: Record<OfficeRoom, { x: number; y: number }[]> = {
     { x: 89, y: 32 },
   ],
   "Break Room": [
-    { x: 77, y: 83 },
-    { x: 89, y: 83 },
-    { x: 77, y: 91 },
-    { x: 89, y: 91 },
+    { x: 77, y: 84.5 },
+    { x: 91.5, y: 84.5 },
+    { x: 84.25, y: 76.5 },
+    { x: 84.25, y: 92.5 },
   ],
   "Open Office": [
-    { x: 73, y: 55 },
-    { x: 84, y: 55 },
+    { x: 73, y: 57 },
+    { x: 84, y: 57 },
     { x: 73, y: 66 },
     { x: 84, y: 66 },
   ],
 };
+
+export const breakSpots = deskSpots["Break Room"];
 
 export function deskSpotForStaff(
   department: string,
@@ -196,13 +159,32 @@ export function targetRoomForStaff(
   return homeRoomForDepartment(department, role);
 }
 
+export function homeRoomForDepartment(
+  department: string,
+  role = "",
+): OfficeRoom {
+  if (department === "Management" || isLeadershipRole(role)) {
+    return "Manager Office";
+  }
+
+  const map: Record<string, OfficeRoom> = {
+    Design: "Design Studio",
+    Finance: "Finance",
+    Support: "Support",
+    Operations: "Open Office",
+    Marketing: "Open Office",
+  };
+
+  return map[department] ?? "Open Office";
+}
+
 export function routineForStaff(
   department: string,
   id: number,
   unixSeconds: number,
   role = "",
 ): RoutineState {
-  // Long, stable work blocks. Staff should feel like they belong to their offices.
+  // Work is the dominant state. Meetings/breaks are short, deliberate trips.
   const cycleLength = 900;
   const phase = (unixSeconds + id * 83) % cycleLength;
 
@@ -251,6 +233,107 @@ export function routineForStaff(
   };
 }
 
+// Navigation is a floor-plan graph, not a room-to-room straight line.
+// Every transition goes current doorway -> circulation point(s) -> next doorway.
+type NavPoint = {
+  id: string;
+  x: number;
+  y: number;
+  neighbors: string[];
+};
+
+const navPoints: NavPoint[] = [
+  { id: "managerDoor", x: 16, y: 33, neighbors: ["managerHall"] },
+  { id: "managerHall", x: 16, y: 40, neighbors: ["managerDoor", "designHall"] },
+  { id: "designDoor", x: 22, y: 45, neighbors: ["designHall"] },
+  { id: "designHall", x: 22, y: 40, neighbors: ["managerHall", "financeHall", "designDoor"] },
+  { id: "meetingDoor", x: 51, y: 33, neighbors: ["meetingHall"] },
+  { id: "meetingHall", x: 51, y: 40, neighbors: ["designHall", "financeHall", "meetingDoor", "supportHall"] },
+  { id: "financeDoor", x: 56, y: 45, neighbors: ["financeHall"] },
+  { id: "financeHall", x: 56, y: 40, neighbors: ["meetingHall", "openHall", "financeDoor"] },
+  { id: "openDoor", x: 77, y: 45, neighbors: ["openHall"] },
+  { id: "openHall", x: 77, y: 40, neighbors: ["financeHall", "supportHall", "openDoor", "breakHall"] },
+  { id: "supportDoor", x: 84, y: 45, neighbors: ["supportHall"] },
+  { id: "supportHall", x: 84, y: 40, neighbors: ["meetingHall", "openHall", "supportDoor", "breakHall"] },
+  { id: "breakDoor", x: 84, y: 73, neighbors: ["breakHall"] },
+  { id: "breakHall", x: 84, y: 63, neighbors: ["openHall", "supportHall", "breakDoor"] },
+];
+
+const roomDoorPoint: Record<OfficeRoom, OfficeSeat> = {
+  Reception: { x: 50, y: 93 },
+  "Manager Office": { x: 16, y: 33 },
+  "Meeting Room": { x: 51, y: 33 },
+  "Design Studio": { x: 22, y: 45 },
+  Finance: { x: 56, y: 45 },
+  Support: { x: 84, y: 45 },
+  "Break Room": { x: 84, y: 73 },
+  "Open Office": { x: 77, y: 45 },
+};
+
+function navPoint(id: string) {
+  return navPoints.find((point) => point.id === id)!;
+}
+
+const roomNavId: Record<OfficeRoom, string> = {
+  Reception: "openHall",
+  "Manager Office": "managerDoor",
+  "Meeting Room": "meetingDoor",
+  "Design Studio": "designDoor",
+  Finance: "financeDoor",
+  Support: "supportDoor",
+  "Break Room": "breakDoor",
+  "Open Office": "openDoor",
+};
+
+function navPath(fromRoom: OfficeRoom, toRoom: OfficeRoom) {
+  const startId = roomNavId[fromRoom];
+  const goalId = roomNavId[toRoom];
+  if (startId === goalId) return [navPoint(startId)];
+
+  const queue: string[][] = [[startId]];
+  const seen = new Set([startId]);
+
+  while (queue.length) {
+    const path = queue.shift()!;
+    const currentId = path[path.length - 1];
+    const current = navPoint(currentId);
+
+    for (const nextId of current.neighbors) {
+      if (seen.has(nextId)) continue;
+      const nextPath = [...path, nextId];
+      if (nextId === goalId) {
+        return nextPath.map(navPoint);
+      }
+      seen.add(nextId);
+      queue.push(nextPath);
+    }
+  }
+
+  return [navPoint(startId), navPoint(goalId)];
+}
+
+export function findPath(start: OfficeRoom, goal: OfficeRoom): OfficeRoom[] {
+  if (start === goal) return [start];
+
+  const queue: OfficeRoom[][] = [[start]];
+  const seen = new Set<OfficeRoom>([start]);
+
+  while (queue.length) {
+    const path = queue.shift()!;
+    const current = path[path.length - 1];
+
+    for (const next of officeNodes[current].neighbors) {
+      if (seen.has(next)) continue;
+      const candidate = [...path, next];
+      if (next === goal) return candidate;
+      seen.add(next);
+      queue.push(candidate);
+    }
+  }
+
+  return [start, goal];
+}
+
 export function advanceActor(
   person: {
     x: number;
@@ -258,36 +341,90 @@ export function advanceActor(
     location?: OfficeRoom;
   },
   goal: OfficeRoom,
-  speed = 3.8,
-  finalPoint?: { x: number; y: number },
+  speed = 4,
+  finalPoint?: OfficeSeat,
 ) {
   const start =
     person.location && officeNodes[person.location]
       ? person.location
       : "Open Office";
 
-  const path = findPath(start, goal);
-  const nextRoom = path[1] ?? goal;
-  const roomTarget = officeNodes[nextRoom];
-  const target =
-    nextRoom === goal && finalPoint ? finalPoint : roomTarget;
+  // Same room: walk directly to the actual chair/activity point.
+  if (start === goal && finalPoint) {
+    const dx = finalPoint.x - person.x;
+    const dy = finalPoint.y - person.y;
+    const distance = Math.hypot(dx, dy);
 
-  const dx = target.x - person.x;
-  const dy = target.y - person.y;
-  const distance = Math.hypot(dx, dy);
+    if (distance <= speed) {
+      return {
+        x: finalPoint.x,
+        y: finalPoint.y,
+        location: goal,
+      };
+    }
 
-  if (distance <= speed) {
     return {
-      x: target.x,
-      y: target.y,
-      location: nextRoom,
+      x: person.x + (dx / distance) * speed,
+      y: person.y + (dy / distance) * speed,
+      location: start,
+    };
+  }
+
+  if (start !== goal) {
+    const currentDoor = roomDoorPoint[start];
+
+    // First leave the room. This prevents the old straight-line wall crossing.
+    const toCurrentDoor = Math.hypot(
+      currentDoor.x - person.x,
+      currentDoor.y - person.y,
+    );
+
+    if (toCurrentDoor > 0.7) {
+      const dx = currentDoor.x - person.x;
+      const dy = currentDoor.y - person.y;
+      const distance = Math.hypot(dx, dy);
+      return {
+        x: person.x + (dx / distance) * Math.min(speed, distance),
+        y: person.y + (dy / distance) * Math.min(speed, distance),
+        location: start,
+      };
+    }
+
+    const rooms = findPath(start, goal);
+    const nextRoom = rooms[1] ?? goal;
+    const route = navPath(start, nextRoom);
+    const nextPoint =
+      route
+        .slice(1)
+        .sort(
+          (a, b) =>
+            Math.hypot(a.x - person.x, a.y - person.y) -
+            Math.hypot(b.x - person.x, b.y - person.y),
+        )[0] ?? navPoint(roomNavId[nextRoom]);
+
+    const dx = nextPoint.x - person.x;
+    const dy = nextPoint.y - person.y;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance <= speed) {
+      return {
+        x: nextPoint.x,
+        y: nextPoint.y,
+        location: nextRoom,
+      };
+    }
+
+    return {
+      x: person.x + (dx / distance) * speed,
+      y: person.y + (dy / distance) * speed,
+      location: start,
     };
   }
 
   return {
-    x: person.x + (dx / distance) * speed,
-    y: person.y + (dy / distance) * speed,
-    location: start,
+    x: person.x,
+    y: person.y,
+    location: goal,
   };
 }
 
@@ -302,17 +439,14 @@ export function activitySpotForStaff(
     return deskSpotForStaff(department, id, role, seatIndex);
   }
 
-  const seats =
-    status === "Meeting"
-      ? deskSpots["Meeting Room"]
-      : deskSpots["Break Room"];
-
+  const room = status === "Meeting" ? "Meeting Room" : "Break Room";
+  const seats = deskSpots[room];
   return seats[Math.max(0, seatIndex) % seats.length];
 }
 
 export function isAtTarget(
   person: { x: number; y: number },
-  target: { x: number; y: number },
+  target: OfficeSeat,
   tolerance = 0.55,
 ) {
   return Math.hypot(person.x - target.x, person.y - target.y) <= tolerance;
