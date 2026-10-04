@@ -469,6 +469,50 @@ function addRoom(
   doors.set(room.name, roomDoors);
 }
 
+
+function addVerticalRoomDividers(scene: THREE.Scene) {
+  // Close the visible gaps between adjacent rooms with the same style as the
+  // existing room walls. These are true vertical divider walls only; no roof,
+  // exterior enclosure, furniture, desks, doors, or room positions are changed.
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: 0xd0c5b7,
+    roughness: 0.88,
+  });
+  const wallH = 2.5;
+  const wallT = 0.16;
+  const rows = new Map<string, RoomData[]>();
+
+  for (const room of ROOM_DATA) {
+    const key = `${room.y}-${room.y + room.h}`;
+    const row = rows.get(key) ?? [];
+    row.push(room);
+    rows.set(key, row);
+  }
+
+  for (const row of rows.values()) {
+    row.sort((a, b) => a.x - b.x);
+    for (let i = 0; i < row.length - 1; i += 1) {
+      const left = row[i];
+      const right = row[i + 1];
+      const gapStart = worldFromPercent(left.x + left.w, left.y).x;
+      const gapEnd = worldFromPercent(right.x, right.y).x;
+      const gap = gapEnd - gapStart;
+
+      if (gap <= 0.03) continue;
+
+      const center = (gapStart + gapEnd) / 2;
+      const roomTop = worldFromPercent(left.x, left.y).z;
+      const roomBottom = worldFromPercent(left.x, left.y + left.h).z;
+
+      const wall = roundedBox(gap, wallH, wallT, wallMat);
+      wall.position.set(center, wallH / 2, (roomTop + roomBottom) / 2);
+      wall.castShadow = true;
+      wall.receiveShadow = true;
+      scene.add(wall);
+    }
+  }
+}
+
 function addOfficeFurniture(scene: THREE.Scene) {
   const colors: Record<string, number> = {
     "Office 1": 0x596f7d,
@@ -1148,6 +1192,7 @@ export default function Office3D({
     }
 
     addLobbyAndWayfinding(scene);
+    addVerticalRoomDividers(scene);
 
     addOfficeFurniture(scene);
     addMeetingAndBreakFurniture(scene);
