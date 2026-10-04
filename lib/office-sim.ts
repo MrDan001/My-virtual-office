@@ -27,61 +27,82 @@ export function isLeadershipRole(role = "") {
   return leadershipPattern.test(role);
 }
 
+// Each coordinate is a real entrance/exit point in the rebuilt 3D floor plan.
 export const officeNodes: Record<OfficeRoom, OfficeNode> = {
-  Reception: { room: "Reception", x: 50, y: 93, neighbors: ["Open Office", "Support"] },
-  "Manager Office": { room: "Manager Office", x: 16.5, y: 33, neighbors: ["Open Office", "Meeting Room"] },
-  "Meeting Room": { room: "Meeting Room", x: 51, y: 33, neighbors: ["Manager Office", "Open Office", "Support"] },
-  "Design Studio": { room: "Design Studio", x: 22, y: 45.5, neighbors: ["Open Office", "Support"] },
-  Finance: { room: "Finance", x: 56.5, y: 45.5, neighbors: ["Open Office", "Meeting Room", "Break Room"] },
-  Support: { room: "Support", x: 84.5, y: 40.5, neighbors: ["Reception", "Meeting Room", "Design Studio", "Break Room"] },
-  "Break Room": { room: "Break Room", x: 84.5, y: 53, neighbors: ["Support", "Finance", "Open Office"] },
-  "Open Office": { room: "Open Office", x: 52, y: 53, neighbors: ["Reception", "Manager Office", "Meeting Room", "Design Studio", "Finance", "Break Room"] },
+  Reception: {
+    room: "Reception",
+    x: 50,
+    y: 93,
+    neighbors: ["Open Office", "Support"],
+  },
+  "Manager Office": {
+    room: "Manager Office",
+    x: 16,
+    y: 34,
+    neighbors: ["Meeting Room", "Design Studio"],
+  },
+  "Meeting Room": {
+    room: "Meeting Room",
+    x: 51,
+    y: 34,
+    neighbors: ["Manager Office", "Support", "Finance"],
+  },
+  "Design Studio": {
+    room: "Design Studio",
+    x: 22,
+    y: 40,
+    neighbors: ["Manager Office", "Finance"],
+  },
+  Finance: {
+    room: "Finance",
+    x: 56,
+    y: 40,
+    neighbors: ["Meeting Room", "Design Studio", "Open Office"],
+  },
+  Support: {
+    room: "Support",
+    x: 84,
+    y: 40,
+    neighbors: ["Meeting Room", "Break Room", "Reception"],
+  },
+  "Break Room": {
+    room: "Break Room",
+    x: 84,
+    y: 74,
+    neighbors: ["Support", "Open Office"],
+  },
+  "Open Office": {
+    room: "Open Office",
+    x: 77,
+    y: 40,
+    neighbors: ["Finance", "Break Room", "Reception"],
+  },
 };
 
-export const deskSpots: Record<OfficeRoom, { x: number; y: number }[]> = {
-  Reception: [{ x: 50, y: 88 }],
-  "Manager Office": [{ x: 17, y: 24 }, { x: 24, y: 24 }],
-  "Meeting Room": [
-    { x: 44, y: 23 },
-    { x: 48.5, y: 23 },
-    { x: 53, y: 23 },
-    { x: 57.5, y: 23 },
-    { x: 44, y: 30 },
-    { x: 57.5, y: 30 },
-  ],
-  "Design Studio": [
-    { x: 13, y: 62 },
-    { x: 28, y: 62 },
-    { x: 13, y: 82 },
-    { x: 28, y: 82 },
-  ],
-  Finance: [
-    { x: 49, y: 62 },
-    { x: 63, y: 62 },
-    { x: 49, y: 82 },
-    { x: 63, y: 82 },
-  ],
-  Support: [
-    { x: 82, y: 17 },
-    { x: 89, y: 17 },
-    { x: 82, y: 36 },
-    { x: 89, y: 36 },
-  ],
-  "Break Room": [
-    { x: 79, y: 72 },
-    { x: 87, y: 72 },
-    { x: 79, y: 85 },
-    { x: 87, y: 85 },
-  ],
-  "Open Office": [
-    { x: 40, y: 64 },
-    { x: 49, y: 64 },
-    { x: 40, y: 82 },
-    { x: 49, y: 82 },
-    { x: 58, y: 64 },
-    { x: 58, y: 82 },
-  ],
-};
+export function findPath(
+  start: OfficeRoom,
+  goal: OfficeRoom,
+): OfficeRoom[] {
+  if (start === goal) return [start];
+
+  const queue: OfficeRoom[][] = [[start]];
+  const seen = new Set<OfficeRoom>([start]);
+
+  while (queue.length) {
+    const path = queue.shift()!;
+    const current = path[path.length - 1];
+
+    for (const next of officeNodes[current].neighbors) {
+      if (seen.has(next)) continue;
+      const candidate = [...path, next];
+      if (next === goal) return candidate;
+      seen.add(next);
+      queue.push(candidate);
+    }
+  }
+
+  return [start, goal];
+}
 
 export function homeRoomForDepartment(
   department: string,
@@ -102,6 +123,54 @@ export function homeRoomForDepartment(
   return map[department] ?? "Open Office";
 }
 
+// Coordinates are the FRONT EDGE OF A DESK where the worker's chair belongs.
+// The 3D renderer uses these exact points to place one chair + one worker per desk.
+export const deskSpots: Record<OfficeRoom, { x: number; y: number }[]> = {
+  Reception: [{ x: 50, y: 89 }],
+  "Manager Office": [
+    { x: 10, y: 22 },
+    { x: 22, y: 22 },
+  ],
+  "Meeting Room": [
+    { x: 40, y: 22 },
+    { x: 46, y: 22 },
+    { x: 52, y: 22 },
+    { x: 58, y: 22 },
+    { x: 64, y: 22 },
+    { x: 40, y: 28 },
+  ],
+  "Design Studio": [
+    { x: 10, y: 58 },
+    { x: 25, y: 58 },
+    { x: 10, y: 79 },
+    { x: 25, y: 79 },
+  ],
+  Finance: [
+    { x: 48, y: 58 },
+    { x: 60, y: 58 },
+    { x: 48, y: 79 },
+    { x: 60, y: 79 },
+  ],
+  Support: [
+    { x: 77, y: 18 },
+    { x: 89, y: 18 },
+    { x: 77, y: 32 },
+    { x: 89, y: 32 },
+  ],
+  "Break Room": [
+    { x: 77, y: 83 },
+    { x: 89, y: 83 },
+    { x: 77, y: 91 },
+    { x: 89, y: 91 },
+  ],
+  "Open Office": [
+    { x: 73, y: 55 },
+    { x: 84, y: 55 },
+    { x: 73, y: 66 },
+    { x: 84, y: 66 },
+  ],
+};
+
 export function deskSpotForStaff(
   department: string,
   id: number,
@@ -110,7 +179,10 @@ export function deskSpotForStaff(
 ) {
   const room = homeRoomForDepartment(department, role);
   const spots = deskSpots[room];
-  const safeIndex = Math.max(0, Number.isFinite(seatIndex) ? seatIndex : 0);
+  const safeIndex = Math.max(
+    0,
+    Number.isFinite(seatIndex) ? seatIndex : 0,
+  );
   return spots[safeIndex % spots.length] ?? spots[0];
 }
 
@@ -130,14 +202,14 @@ export function routineForStaff(
   unixSeconds: number,
   role = "",
 ): RoutineState {
-  // Long work blocks keep staff in their own office most of the time.
-  const cycleLength = 600;
-  const phase = (unixSeconds + id * 73) % cycleLength;
+  // Long, stable work blocks. Staff should feel like they belong to their offices.
+  const cycleLength = 900;
+  const phase = (unixSeconds + id * 83) % cycleLength;
 
   if (
     (department === "Management" || isLeadershipRole(role)) &&
     phase >= 180 &&
-    phase < 220
+    phase < 235
   ) {
     return { status: "Meeting", task: "Leadership sync" };
   }
@@ -149,13 +221,18 @@ export function routineForStaff(
     "Marketing",
     "Support",
   ];
-  const meetingSlot = meetingDepartments[Math.floor(phase / 55) % meetingDepartments.length];
+  const departmentSlot =
+    meetingDepartments[Math.floor(phase / 60) % meetingDepartments.length];
 
-  if (phase >= 240 && phase < 300 && meetingSlot === department) {
+  if (
+    phase >= 300 &&
+    phase < 375 &&
+    departmentSlot === department
+  ) {
     return { status: "Meeting", task: "Department sync" };
   }
 
-  if (phase >= 515 && phase < 570) {
+  if (phase >= 700 && phase < 760) {
     return { status: "Break", task: "Taking a short break" };
   }
 
@@ -174,31 +251,6 @@ export function routineForStaff(
   };
 }
 
-export function findPath(
-  start: OfficeRoom,
-  goal: OfficeRoom,
-): OfficeRoom[] {
-  if (start === goal) return [start];
-
-  const queue: OfficeRoom[][] = [[start]];
-  const seen = new Set<OfficeRoom>([start]);
-
-  while (queue.length) {
-    const currentPath = queue.shift()!;
-    const current = currentPath[currentPath.length - 1];
-
-    for (const nextRoom of officeNodes[current].neighbors) {
-      if (seen.has(nextRoom)) continue;
-      const nextPath = [...currentPath, nextRoom];
-      if (nextRoom === goal) return nextPath;
-      seen.add(nextRoom);
-      queue.push(nextPath);
-    }
-  }
-
-  return [start, goal];
-}
-
 export function advanceActor(
   person: {
     x: number;
@@ -206,7 +258,7 @@ export function advanceActor(
     location?: OfficeRoom;
   },
   goal: OfficeRoom,
-  speed = 2.25,
+  speed = 3.8,
   finalPoint?: { x: number; y: number },
 ) {
   const start =
@@ -228,7 +280,7 @@ export function advanceActor(
     return {
       x: target.x,
       y: target.y,
-      location: nextRoom as OfficeRoom,
+      location: nextRoom,
     };
   }
 
@@ -261,7 +313,7 @@ export function activitySpotForStaff(
 export function isAtTarget(
   person: { x: number; y: number },
   target: { x: number; y: number },
-  tolerance = 0.7,
+  tolerance = 0.55,
 ) {
   return Math.hypot(person.x - target.x, person.y - target.y) <= tolerance;
 }
