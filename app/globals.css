@@ -10,7 +10,9 @@
   overflow: hidden;
   isolation: isolate;
   border-radius: 18px;
-  background: #d9e0d7;}
+  background: #d9e0d7;
+  perspective: 1100px;
+  transform-style: preserve-3d;}
 
 .scene-floor {
   position: absolute;
@@ -503,11 +505,16 @@
 }
 
 
+.staff-token.is-sitting .staff-head,
+.staff-token.is-idle .staff-head{
+  animation:none !important;
+}
+
 /* Human motion pass — front-facing biped walk, real seated poses, expressive faces */
 .staff-token{
   transition:
-    left .62s cubic-bezier(.22,.78,.27,1),
-    top .62s cubic-bezier(.22,.78,.27,1),
+    left .78s cubic-bezier(.22,.78,.27,1),
+    top .78s cubic-bezier(.22,.78,.27,1),
     transform .18s ease;
 }
 
