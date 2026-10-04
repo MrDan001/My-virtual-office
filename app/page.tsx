@@ -346,7 +346,7 @@ export default function Home() {
             <strong>{activeRoom}</strong>
             <span>{staff.filter((s) => (s.location ?? homeRoomForDepartment(s.department)) === activeRoom).length} staff linked · inspect room activity</span>
           </div>
-          <button className="secondary" onClick={() => setSelectedRoom(null)}>Close</button>}
+          <button className="secondary" onClick={() => setSelectedRoom(null)}>Close</button>
         </div>}
       </section></div>;
     }
