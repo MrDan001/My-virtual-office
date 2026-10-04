@@ -589,11 +589,15 @@ function addMeetingAndBreakFurniture(scene: THREE.Scene) {
   table.castShadow = true;
   scene.add(table);
 
-  for (const x of [39.5, 45, 51, 57, 63]) {
-    const pTop = worldFromPercent(x, 28);
-    const pBottom = worldFromPercent(x, 10);
-    addMeetingChair(scene, pTop.x, pTop.z, Math.PI);
-    addMeetingChair(scene, pBottom.x, pBottom.z, 0);
+  // Six physical meeting chairs for six staff. These coordinates are exactly
+  // the same coordinates returned by activitySpotForStaff("Meeting").
+  for (const seat of deskSpots["Meeting Room"]) {
+    const p = worldFromPercent(seat.x, seat.y);
+    const facing = Math.atan2(
+      meetingCenter.x - p.x,
+      meetingCenter.z - p.z,
+    );
+    addMeetingChair(scene, p.x, p.z, facing);
   }
 
   const board = roundedBox(
@@ -605,14 +609,16 @@ function addMeetingAndBreakFurniture(scene: THREE.Scene) {
       roughness: 0.44,
     }),
   );
-  board.position.set(
-    worldFromPercent(63, 8).x,
-    1.62,
-    worldFromPercent(63, 8).z,
-  );
+  const boardPoint = worldFromPercent(63, 8);
+  board.position.set(boardPoint.x, 1.62, boardPoint.z);
   scene.add(board);
 
-  const breakPoint = worldFromPercent(84.25, 84.5);
+  const boardText = labelSprite("TEAM PLAN", "#687f93");
+  boardText.position.set(boardPoint.x, 1.66, boardPoint.z - 0.05);
+  boardText.scale.set(1.28, 0.34, 1);
+  scene.add(boardText);
+
+  const breakCenter = worldFromPercent(84.25, 84.5);
   const roundTable = new THREE.Mesh(
     new THREE.CylinderGeometry(1.15, 1.15, 0.18, 32),
     new THREE.MeshStandardMaterial({
@@ -620,16 +626,17 @@ function addMeetingAndBreakFurniture(scene: THREE.Scene) {
       roughness: 0.72,
     }),
   );
-  roundTable.position.set(breakPoint.x, 1.0, breakPoint.z);
+  roundTable.position.set(breakCenter.x, 1.0, breakCenter.z);
+  roundTable.castShadow = true;
   scene.add(roundTable);
 
-  for (const point of deskSpots["Break Room"]) {
-    const chairPoint = worldFromPercent(point.x, point.y);
-    const rotation = Math.atan2(
-      breakPoint.x - chairPoint.x,
-      breakPoint.z - chairPoint.z,
+  for (const seat of deskSpots["Break Room"]) {
+    const p = worldFromPercent(seat.x, seat.y);
+    const facing = Math.atan2(
+      breakCenter.x - p.x,
+      breakCenter.z - p.z,
     );
-    addMeetingChair(scene, chairPoint.x, chairPoint.z, rotation);
+    addMeetingChair(scene, p.x, p.z, facing);
   }
 
   const counter = roundedBox(
@@ -987,9 +994,11 @@ function applyPose(
   time: number,
 ) {
   const walking = Boolean(person.walking);
-  const working = person.status === "Working" && !walking;
-  const meeting = person.status === "Meeting" && !walking;
-  const breaking = person.status === "Break" && !walking;
+  const seated =
+    !walking &&
+    (person.status === "Working" ||
+      person.status === "Meeting" ||
+      person.status === "Break");
 
   rig.torso.rotation.x = 0;
   rig.torso.rotation.z = 0;
@@ -1002,15 +1011,13 @@ function applyPose(
 
     rig.group.position.y =
       0.02 + Math.abs(Math.sin(phase)) * 0.018;
-
-    rig.torso.position.y = 1.36;
-    rig.head.position.y = 2.2;
+    rig.torso.position.set(0, 1.36, 0);
+    rig.head.position.set(0, 2.2, 0);
 
     rig.leftArm.rotation.z = -0.06 - stride * 0.48;
     rig.rightArm.rotation.z = 0.06 + stride * 0.48;
     rig.leftArm.rotation.x = 0.04;
     rig.rightArm.rotation.x = -0.04;
-
     rig.leftForearm.rotation.x = -0.08;
     rig.rightForearm.rotation.x = -0.08;
 
@@ -1024,102 +1031,68 @@ function applyPose(
     return;
   }
 
-  // Stable seated work pose: the root never bobs and the worker faces +Z,
-  // where the desk is placed.
-  if (working) {
+  if (seated) {
+    // One stable seating rig for all chair types. The character's pelvis is
+    // lower than the chair back, thighs point toward the table/desk, and
+    // shins return to the floor. No vertical bobbing.
     rig.group.position.y = 0;
-    // Workstations are built facing +Z, so the worker's chest, knees and face
-    // are all aligned toward the monitor while the chair remains behind them.
-    rig.group.rotation.y = 0;
     rig.torso.position.set(0, 1.21, 0.02);
-    rig.torso.rotation.x = 0.04;
-    rig.head.position.set(0, 2.0, 0.1);
-    rig.head.rotation.x = 0.035;
-
-    rig.leftUpperLeg.rotation.x = -Math.PI / 2;
-    rig.rightUpperLeg.rotation.x = -Math.PI / 2;
-    rig.leftUpperLeg.position.set(-0.17, 0.82, 0);
-    rig.rightUpperLeg.position.set(0.17, 0.82, 0);
-
-    // Upper legs extend toward the desk. Lower legs bend back down to the floor.
-    rig.leftLowerLeg.position.set(0, -0.02, 0.27);
-    rig.rightLowerLeg.position.set(0, -0.02, 0.27);
-    rig.leftLowerLeg.rotation.x = Math.PI / 2;
-    rig.rightLowerLeg.rotation.x = Math.PI / 2;
-
-    rig.leftArm.rotation.x = -0.48;
-    rig.rightArm.rotation.x = -0.48;
-    rig.leftArm.rotation.z = -0.08;
-    rig.rightArm.rotation.z = 0.08;
-    rig.leftForearm.rotation.x = -0.78;
-    rig.rightForearm.rotation.x = -0.78;
-
-    const typeMotion = Math.sin(time * 4.5 + person.id) * 0.025;
-    rig.hands[0].position.set(-0.23, 1.16, 0.43 + typeMotion);
-    rig.hands[1].position.set(0.23, 1.16, 0.43 - typeMotion);
-    return;
-  }
-
-  rig.group.position.y = 0;
-  rig.torso.position.set(0, 1.36, 0);
-  rig.head.position.set(0, 2.2, 0);
-
-  rig.leftUpperLeg.position.set(-0.17, 0.9, 0);
-  rig.rightUpperLeg.position.set(0.17, 0.9, 0);
-  rig.leftUpperLeg.rotation.x = 0;
-  rig.rightUpperLeg.rotation.x = 0;
-  rig.leftLowerLeg.position.set(0, -0.58, 0);
-  rig.rightLowerLeg.position.set(0, -0.58, 0);
-  rig.leftLowerLeg.rotation.x = 0;
-  rig.rightLowerLeg.rotation.x = 0;
-
-  if (meeting) {
-    const meetingCenter = worldFromPercent(51, 19);
-    rig.group.rotation.y = Math.atan2(
-      meetingCenter.x - rig.group.position.x,
-      meetingCenter.z - rig.group.position.z,
-    );
-    rig.leftArm.rotation.z = -0.18;
-    rig.rightArm.rotation.z = 0.18;
-    rig.leftForearm.rotation.x = 0.18;
-    rig.rightForearm.rotation.x = 0.18;
-    rig.hands[0].position.set(-0.3, 0.96, 0.03);
-    rig.hands[1].position.set(0.3, 0.96, 0.03);
-  } else if (breaking) {
-    const breakCenter = worldFromPercent(84.25, 84.5);
-    rig.group.rotation.y = Math.atan2(
-      breakCenter.x - rig.group.position.x,
-      breakCenter.z - rig.group.position.z,
-    );
-
-    // Break is a real seated state: hips on the chair, thighs toward the table,
-    // shins down, back against the chair, and hands at table height.
-    rig.torso.position.set(0, 1.21, 0.02);
-    rig.torso.rotation.x = 0.025;
     rig.head.position.set(0, 2.0, 0.08);
-    rig.head.rotation.x = 0.02;
 
-    rig.leftUpperLeg.rotation.x = -Math.PI / 2;
-    rig.rightUpperLeg.rotation.x = -Math.PI / 2;
     rig.leftUpperLeg.position.set(-0.17, 0.82, 0);
     rig.rightUpperLeg.position.set(0.17, 0.82, 0);
+    rig.leftUpperLeg.rotation.x = -Math.PI / 2;
+    rig.rightUpperLeg.rotation.x = -Math.PI / 2;
 
     rig.leftLowerLeg.position.set(0, -0.02, 0.27);
     rig.rightLowerLeg.position.set(0, -0.02, 0.27);
     rig.leftLowerLeg.rotation.x = Math.PI / 2;
     rig.rightLowerLeg.rotation.x = Math.PI / 2;
 
-    rig.leftArm.rotation.x = -0.35;
-    rig.rightArm.rotation.x = -0.35;
+    if (person.status === "Working") {
+      rig.torso.rotation.x = 0.045;
+      rig.head.rotation.x = 0.035;
+      rig.leftArm.rotation.x = -0.48;
+      rig.rightArm.rotation.x = -0.48;
+      rig.leftArm.rotation.z = -0.08;
+      rig.rightArm.rotation.z = 0.08;
+      rig.leftForearm.rotation.x = -0.78;
+      rig.rightForearm.rotation.x = -0.78;
+
+      const typing = Math.sin(time * 4.5 + person.id) * 0.022;
+      rig.hands[0].position.set(-0.23, 1.16, 0.43 + typing);
+      rig.hands[1].position.set(0.23, 1.16, 0.43 - typing);
+      return;
+    }
+
+    rig.torso.rotation.x = 0.02;
+    rig.head.rotation.x = 0.015;
+    rig.leftArm.rotation.x = -0.34;
+    rig.rightArm.rotation.x = -0.34;
     rig.leftArm.rotation.z = -0.08;
     rig.rightArm.rotation.z = 0.08;
-    rig.leftForearm.rotation.x = 0.75;
-    rig.rightForearm.rotation.x = 0.75;
-    rig.hands[0].position.set(-0.24, 1.09, 0.42);
-    rig.hands[1].position.set(0.24, 1.09, 0.42);
+    rig.leftForearm.rotation.x = 0.72;
+    rig.rightForearm.rotation.x = 0.72;
+    rig.hands[0].position.set(-0.25, 1.08, 0.43);
+    rig.hands[1].position.set(0.25, 1.08, 0.43);
   } else {
+    rig.group.position.y = 0;
+    rig.torso.position.set(0, 1.36, 0);
+    rig.head.position.set(0, 2.2, 0);
+    rig.leftUpperLeg.position.set(-0.17, 0.9, 0);
+    rig.rightUpperLeg.position.set(0.17, 0.9, 0);
+    rig.leftUpperLeg.rotation.x = 0;
+    rig.rightUpperLeg.rotation.x = 0;
+    rig.leftLowerLeg.position.set(0, -0.58, 0);
+    rig.rightLowerLeg.position.set(0, -0.58, 0);
+    rig.leftLowerLeg.rotation.x = 0;
+    rig.rightLowerLeg.rotation.x = 0;
     rig.leftArm.rotation.z = -0.05;
     rig.rightArm.rotation.z = 0.05;
+    rig.leftArm.rotation.x = 0;
+    rig.rightArm.rotation.x = 0;
+    rig.leftForearm.rotation.x = 0;
+    rig.rightForearm.rotation.x = 0;
     rig.hands[0].position.set(-0.43, 0.79, 0);
     rig.hands[1].position.set(0.43, 0.79, 0);
   }
@@ -1352,6 +1325,23 @@ export default function Office3D({
             rig.group.rotation.y +=
               angle * Math.min(1, delta * 12);
           }
+        }
+
+        // Seated staff face the center of their actual activity table.
+        if (!person.walking && person.status === "Meeting") {
+          const center = worldFromPercent(51, 19);
+          rig.group.rotation.y = Math.atan2(
+            center.x - rig.group.position.x,
+            center.z - rig.group.position.z,
+          );
+        } else if (!person.walking && person.status === "Break") {
+          const center = worldFromPercent(84.25, 84.5);
+          rig.group.rotation.y = Math.atan2(
+            center.x - rig.group.position.x,
+            center.z - rig.group.position.z,
+          );
+        } else if (!person.walking && person.status === "Working") {
+          rig.group.rotation.y = 0;
         }
 
         // Open only the doorway that a nearby worker is approaching.
