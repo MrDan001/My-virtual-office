@@ -956,21 +956,24 @@ function applyPose(
   // where the desk is placed.
   if (working) {
     rig.group.position.y = 0;
+    // Workstations are built facing +Z, so the worker's chest, knees and face
+    // are all aligned toward the monitor while the chair remains behind them.
     rig.group.rotation.y = 0;
-    rig.torso.position.set(0, 1.27, 0.02);
-    rig.torso.rotation.x = 0.05;
-    rig.head.position.set(0, 2.06, 0.1);
+    rig.torso.position.set(0, 1.21, 0.02);
+    rig.torso.rotation.x = 0.04;
+    rig.head.position.set(0, 2.0, 0.1);
     rig.head.rotation.x = 0.035;
 
     rig.leftUpperLeg.rotation.x = -Math.PI / 2;
     rig.rightUpperLeg.rotation.x = -Math.PI / 2;
-    rig.leftUpperLeg.position.set(-0.17, 0.84, 0);
-    rig.rightUpperLeg.position.set(0.17, 0.84, 0);
+    rig.leftUpperLeg.position.set(-0.17, 0.82, 0);
+    rig.rightUpperLeg.position.set(0.17, 0.82, 0);
 
+    // Upper legs extend toward the desk. Lower legs bend back down to the floor.
     rig.leftLowerLeg.position.set(0, -0.02, 0.27);
     rig.rightLowerLeg.position.set(0, -0.02, 0.27);
-    rig.leftLowerLeg.rotation.x = 0;
-    rig.rightLowerLeg.rotation.x = 0;
+    rig.leftLowerLeg.rotation.x = Math.PI / 2;
+    rig.rightLowerLeg.rotation.x = Math.PI / 2;
 
     rig.leftArm.rotation.x = -0.48;
     rig.rightArm.rotation.x = -0.48;
@@ -1016,10 +1019,32 @@ function applyPose(
       breakCenter.x - rig.group.position.x,
       breakCenter.z - rig.group.position.z,
     );
+
+    // Break is a real seated state: hips on the chair, thighs toward the table,
+    // shins down, back against the chair, and hands at table height.
+    rig.torso.position.set(0, 1.21, 0.02);
+    rig.torso.rotation.x = 0.025;
+    rig.head.position.set(0, 2.0, 0.08);
+    rig.head.rotation.x = 0.02;
+
+    rig.leftUpperLeg.rotation.x = -Math.PI / 2;
+    rig.rightUpperLeg.rotation.x = -Math.PI / 2;
+    rig.leftUpperLeg.position.set(-0.17, 0.82, 0);
+    rig.rightUpperLeg.position.set(0.17, 0.82, 0);
+
+    rig.leftLowerLeg.position.set(0, -0.02, 0.27);
+    rig.rightLowerLeg.position.set(0, -0.02, 0.27);
+    rig.leftLowerLeg.rotation.x = Math.PI / 2;
+    rig.rightLowerLeg.rotation.x = Math.PI / 2;
+
+    rig.leftArm.rotation.x = -0.35;
+    rig.rightArm.rotation.x = -0.35;
     rig.leftArm.rotation.z = -0.08;
     rig.rightArm.rotation.z = 0.08;
-    rig.hands[0].position.set(-0.31, 0.86, 0);
-    rig.hands[1].position.set(0.31, 0.86, 0);
+    rig.leftForearm.rotation.x = 0.75;
+    rig.rightForearm.rotation.x = 0.75;
+    rig.hands[0].position.set(-0.24, 1.09, 0.42);
+    rig.hands[1].position.set(0.24, 1.09, 0.42);
   } else {
     rig.leftArm.rotation.z = -0.05;
     rig.rightArm.rotation.z = 0.05;
