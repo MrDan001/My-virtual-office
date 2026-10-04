@@ -357,14 +357,13 @@ function buildRoom(
     metalness: 0.02,
   });
 
-  const floor = roundedBox(room.w, 0.12, room.d, mat);
-  floor.position.set(room.x, 0.06, room.z);
-  floor.userData.room = room.name;
-  floor.receiveShadow = true;
-  scene.add(floor);
-
-  // Open Office is intentionally a shared, open-plan zone.
+  // Open Office is intentionally a shared, open-plan zone; its furniture sits on the common base.
   if (room.name !== "Open Office") {
+    const floor = roundedBox(room.w, 0.12, room.d, mat);
+    floor.position.set(room.x, 0.06, room.z);
+    floor.userData.room = room.name;
+    floor.receiveShadow = true;
+    scene.add(floor);
     const wallMat = new THREE.MeshStandardMaterial({
       color: 0xd5c7b4,
       roughness: 0.85,
@@ -416,7 +415,7 @@ function buildRoom(
     scene.add(light);
   } else {
     const rug = new THREE.Mesh(
-      new THREE.BoxGeometry(room.w * 0.92, 0.03, room.d * 0.88),
+      new THREE.BoxGeometry(room.w * 0.92, 0.035, room.d * 0.88),
       new THREE.MeshStandardMaterial({
         color: 0xcad6c7,
         roughness: 1,
@@ -424,7 +423,7 @@ function buildRoom(
         opacity: 0.72,
       }),
     );
-    rug.position.set(room.x, 0.13, room.z);
+    rug.position.set(room.x, 0.11, room.z);
     scene.add(rug);
   }
 
@@ -440,34 +439,39 @@ function buildRoom(
 }
 
 function addManagerOffice(scene: THREE.Scene) {
-  addDesk(scene, -8.1, -5.2, 0, "Manager");
-  addDesk(scene, -6.45, -5.2, 0, "Manager");
+  // Chair positions match the app's staff targets at 17/34 and 24/34.
+  addDesk(scene, -7.26, -4.02, 0, "Manager");
+  addDesk(scene, -5.72, -4.02, 0, "Manager");
 }
 
 function addDepartmentDesks(scene: THREE.Scene) {
-  // Design Studio
-  addDesk(scene, -8.1, 0.6, 0, "Design");
-  addDesk(scene, -5.0, 0.6, 0, "Design");
-  addDesk(scene, -8.1, 5.0, Math.PI, "Design");
-  addDesk(scene, -5.0, 5.0, Math.PI, "Design");
+  // Design Studio — targets: (13,68), (28,68), (13,86), (28,86)
+  addDesk(scene, -8.14, 2.44, 0, "Design");
+  addDesk(scene, -4.84, 2.44, 0, "Design");
+  addDesk(scene, -8.14, 7.82, Math.PI, "Design");
+  addDesk(scene, -4.84, 7.82, Math.PI, "Design");
 
-  // Finance
-  addDesk(scene, 0.1, 0.6, 0, "Finance");
-  addDesk(scene, 2.5, 0.6, 0, "Finance");
-  addDesk(scene, 0.1, 5.0, Math.PI, "Finance");
-  addDesk(scene, 2.5, 5.0, Math.PI, "Finance");
+  // Finance — targets: (49,67), (63,67), (49,87), (63,87)
+  addDesk(scene, -0.22, 2.25, 0, "Finance");
+  addDesk(scene, 2.86, 2.25, 0, "Finance");
+  addDesk(scene, -0.22, 8.01, Math.PI, "Finance");
+  addDesk(scene, 2.86, 8.01, Math.PI, "Finance");
 
-  // Support
-  addDesk(scene, 6.8, -5.9, 0, "Support");
-  addDesk(scene, 8.6, -5.9, 0, "Support");
-  addDesk(scene, 6.8, -2.6, Math.PI, "Support");
-  addDesk(scene, 8.6, -2.6, Math.PI, "Support");
+  // Support — targets: (82,31), (88,31), (82,39), (88,39)
+  addDesk(scene, 7.04, -4.59, 0, "Support");
+  addDesk(scene, 8.36, -4.59, 0, "Support");
+  addDesk(scene, 7.04, -1.11, Math.PI, "Support");
+  addDesk(scene, 8.36, -1.11, Math.PI, "Support");
 
-  // Open-plan area for Operations + Marketing.
-  addDesk(scene, -0.9, -0.1, 0, "Open");
-  addDesk(scene, 2.0, -0.1, 0, "Open");
-  addDesk(scene, -0.9, 4.0, Math.PI, "Open");
-  addDesk(scene, 2.0, 4.0, Math.PI, "Open");
+  // Open-plan area for Operations + Marketing — targets from office-sim.
+  addDesk(scene, -2.86, -1.17, 0, "Open");
+  addDesk(scene, -1.54, -1.17, 0, "Open");
+  addDesk(scene, -2.86, 3.45, 0, "Open");
+  addDesk(scene, -1.54, 3.45, 0, "Open");
+  addDesk(scene, -2.86, 6.11, 0, "Open");
+  addDesk(scene, -1.54, 6.11, 0, "Open");
+  addDesk(scene, -2.86, 8.39, Math.PI, "Open");
+  addDesk(scene, -1.54, 8.39, Math.PI, "Open");
 }
 
 function addMeetingSetup(scene: THREE.Scene) {
