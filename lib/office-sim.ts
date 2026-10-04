@@ -349,7 +349,7 @@ export function advanceActor(
       ? person.location
       : "Open Office";
 
-  // Same room: walk directly to the actual chair/activity point.
+  // Same room: go straight to the exact chair/activity point.
   if (start === goal && finalPoint) {
     const dx = finalPoint.x - person.x;
     const dy = finalPoint.y - person.y;
@@ -370,61 +370,78 @@ export function advanceActor(
     };
   }
 
-  if (start !== goal) {
-    const currentDoor = roomDoorPoint[start];
+  if (start === goal) {
+    return { x: person.x, y: person.y, location: goal };
+  }
 
-    // First leave the room. This prevents the old straight-line wall crossing.
-    const toCurrentDoor = Math.hypot(
-      currentDoor.x - person.x,
-      currentDoor.y - person.y,
-    );
+  const currentDoor = roomDoorPoint[start];
+  const currentDoorDistance = Math.hypot(
+    currentDoor.x - person.x,
+    currentDoor.y - person.y,
+  );
 
-    if (toCurrentDoor > 0.7) {
-      const dx = currentDoor.x - person.x;
-      const dy = currentDoor.y - person.y;
-      const distance = Math.hypot(dx, dy);
-      return {
-        x: person.x + (dx / distance) * Math.min(speed, distance),
-        y: person.y + (dy / distance) * Math.min(speed, distance),
-        location: start,
-      };
-    }
-
-    const rooms = findPath(start, goal);
-    const nextRoom = rooms[1] ?? goal;
-    const route = navPath(start, nextRoom);
-    const nextPoint =
-      route
-        .slice(1)
-        .sort(
-          (a, b) =>
-            Math.hypot(a.x - person.x, a.y - person.y) -
-            Math.hypot(b.x - person.x, b.y - person.y),
-        )[0] ?? navPoint(roomNavId[nextRoom]);
-
-    const dx = nextPoint.x - person.x;
-    const dy = nextPoint.y - person.y;
+  // Phase 1: walk from inside the current room to its actual door.
+  if (currentDoorDistance > 0.7) {
+    const dx = currentDoor.x - person.x;
+    const dy = currentDoor.y - person.y;
     const distance = Math.hypot(dx, dy);
 
-    if (distance <= speed) {
-      return {
-        x: nextPoint.x,
-        y: nextPoint.y,
-        location: nextRoom,
-      };
-    }
-
     return {
-      x: person.x + (dx / distance) * speed,
-      y: person.y + (dy / distance) * speed,
+      x: person.x + (dx / distance) * Math.min(speed, distance),
+      y: person.y + (dy / distance) * Math.min(speed, distance),
       location: start,
     };
   }
 
+  // Phase 2: follow the safe circulation graph from this door to the
+  // next room's door. We never mark the next room as entered until the
+  // worker has actually reached that next doorway.
+  const rooms = findPath(start, goal);
+  const nextRoom = rooms[1] ?? goal;
+  const route = navPath(start, nextRoom);
+
+  let waypointIndex = 1;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (let i = 1; i < route.length; i += 1) {
+    const d = Math.hypot(
+      route[i].x - person.x,
+      route[i].y - person.y,
+    );
+
+    if (d < bestDistance) {
+      bestDistance = d;
+      waypointIndex = i;
+    }
+  }
+
+  // Move to the next waypoint after the nearest point on the route.
+  // This avoids turning backward when the actor is already part-way through
+  // the corridor.
+  const nextIndex = Math.min(
+    route.length - 1,
+    Math.max(waypointIndex, waypointIndex + (bestDistance < 0.9 ? 1 : 0)),
+  );
+  const nextPoint = route[nextIndex];
+
+  const dx = nextPoint.x - person.x;
+  const dy = nextPoint.y - person.y;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance <= speed) {
+    const reachedGoalDoor = nextIndex === route.length - 1;
+
+    return {
+      x: nextPoint.x,
+      y: nextPoint.y,
+      location: reachedGoalDoor ? nextRoom : start,
+    };
+  }
+
   return {
-    x: person.x,
-    y: person.y,
-    location: goal,
+    x: person.x + (dx / distance) * speed,
+    y: person.y + (dy / distance) * speed,
+    location: start,
   };
 }
 
