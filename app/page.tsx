@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
+import Office3D from "../components/Office3D";
 import { activitySpotForStaff, advanceActor, homeRoomForDepartment, isAtTarget, targetRoomForStaff, routineForStaff, isLeadershipRole, type OfficeRoom } from "../lib/office-sim";
 
 type Page = "dashboard" | "office" | "staff" | "tasks" | "schedule" | "reports" | "settings";
@@ -122,7 +123,7 @@ function StatCard({ label, value, note, icon, tone }: { label: string; value: st
   );
 }
 
-function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom, layout = DEFAULT_LAYOUT, editing = false }: {
+function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom, editing = false }: {
   staff: Staff[];
   running: boolean;
   onSelect: (s: Staff) => void;
@@ -131,88 +132,14 @@ function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom, lay
   layout?: Record<OfficeRoom, RoomLayout>;
   editing?: boolean;
 }) {
-  const rooms: { room: OfficeRoom; cls: string; furniture: string }[] = [
-    { room: "Manager Office", cls: "manager-room", furniture: "manager-furniture" },
-    { room: "Meeting Room", cls: "meeting-room", furniture: "meeting-furniture" },
-    { room: "Design Studio", cls: "design-room", furniture: "design-furniture" },
-    { room: "Finance", cls: "finance-room", furniture: "finance-furniture" },
-    { room: "Support", cls: "support-room", furniture: "support-furniture" },
-    { room: "Break Room", cls: "break-room", furniture: "break-furniture" },
-  ];
-
   return (
-    <div className={`office-scene ${running ? "is-running" : "is-paused"} ${editing ? "is-editing" : ""}`}>
-      <div className="scene-sunlight" />
-      <div className="scene-floor" />
-      <div className="scene-window window-left"><span/><span/><span/></div>
-      <div className="scene-window window-right"><span/><span/><span/></div>
-      <div className="wall top-wall" /><div className="wall left-wall" />
-
-      <div className="scene-corridor"><span>MAIN CORRIDOR</span></div>
-      <div className="scene-lounge">
-        <span className="lounge-sofa sofa-left" /><span className="lounge-sofa sofa-right" />
-        <span className="lounge-table" /><span className="lounge-rug" />
-        <span className="lounge-lamp" /><span className="lounge-plant">🌿</span>
-      </div>
-
-      {rooms.map(({ room, cls, furniture }) => {
-        const box = layout[room];
-        return <button
-          key={room}
-          className={`room ${cls} room-object ${selectedRoom === room ? "room-selected-object" : ""}`}
-          style={{ left: `${box.x}%`, top: `${box.y}%`, width: `${box.w}%`, height: `${box.h}%` }}
-          onClick={() => onRoomSelect?.(room)}
-          aria-label={`Inspect ${room}`}
-        >
-          <span className="room-ceiling" />
-          <span className="room-label"><b>{room}</b><i /></span>
-          {room === "Manager Office" && <span className="room-furniture manager-furniture"><span className="director-desk"><i/><i/></span><span className="guest-chair" /></span>}
-          {room === "Meeting Room" && <span className="room-furniture meeting-furniture"><span className="meeting-table"><i/><i/><i/><i/></span><span className="whiteboard"><b>Q2</b><small>TEAM PLAN</small></span></span>}
-          {room === "Design Studio" && <span className="room-furniture design-furniture"><span className="designer-desk d1" /><span className="designer-desk d2" /><span className="designer-desk d3" /><span className="designer-desk d4" /><span className="design-board">IDEAS</span></span>}
-          {room === "Finance" && <span className="room-furniture finance-furniture"><span className="finance-desk f1" /><span className="finance-desk f2" /><span className="finance-desk f3" /><span className="finance-desk f4" /></span>}
-          {room === "Support" && <span className="room-furniture support-furniture"><span className="support-bar s1" /><span className="support-bar s2" /><span className="support-bar s3" /><span className="support-screen">HELP DESK</span></span>}
-          {room === "Break Room" && <span className="room-furniture break-furniture"><span className="kitchen-line" /><span className="break-counter" /><span className="round-table"><i/><i/><i/><i/></span><span className="coffee-bar">COFFEE</span></span>}
-          <span className={`room-footer-chip ${furniture}`}>{room === "Manager Office" ? "Leadership" : room === "Meeting Room" ? "Collaboration" : room === "Break Room" ? "Wellness" : "Workspace"}</span>
-        </button>;
-      })}
-
-      <div className="plant plant-1">🌿</div>
-      <div className="plant plant-2">🌿</div>
-      <div className="plant plant-3">🌿</div>
-      <div className="floor-art art-1">✦</div>
-      <div className="floor-art art-2">◌</div>
-      <div className="reception"><span className="front-desk" /><strong>RECEPTION</strong><small>Welcome</small></div>
-
-      {staff.map((person) => {
-        const seated = !person.walking && person.status !== "Away";
-        return <button
-          key={person.id}
-          className={`staff-token face-${Math.abs(person.id) % 5} ${isLeadershipRole(person.role) ? "is-leader" : ""} status-${person.status.toLowerCase()} ${seated ? "is-sitting" : "is-walking"}`}
-          style={{ left: `${person.x}%`, top: `${person.y}%`, "--staff-color": person.color } as CSSProperties}
-          onClick={(event) => { event.stopPropagation(); onSelect(person); }}
-          aria-label={`Open ${person.name}`}
-        >
-          <span className="staff-shadow" />
-          <span className="staff-chair" />
-          <span className="staff-legs"><i/><i/></span>
-          <span className="staff-body"><i className="staff-arm arm-left"/><i className="staff-arm arm-right"/><i className="staff-badge"/></span>
-          <span className="staff-head">
-            <i className="staff-hair"/>
-            <i className="staff-ear ear-left"/><i className="staff-ear ear-right"/>
-            <i className="staff-brow brow-left"/><i className="staff-brow brow-right"/>
-            <i className="staff-eye eye-left"/><i className="staff-eye eye-right"/>
-            <i className="staff-mouth"/>
-          </span>
-          {isLeadershipRole(person.role) && <span className="staff-rank">LEAD</span>}
-          <span className="staff-name">{person.name.split(" ")[0]}</span>
-          <span className="staff-role">{person.role}</span>
-          <span className="staff-state">{person.walking ? `Walking to ${person.location ?? "desk"}` : person.status === "Working" ? "At workstation" : person.status}</span>
-        </button>;
-      })}
-
-      <div className="scene-hint"><Icon name="pin" /> {editing ? "Select a room, then move it from the inspector" : "Click a staff member or room"} </div>
-      <div className="scene-legend"><span><i className="legend-sit" /> Working</span><span><i className="legend-meet" /> Meeting</span><span><i className="legend-break" /> Break</span></div>
-    </div>
+    <Office3D
+      staff={staff}
+      running={running}
+      onSelect={onSelect}
+      onRoomSelect={onRoomSelect}
+      selectedRoom={selectedRoom}
+    />
   );
 }
 
