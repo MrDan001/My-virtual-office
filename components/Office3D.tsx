@@ -462,12 +462,12 @@ function addRoom(
   const gap = doorW + 0.04;
 
   if (room.door.side === "bottom") {
-    const side = Math.max(0.25, (roomW - gap) / 2);
-    addWall(side, wallH, wallT, leftX + side / 2, bottomZ);
-    addWall(side, wallH, wallT, rightX - side / 2, bottomZ);
+    const leftWidth = Math.max(0.25, doorPoint.x - leftX - gap / 2);
+    const rightWidth = Math.max(0.25, rightX - doorPoint.x - gap / 2);
+    addWall(leftWidth, wallH, wallT, leftX + leftWidth / 2, bottomZ);
+    addWall(rightWidth, wallH, wallT, rightX - rightWidth / 2, bottomZ);
     addWall(roomW, wallH, wallT, center.x, topZ);
 
-    // Door threshold.
     const threshold = new THREE.Mesh(
       new THREE.BoxGeometry(doorW * 1.05, 0.035, 0.32),
       new THREE.MeshStandardMaterial({ color: 0xb7a28a, roughness: 0.84 }),
@@ -475,9 +475,10 @@ function addRoom(
     threshold.position.set(doorPoint.x, 0.075, bottomZ + 0.12);
     scene.add(threshold);
   } else {
-    const side = Math.max(0.25, (roomW - gap) / 2);
-    addWall(side, wallH, wallT, leftX + side / 2, topZ);
-    addWall(side, wallH, wallT, rightX - side / 2, topZ);
+    const leftWidth = Math.max(0.25, doorPoint.x - leftX - gap / 2);
+    const rightWidth = Math.max(0.25, rightX - doorPoint.x - gap / 2);
+    addWall(leftWidth, wallH, wallT, leftX + leftWidth / 2, topZ);
+    addWall(rightWidth, wallH, wallT, rightX - rightWidth / 2, topZ);
     addWall(roomW, wallH, wallT, center.x, bottomZ);
 
     const threshold = new THREE.Mesh(
@@ -574,7 +575,7 @@ function addMeetingAndBreakFurniture(scene: THREE.Scene) {
   );
   scene.add(board);
 
-  const breakPoint = worldFromPercent(83.5, 84.5);
+  const breakPoint = worldFromPercent(84.25, 84.5);
   const roundTable = new THREE.Mesh(
     new THREE.CylinderGeometry(1.15, 1.15, 0.18, 32),
     new THREE.MeshStandardMaterial({
@@ -585,13 +586,13 @@ function addMeetingAndBreakFurniture(scene: THREE.Scene) {
   roundTable.position.set(breakPoint.x, 1.0, breakPoint.z);
   scene.add(roundTable);
 
-  for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
-    addMeetingChair(
-      scene,
-      breakPoint.x + Math.cos(a) * 1.6,
-      breakPoint.z + Math.sin(a) * 1.6,
-      a,
+  for (const point of deskSpots["Break Room"]) {
+    const chairPoint = worldFromPercent(point.x, point.y);
+    const rotation = Math.atan2(
+      breakPoint.x - chairPoint.x,
+      breakPoint.z - chairPoint.z,
     );
+    addMeetingChair(scene, chairPoint.x, chairPoint.z, rotation);
   }
 
   const counter = roundedBox(
@@ -955,6 +956,7 @@ function applyPose(
   // where the desk is placed.
   if (working) {
     rig.group.position.y = 0;
+    rig.group.rotation.y = 0;
     rig.torso.position.set(0, 1.27, 0.02);
     rig.torso.rotation.x = 0.05;
     rig.head.position.set(0, 2.06, 0.1);
@@ -997,6 +999,11 @@ function applyPose(
   rig.rightLowerLeg.rotation.x = 0;
 
   if (meeting) {
+    const meetingCenter = worldFromPercent(51, 19);
+    rig.group.rotation.y = Math.atan2(
+      meetingCenter.x - rig.group.position.x,
+      meetingCenter.z - rig.group.position.z,
+    );
     rig.leftArm.rotation.z = -0.18;
     rig.rightArm.rotation.z = 0.18;
     rig.leftForearm.rotation.x = 0.18;
@@ -1004,6 +1011,11 @@ function applyPose(
     rig.hands[0].position.set(-0.3, 0.96, 0.03);
     rig.hands[1].position.set(0.3, 0.96, 0.03);
   } else if (breaking) {
+    const breakCenter = worldFromPercent(84.25, 84.5);
+    rig.group.rotation.y = Math.atan2(
+      breakCenter.x - rig.group.position.x,
+      breakCenter.z - rig.group.position.z,
+    );
     rig.leftArm.rotation.z = -0.08;
     rig.rightArm.rotation.z = 0.08;
     rig.hands[0].position.set(-0.31, 0.86, 0);
@@ -1229,7 +1241,7 @@ export default function Office3D({
         if (runningRef.current && distance > 0.003) {
           const blend = Math.min(
             1,
-            delta * (person.walking ? 9.5 : 13),
+            delta * (person.walking ? 10.5 : 14),
           );
           rig.group.position.x += dx * blend;
           rig.group.position.z += dz * blend;
