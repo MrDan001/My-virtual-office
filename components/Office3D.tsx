@@ -558,7 +558,7 @@ function addMeetingAndBreakFurniture(scene: THREE.Scene) {
   );
   scene.add(board);
 
-  const break = worldFromPercent(83.5, 84.5);
+  const breakPoint = worldFromPercent(83.5, 84.5);
   const roundTable = new THREE.Mesh(
     new THREE.CylinderGeometry(1.15, 1.15, 0.18, 32),
     new THREE.MeshStandardMaterial({
@@ -566,14 +566,14 @@ function addMeetingAndBreakFurniture(scene: THREE.Scene) {
       roughness: 0.72,
     }),
   );
-  roundTable.position.set(break.x, 1.0, break.z);
+  roundTable.position.set(breakPoint.x, 1.0, breakPoint.z);
   scene.add(roundTable);
 
   for (const a of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
     addMeetingChair(
       scene,
-      break.x + Math.cos(a) * 1.6,
-      break.z + Math.sin(a) * 1.6,
+      breakPoint.x + Math.cos(a) * 1.6,
+      breakPoint.z + Math.sin(a) * 1.6,
       a,
     );
   }
