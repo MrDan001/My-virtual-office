@@ -142,6 +142,34 @@ export function advanceActor(
   };
 }
 
+export function activitySpotForStaff(
+  department: string,
+  status: "Working" | "Meeting" | "Break",
+  id: number,
+) {
+  if (status === "Working") return deskSpotForStaff(department, id);
+
+  if (status === "Meeting") {
+    const seats = [
+      { x: 44, y: 25 },
+      { x: 48.5, y: 25 },
+      { x: 53, y: 25 },
+      { x: 57.5, y: 25 },
+      { x: 44, y: 29 },
+      { x: 57.5, y: 29 },
+    ];
+    return seats[(Math.max(1, id) - 1) % seats.length];
+  }
+
+  const seats = [
+    { x: 79.5, y: 72 },
+    { x: 86.5, y: 72 },
+    { x: 79.5, y: 82 },
+    { x: 86.5, y: 82 },
+  ];
+  return seats[(Math.max(1, id) - 1) % seats.length];
+}
+
 export function isAtTarget(
   person: { x: number; y: number },
   target: { x: number; y: number },
