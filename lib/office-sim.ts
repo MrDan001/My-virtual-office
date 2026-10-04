@@ -8,39 +8,32 @@ export type OfficeRoom =
   | "Break Room"
   | "Open Office";
 
-export type OfficeNode = {
-  room: OfficeRoom;
-  x: number;
-  y: number;
-  neighbors: OfficeRoom[];
-};
+export type OfficeNode = { room: OfficeRoom; x: number; y: number; neighbors: OfficeRoom[] };
+export type RoutineState = { status: "Working" | "Meeting" | "Break"; task: string };
 
-export type RoutineState = {
-  status: "Working" | "Meeting" | "Break";
-  task: string;
-};
+const departmentMeetingOrder = ["Design", "Finance", "Operations", "Marketing", "Support"] as const;
+const leadershipPattern = /\b(owner|founder|ceo|cto|cfo|coo|director|manager|head|lead|chief|vp|president)\b/i;
+
+export function isLeadershipRole(role = "") { return leadershipPattern.test(role); }
 
 export const officeNodes: Record<OfficeRoom, OfficeNode> = {
-  Reception: { room: "Reception", x: 38, y: 91, neighbors: ["Open Office", "Support"] },
-  "Manager Office": { room: "Manager Office", x: 17, y: 19, neighbors: ["Open Office", "Meeting Room"] },
-  "Meeting Room": { room: "Meeting Room", x: 51, y: 19, neighbors: ["Manager Office", "Open Office", "Support"] },
-  "Design Studio": { room: "Design Studio", x: 20, y: 68, neighbors: ["Open Office", "Support"] },
-  Finance: { room: "Finance", x: 56, y: 68, neighbors: ["Open Office", "Meeting Room", "Break Room"] },
-  Support: { room: "Support", x: 84, y: 28, neighbors: ["Reception", "Meeting Room", "Design Studio", "Break Room"] },
-  "Break Room": { room: "Break Room", x: 84, y: 75, neighbors: ["Support", "Finance", "Open Office"] },
-  "Open Office": { room: "Open Office", x: 49, y: 53, neighbors: ["Reception", "Manager Office", "Meeting Room", "Design Studio", "Finance", "Break Room"] },
+  Reception: { room: "Reception", x: 50, y: 91, neighbors: ["Open Office", "Support"] },
+  "Manager Office": { room: "Manager Office", x: 17, y: 28, neighbors: ["Open Office", "Meeting Room"] },
+  "Meeting Room": { room: "Meeting Room", x: 52, y: 28, neighbors: ["Manager Office", "Open Office", "Support"] },
+  "Design Studio": { room: "Design Studio", x: 21, y: 70, neighbors: ["Open Office", "Support"] },
+  Finance: { room: "Finance", x: 55, y: 70, neighbors: ["Open Office", "Meeting Room", "Break Room"] },
+  Support: { room: "Support", x: 85, y: 31, neighbors: ["Reception", "Meeting Room", "Design Studio", "Break Room"] },
+  "Break Room": { room: "Break Room", x: 85, y: 78, neighbors: ["Support", "Finance", "Open Office"] },
+  "Open Office": { room: "Open Office", x: 37, y: 59, neighbors: ["Reception", "Manager Office", "Meeting Room", "Design Studio", "Finance", "Break Room"] },
 };
 
 export function findPath(start: OfficeRoom, goal: OfficeRoom): OfficeRoom[] {
   if (start === goal) return [start];
-
   const queue: OfficeRoom[][] = [[start]];
   const seen = new Set<OfficeRoom>([start]);
-
   while (queue.length) {
     const currentPath = queue.shift()!;
     const current = currentPath[currentPath.length - 1];
-
     for (const neighbor of officeNodes[current].neighbors) {
       if (seen.has(neighbor)) continue;
       const next = [...currentPath, neighbor];
@@ -49,131 +42,73 @@ export function findPath(start: OfficeRoom, goal: OfficeRoom): OfficeRoom[] {
       queue.push(next);
     }
   }
-
   return [start, goal];
 }
 
-export function homeRoomForDepartment(department: string): OfficeRoom {
-  const map: Record<string, OfficeRoom> = {
-    Management: "Manager Office",
-    Design: "Design Studio",
-    Finance: "Finance",
-    Support: "Support",
-    Operations: "Open Office",
-    Marketing: "Open Office",
-  };
+export function homeRoomForDepartment(department: string, role = ""): OfficeRoom {
+  if (department === "Management" || isLeadershipRole(role)) return "Manager Office";
+  const map: Record<string, OfficeRoom> = { Design: "Design Studio", Finance: "Finance", Support: "Support", Operations: "Open Office", Marketing: "Open Office" };
   return map[department] ?? "Open Office";
 }
 
-export function deskSpotForStaff(department: string, id: number) {
-  const positions: Record<OfficeRoom, { x: number; y: number }[]> = {
-    Reception: [{ x: 38, y: 88 }],
-    "Manager Office": [{ x: 17, y: 23 }, { x: 24, y: 23 }],
-    "Meeting Room": [{ x: 43, y: 25 }, { x: 48, y: 25 }, { x: 53, y: 25 }, { x: 58, y: 25 }],
-    "Design Studio": [{ x: 18, y: 50 }, { x: 29, y: 50 }, { x: 18, y: 78 }, { x: 29, y: 78 }],
-    Finance: [{ x: 51, y: 55 }, { x: 61, y: 55 }, { x: 51, y: 83 }, { x: 61, y: 83 }],
-    Support: [{ x: 80, y: 20 }, { x: 88, y: 20 }, { x: 80, y: 38 }, { x: 88, y: 38 }],
-    "Break Room": [{ x: 80, y: 72 }, { x: 88, y: 72 }, { x: 80, y: 82 }, { x: 88, y: 82 }],
-    "Open Office": [{ x: 42, y: 45 }, { x: 51, y: 45 }, { x: 42, y: 70 }, { x: 51, y: 70 }],
-  };
+const deskSpots: Record<OfficeRoom, { x: number; y: number }[]> = {
+  Reception: [{ x: 50, y: 88 }],
+  "Manager Office": [{ x: 17, y: 34 }, { x: 24, y: 34 }],
+  "Meeting Room": [{ x: 44, y: 25 }, { x: 48.5, y: 25 }, { x: 53, y: 25 }, { x: 57.5, y: 25 }, { x: 44, y: 33 }, { x: 57.5, y: 33 }],
+  "Design Studio": [{ x: 13, y: 68 }, { x: 28, y: 68 }, { x: 13, y: 86 }, { x: 28, y: 86 }],
+  Finance: [{ x: 49, y: 67 }, { x: 63, y: 67 }, { x: 49, y: 87 }, { x: 63, y: 87 }],
+  Support: [{ x: 82, y: 31 }, { x: 88, y: 31 }, { x: 82, y: 39 }, { x: 88, y: 39 }],
+  "Break Room": [{ x: 80, y: 80 }, { x: 89, y: 80 }, { x: 80, y: 89 }, { x: 89, y: 89 }],
+  "Open Office": [{ x: 37, y: 49 }, { x: 37, y: 63 }, { x: 37, y: 77 }, { x: 37, y: 89 }, { x: 43, y: 49 }, { x: 43, y: 63 }, { x: 43, y: 77 }, { x: 43, y: 89 }],
+};
 
-  const room = homeRoomForDepartment(department);
-  const list = positions[room];
-  return list[(Math.max(1, id) - 1) % list.length];
+export function deskSpotForStaff(department: string, id: number, role = "", seatIndex = 0) {
+  const room = homeRoomForDepartment(department, role);
+  const list = deskSpots[room];
+  const index = Math.max(0, Number.isFinite(seatIndex) ? seatIndex : 0);
+  return list[index % list.length] ?? list[0];
 }
 
-export function targetRoomForStaff(department: string, status: string): OfficeRoom {
+export function targetRoomForStaff(department: string, status: string, role = ""): OfficeRoom {
   if (status === "Meeting") return "Meeting Room";
   if (status === "Break") return "Break Room";
-  return homeRoomForDepartment(department);
+  return homeRoomForDepartment(department, role);
 }
 
-export function routineForStaff(department: string, id: number, unixSeconds: number): RoutineState {
-  const cycleLength = 360;
-  const phase = (unixSeconds + id * 47) % cycleLength;
-
-  if (phase < 285) {
-    const taskByDepartment: Record<string, string> = {
-      Finance: "Processing payroll",
-      Support: "Customer inbox",
-      Design: "Design review",
-      Marketing: "Campaign work",
-      Operations: "Operations queue",
-      Management: "Team management",
-    };
-    return { status: "Working", task: taskByDepartment[department] ?? "Focused work" };
-  }
-
-  if (phase < 325 && department !== "Support") {
-    return { status: "Meeting", task: "Team sync" };
-  }
-
-  if (phase < 360) {
-    return { status: "Break", task: "Taking a short break" };
-  }
-
-  return { status: "Working", task: "Focused work" };
+export function routineForStaff(department: string, id: number, unixSeconds: number, role = ""): RoutineState {
+  const cycleLength = 300;
+  const phase = unixSeconds % cycleLength;
+  const meetingSlot = Math.floor(phase / 30);
+  const meetingWindow = phase < 150 && (phase % 30) < 22;
+  const departmentSlot = departmentMeetingOrder[meetingSlot % departmentMeetingOrder.length];
+  const leadershipMeeting = (department === "Management" || isLeadershipRole(role)) && (meetingSlot % 2 === 0);
+  const scheduledMeeting = meetingWindow && (department === departmentSlot || leadershipMeeting);
+  if (scheduledMeeting) return { status: "Meeting", task: leadershipMeeting ? "Leadership sync" : "Department sync" };
+  const personalPhase = (unixSeconds + id * 47) % cycleLength;
+  if (personalPhase >= 270) return { status: "Break", task: "Taking a short break" };
+  const taskByDepartment: Record<string, string> = { Finance: "Processing payroll", Support: "Customer inbox", Design: "Design review", Marketing: "Campaign work", Operations: "Operations queue", Management: "Team management" };
+  return { status: "Working", task: taskByDepartment[department] ?? "Focused work" };
 }
 
-export function advanceActor(
-  person: { x: number; y: number; location?: OfficeRoom },
-  goal: OfficeRoom,
-  speed = 0.65,
-  finalPoint?: { x: number; y: number },
-) {
+export function advanceActor(person: { x: number; y: number; location?: OfficeRoom }, goal: OfficeRoom, speed = 0.72, finalPoint?: { x: number; y: number }) {
   const start = person.location && officeNodes[person.location] ? person.location : "Open Office";
   const path = findPath(start, goal);
   const nextRoom = path[1] ?? goal;
   const roomTarget = officeNodes[nextRoom];
   const target = nextRoom === goal && finalPoint ? finalPoint : roomTarget;
-
   const dx = target.x - person.x;
   const dy = target.y - person.y;
   const distance = Math.hypot(dx, dy);
-
-  if (distance <= speed) {
-    return { x: target.x, y: target.y, location: nextRoom as OfficeRoom };
-  }
-
-  return {
-    x: person.x + (dx / distance) * speed,
-    y: person.y + (dy / distance) * speed,
-    location: start,
-  };
+  if (distance <= speed) return { x: target.x, y: target.y, location: nextRoom as OfficeRoom };
+  return { x: person.x + (dx / distance) * speed, y: person.y + (dy / distance) * speed, location: start };
 }
 
-export function activitySpotForStaff(
-  department: string,
-  status: "Working" | "Meeting" | "Break",
-  id: number,
-) {
-  if (status === "Working") return deskSpotForStaff(department, id);
-
-  if (status === "Meeting") {
-    const seats = [
-      { x: 44, y: 25 },
-      { x: 48.5, y: 25 },
-      { x: 53, y: 25 },
-      { x: 57.5, y: 25 },
-      { x: 44, y: 29 },
-      { x: 57.5, y: 29 },
-    ];
-    return seats[(Math.max(1, id) - 1) % seats.length];
-  }
-
-  const seats = [
-    { x: 79.5, y: 72 },
-    { x: 86.5, y: 72 },
-    { x: 79.5, y: 82 },
-    { x: 86.5, y: 82 },
-  ];
-  return seats[(Math.max(1, id) - 1) % seats.length];
+export function activitySpotForStaff(department: string, status: "Working" | "Meeting" | "Break", id: number, seatIndex = 0, role = "") {
+  if (status === "Working") return deskSpotForStaff(department, id, role, seatIndex);
+  const seats = status === "Meeting" ? deskSpots["Meeting Room"] : deskSpots["Break Room"];
+  return seats[Math.max(0, seatIndex) % seats.length];
 }
 
-export function isAtTarget(
-  person: { x: number; y: number },
-  target: { x: number; y: number },
-  tolerance = 0.7,
-) {
+export function isAtTarget(person: { x: number; y: number }, target: { x: number; y: number }, tolerance = 0.7) {
   return Math.hypot(person.x - target.x, person.y - target.y) <= tolerance;
 }
