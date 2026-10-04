@@ -503,3 +503,210 @@
   .staff-token{width:74px !important;height:92px !important}
   .staff-name{font-size:6.5px;min-width:74px}.staff-role,.staff-state{font-size:5px}
 }
+
+
+/* Human motion pass — front-facing biped walk, real seated poses, expressive faces */
+.staff-token{
+  transition:
+    left .62s cubic-bezier(.22,.78,.27,1),
+    top .62s cubic-bezier(.22,.78,.27,1),
+    transform .18s ease;
+}
+
+.staff-token.is-walking{
+  will-change:left,top,transform;
+}
+
+.staff-token.is-walking .staff-chair{
+  opacity:0 !important;
+}
+
+.staff-token.is-walking .staff-body{
+  animation:human-walk-body .62s ease-in-out infinite;
+}
+
+.staff-token.is-walking .staff-head{
+  animation:human-walk-head .62s ease-in-out infinite;
+}
+
+.staff-token.is-walking .staff-legs i:first-child{
+  animation:human-walk-left-leg .62s ease-in-out infinite;
+}
+
+.staff-token.is-walking .staff-legs i:last-child{
+  animation:human-walk-right-leg .62s ease-in-out infinite;
+}
+
+.staff-token.is-walking .arm-left{
+  animation:human-walk-left-arm .62s ease-in-out infinite;
+}
+
+.staff-token.is-walking .arm-right{
+  animation:human-walk-right-arm .62s ease-in-out infinite;
+}
+
+/* Never turn characters into profile silhouettes. They stay camera-facing. */
+.staff-token.walk-facing-back .staff-eye,
+.staff-token.walk-facing-back .staff-brow,
+.staff-token.walk-facing-back .staff-nose,
+.staff-token.walk-facing-back .staff-mouth,
+.staff-token.walk-facing-back .staff-cheek{
+  opacity:0;
+}
+.staff-token.walk-facing-back .staff-hair{
+  left:-3px;
+  top:-5px;
+  width:25px;
+  height:16px;
+  border-radius:13px 13px 9px 9px;
+}
+.staff-token.walk-facing-back .staff-head{
+  box-shadow:0 4px 8px rgba(54,45,38,.22);
+}
+
+/* A clearly seated body: hips drop into the chair and knees bend forward. */
+.staff-token.is-sitting .staff-chair{
+  opacity:1 !important;
+  left:28px;
+  top:49px;
+  width:28px;
+  height:25px;
+}
+.staff-token.is-sitting .staff-body{
+  left:30px;
+  top:46px !important;
+  width:24px;
+  height:21px !important;
+  border-radius:9px 9px 6px 6px;
+}
+.staff-token.is-sitting .staff-head{
+  top:25px !important;
+}
+.staff-token.is-sitting .staff-legs{
+  left:25px;
+  top:60px !important;
+  width:36px;
+  height:25px;
+}
+.staff-token.is-sitting .staff-legs i{
+  width:13px;
+  height:8px;
+  top:2px;
+  border-radius:7px;
+  transform-origin:4px 4px;
+}
+.staff-token.is-sitting .staff-legs i:first-child{
+  left:5px;
+  transform:rotate(18deg);
+}
+.staff-token.is-sitting .staff-legs i:last-child{
+  right:5px;
+  transform:rotate(-18deg);
+}
+.staff-token.is-sitting .staff-legs i:after{
+  content:"";
+  position:absolute;
+  width:6px;
+  height:10px;
+  top:5px;
+  left:8px;
+  border-radius:4px;
+  background:#27384d;
+}
+.staff-token.is-sitting .staff-arm{
+  top:6px;
+  height:17px;
+}
+.staff-token.is-sitting .arm-left{left:-3px;transform:rotate(34deg)}
+.staff-token.is-sitting .arm-right{right:-3px;transform:rotate(-34deg)}
+
+.staff-token.status-working.is-sitting .arm-left{
+  animation:typing-left .9s ease-in-out infinite alternate;
+}
+.staff-token.status-working.is-sitting .arm-right{
+  animation:typing-right .9s ease-in-out infinite alternate;
+}
+
+.staff-collar{
+  position:absolute;
+  top:3px;
+  width:6px;
+  height:8px;
+  background:rgba(255,255,255,.82);
+  clip-path:polygon(0 0,100% 0,58% 100%);
+  z-index:8;
+}
+.collar-left{left:7px;transform:rotate(8deg)}
+.collar-right{right:7px;transform:scaleX(-1) rotate(8deg)}
+
+.staff-brow{
+  position:absolute;
+  top:7px;
+  width:6px;
+  height:2px;
+  border-radius:3px;
+  background:#5b4036;
+  z-index:2;
+}
+.brow-left{left:5px;transform:rotate(-5deg)}
+.brow-right{right:5px;transform:rotate(5deg)}
+
+.staff-nose{
+  position:absolute;
+  left:50%;
+  top:12px;
+  width:3px;
+  height:5px;
+  transform:translateX(-50%);
+  border-right:1px solid rgba(157,105,78,.55);
+  border-bottom:1px solid rgba(157,105,78,.55);
+  border-radius:0 0 3px 0;
+}
+.staff-cheek{
+  position:absolute;
+  top:14px;
+  width:4px;
+  height:3px;
+  border-radius:50%;
+  background:rgba(220,126,126,.24);
+}
+.cheek-left{left:3px}.cheek-right{right:3px}
+
+.staff-token.is-sitting .staff-shadow{
+  top:78px;
+  width:38px;
+  opacity:.22;
+}
+
+@keyframes human-walk-left-leg{
+  0%,100%{transform:rotate(18deg)}
+  50%{transform:rotate(-18deg)}
+}
+@keyframes human-walk-right-leg{
+  0%,100%{transform:rotate(-18deg)}
+  50%{transform:rotate(18deg)}
+}
+@keyframes human-walk-left-arm{
+  0%,100%{transform:rotate(25deg)}
+  50%{transform:rotate(-18deg)}
+}
+@keyframes human-walk-right-arm{
+  0%,100%{transform:rotate(-25deg)}
+  50%{transform:rotate(18deg)}
+}
+@keyframes human-walk-body{
+  0%,100%{transform:translateY(1px)}
+  50%{transform:translateY(-2px)}
+}
+@keyframes human-walk-head{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-1px)}
+}
+@keyframes typing-left{
+  from{transform:rotate(34deg) translateY(0)}
+  to{transform:rotate(40deg) translateY(2px)}
+}
+@keyframes typing-right{
+  from{transform:rotate(-34deg) translateY(2px)}
+  to{transform:rotate(-40deg) translateY(0)}
+}
