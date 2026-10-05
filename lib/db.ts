@@ -13,18 +13,6 @@ export function getDb(): Client | null {
 export async function ensureSchema(db: Client) {
   await db.batch(
     [
-      `CREATE TABLE IF NOT EXISTS employees (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        role TEXT NOT NULL,
-        department TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'Working',
-        task TEXT NOT NULL DEFAULT 'Getting started',
-        x REAL NOT NULL DEFAULT 46,
-        y REAL NOT NULL DEFAULT 58,
-        color TEXT NOT NULL DEFAULT '#3b82f6',
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )`,
       `CREATE TABLE IF NOT EXISTS tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
@@ -33,20 +21,34 @@ export async function ensureSchema(db: Client) {
         due_label TEXT NOT NULL DEFAULT 'Today',
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       )`,
-      `CREATE TABLE IF NOT EXISTS office_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        employee_id INTEGER,
-        event_type TEXT NOT NULL,
-        message TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL
+      `CREATE TABLE IF NOT EXISTS schema_migrations (
+        version TEXT PRIMARY KEY,
+        applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       )`,
-      `CREATE INDEX IF NOT EXISTS idx_employees_department ON employees(department)`,
       `CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`,
-      `CREATE INDEX IF NOT EXISTS idx_events_created_at ON office_events(created_at)`
     ],
     "write",
   );
+
+  // One-time clean-slate migration: remove the legacy staff/event data layer.
+  const staffCleanup = await db.execute({
+    sql: "SELECT version FROM schema_migrations WHERE version = ?",
+    args: ["clean-staff-layer-v1"],
+  });
+
+  if (staffCleanup.rows.length === 0) {
+    await db.batch(
+      [
+        "DROP TABLE IF EXISTS office_events",
+        "DROP TABLE IF EXISTS employees",
+        {
+          sql: "INSERT INTO schema_migrations (version) VALUES (?)",
+          args: ["clean-staff-layer-v1"],
+        },
+      ],
+      "write",
+    );
+  }
 
   // Existing installations may still have the legacy tasks.assignee_id column.
   // Rebuild the table once so the database itself no longer carries task-to-employee coupling.
@@ -66,17 +68,12 @@ export async function ensureSchema(db: Client) {
         )`,
         `INSERT INTO tasks_clean (id, title, priority, status, due_label, created_at)
          SELECT id, title, priority, status, due_label, created_at FROM tasks`,
-        `DROP TABLE tasks`,
-        `ALTER TABLE tasks_clean RENAME TO tasks`,
+        "DROP TABLE tasks",
+        "ALTER TABLE tasks_clean RENAME TO tasks",
+        "CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)",
       ],
       "write",
     );
-  }
-
-  const columns = await db.execute("PRAGMA table_info(employees)");
-  const hasLocation = columns.rows.some((row) => String(row.name) === "location");
-  if (!hasLocation) {
-    await db.execute("ALTER TABLE employees ADD COLUMN location TEXT NOT NULL DEFAULT 'Open Office'");
   }
 }
 
