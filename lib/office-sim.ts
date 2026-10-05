@@ -20,64 +20,11 @@ export type OfficeNode = {
   neighbors: OfficeRoom[];
 };
 
-type Portal = {
-  from: { x: number; y: number };
-  to: { x: number; y: number };
-};
+const distanceBetween = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+  Math.hypot(a.x - b.x, a.y - b.y);
 
-const portal = (fromX: number, fromY: number, toX: number, toY: number): Portal => ({
-  from: { x: fromX, y: fromY },
-  to: { x: toX, y: toY },
-});
-
-export const officeNodes: Record<OfficeRoom, OfficeNode> = {
-  Reception: { room: "Reception", x: 38, y: 91, neighbors: ["Open Office"] },
-  "Manager Office": { room: "Manager Office", x: 17, y: 19, neighbors: ["Meeting Room", "Design Studio"] },
-  "Meeting Room": { room: "Meeting Room", x: 51, y: 19, neighbors: ["Manager Office", "Support", "Finance"] },
-  "Design Studio": { room: "Design Studio", x: 20, y: 68, neighbors: ["Manager Office", "Finance", "Open Office"] },
-  Finance: { room: "Finance", x: 56, y: 68, neighbors: ["Meeting Room", "Design Studio", "Break Room", "Open Office"] },
-  Support: { room: "Support", x: 84, y: 28, neighbors: ["Meeting Room"] },
-  "Break Room": { room: "Break Room", x: 84, y: 75, neighbors: ["Finance", "Open Office"] },
-  "Open Office": { room: "Open Office", x: 49, y: 53, neighbors: ["Design Studio", "Finance", "Break Room"] },
-};
-
-const ROOM_PORTALS: Record<string, Record<string, Portal>> = {
-  "Manager Office": {
-    "Meeting Room": portal(26.92, 16.93, 34.73, 16.93),
-    "Design Studio": portal(15.13, 29.63, 15.13, 41.71),
-  },
-  "Meeting Room": {
-    "Manager Office": portal(34.73, 16.93, 26.92, 16.93),
-    Support: portal(65.27, 16.93, 73.08, 16.93),
-    Finance: portal(53.49, 29.63, 53.49, 41.71),
-  },
-  Support: {
-    "Meeting Room": portal(73.08, 16.93, 65.27, 16.93),
-  },
-  "Design Studio": {
-    "Manager Office": portal(15.13, 41.71, 15.13, 29.63),
-    Finance: portal(33.89, 58.82, 43.44, 58.82),
-    "Open Office": portal(39.54, 75.93, 39.54, 79.19),
-  },
-  Finance: {
-    "Meeting Room": portal(53.49, 41.71, 53.49, 29.63),
-    "Design Studio": portal(43.44, 58.82, 33.89, 58.82),
-    "Break Room": portal(63.53, 58.82, 73.08, 58.82),
-    "Open Office": portal(53.49, 75.93, 53.49, 79.19),
-  },
-  "Break Room": {
-    Finance: portal(73.08, 58.82, 63.53, 58.82),
-    "Open Office": portal(73.08, 80.86, 63.53, 80.86),
-  },
-  "Open Office": {
-    "Design Studio": portal(39.54, 79.19, 39.54, 75.93),
-    Finance: portal(53.49, 79.19, 53.49, 75.93),
-    "Break Room": portal(63.53, 80.86, 73.08, 80.86),
-  },
-};
-
-function nextRoomInPath(start: OfficeRoom, goal: OfficeRoom): { room: OfficeRoom; portal: Portal } | null {
-  if (start === goal) return null;
+export function findPath(start: OfficeRoom, goal: OfficeRoom): OfficeRoom[] {
+  if (start === goal) return [start];
 
   const queue: OfficeRoom[][] = [[start]];
   const seen = new Set<OfficeRoom>([start]);
@@ -89,53 +36,6 @@ function nextRoomInPath(start: OfficeRoom, goal: OfficeRoom): { room: OfficeRoom
     for (const neighbor of officeNodes[room].neighbors) {
       if (seen.has(neighbor)) continue;
       const next = [...path, neighbor];
-      if (neighbor === goal) {
-        const firstNext = next[1];
-        const routePortal = ROOM_PORTALS[room]?.[firstNext];
-        if (routePortal) return { room: firstNext, portal: routePortal };
-        return null;
-      }
-      seen.add(neighbor);
-      queue.push(next);
-    }
-  }
-
-  return null;
-}
-
-function moveToward(
-  person: { x: number; y: number },
-  target: { x: number; y: number },
-  speed: number,
-) {
-  const dx = target.x - person.x;
-  const dy = target.y - person.y;
-  const distance = Math.hypot(dx, dy);
-
-  if (distance <= speed) {
-    return { x: target.x, y: target.y, arrived: true };
-  }
-
-  return {
-    x: person.x + (dx / distance) * speed,
-    y: person.y + (dy / distance) * speed,
-    arrived: false,
-  };
-}
-
-export function findPath(start: OfficeRoom, goal: OfficeRoom): OfficeRoom[] {
-  if (start === goal) return [start];
-
-  const queue: OfficeRoom[][] = [[start]];
-  const seen = new Set<OfficeRoom>([start]);
-
-  while (queue.length) {
-    const currentPath = queue.shift()!;
-    const current = currentPath[currentPath.length - 1];
-
-    for (const neighbor of officeNodes[current].neighbors) {
-      if (seen.has(neighbor)) continue;
-      const next = [...currentPath, neighbor];
       if (neighbor === goal) return next;
       seen.add(neighbor);
       queue.push(next);
@@ -143,6 +43,35 @@ export function findPath(start: OfficeRoom, goal: OfficeRoom): OfficeRoom[] {
   }
 
   return [start, goal];
+}
+
+export function advanceActor(
+  person: { x: number; y: number; location?: OfficeRoom },
+  goal: OfficeRoom,
+  speed = 0.65,
+  finalPoint?: { x: number; y: number },
+) {
+  const start = person.location && officeNodes[person.location] ? person.location : "Open Office";
+  const path = findPath(start, goal);
+  const nextRoom = path[1] ?? goal;
+  const target = nextRoom === goal && finalPoint ? finalPoint : officeNodes[nextRoom];
+
+  const distance = distanceBetween(person, target);
+
+  if (distance <= speed) {
+    return {
+      x: target.x,
+      y: target.y,
+      location: nextRoom,
+    };
+  }
+
+  const ratio = speed / distance;
+  return {
+    x: person.x + (target.x - person.x) * ratio,
+    y: person.y + (target.y - person.y) * ratio,
+    location: start,
+  };
 }
 
 export function homeRoomForDepartment(department: string): OfficeRoom {
