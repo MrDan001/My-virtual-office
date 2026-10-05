@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { activitySpotForStaff } from "../lib/office-sim";
 
 type OfficeRoom =
   | "Reception"
@@ -47,6 +48,19 @@ const ROOM_DATA: { name: OfficeRoom; x: number; z: number; w: number; d: number;
   { name: "Open Office", x: -1, z: 10, w: 11, d: 5, color: 0xe6eee5 },
   { name: "Break Room", x: 10, z: 5, w: 8, d: 9, color: 0xf0eadf },
 ];
+
+type DoorSide = "north" | "south" | "east" | "west";
+
+const ROOM_DOORS: Record<OfficeRoom, DoorSide> = {
+  Reception: "north",
+  "Manager Office": "north",
+  "Meeting Room": "north",
+  "Design Studio": "south",
+  Finance: "south",
+  Support: "north",
+  "Break Room": "west",
+  "Open Office": "east",
+};
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
@@ -203,11 +217,7 @@ function addStaff(scene: THREE.Scene, person: Staff) {
   label.position.y = 2.85;
   group.add(label);
 
-  if (person.status === "Working" && !person.walking) {
-    group.userData.seated = true;
-    group.position.y = -0.38;
-    group.rotation.x = 0.04;
-  }
+  group.userData.bodyParts = { legs, torso, head, hairCap, armL, armR, label };
 
   scene.add(group);
   return group;
@@ -335,8 +345,6 @@ function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
     metalness: 0.02,
   });
 
-  // Pull each room footprint inward on every side to create wider circulation
-  // passages while keeping the room centers and overall office layout unchanged.
   const passageInset = 0.5;
   const visualW = Math.max(1, room.w - passageInset * 2);
   const visualD = Math.max(1, room.d - passageInset * 2);
@@ -351,18 +359,23 @@ function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
     color: 0xd5c7b4,
     roughness: 0.85,
   });
+  const doorMat = new THREE.MeshStandardMaterial({
+    color: 0x7f5a3f,
+    roughness: 0.72,
+  });
+  const frameMat = new THREE.MeshStandardMaterial({
+    color: 0x5e4634,
+    roughness: 0.65,
+  });
 
   const wallH = 2.35;
   const thickness = 0.18;
+  const doorW = 1.65;
+  const doorH = 2.05;
+  const doorSide = ROOM_DOORS[room.name];
 
-  // For this cleanup pass every room wall is fully closed.
-  // No doorway cuts, no frame gaps and no broken wall segments.
-  const addSolidWall = (
-    width: number,
-    depth: number,
-    x: number,
-    z: number,
-  ) => {
+  const addSolidWall = (width: number, depth: number, x: number, z: number) => {
+    if (width <= 0 || depth <= 0) return;
     const wall = roundedBox(width, wallH, depth, wallMat);
     wall.position.set(x, wallH / 2, z);
     wall.castShadow = true;
@@ -370,30 +383,67 @@ function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
     scene.add(wall);
   };
 
-  addSolidWall(
-    visualW + thickness,
-    thickness,
-    room.x,
-    room.z - visualD / 2,
-  );
-  addSolidWall(
-    visualW + thickness,
-    thickness,
-    room.x,
-    room.z + visualD / 2,
-  );
-  addSolidWall(
-    thickness,
-    visualD,
-    room.x - visualW / 2,
-    room.z,
-  );
-  addSolidWall(
-    thickness,
-    visualD,
-    room.x + visualW / 2,
-    room.z,
-  );
+  const halfGap = doorW / 2;
+  const addHorizontalDoorWall = (z: number) => {
+    const sideWidth = Math.max(0, visualW / 2 - halfGap);
+    addSolidWall(sideWidth, thickness, room.x - (halfGap + sideWidth / 2), z);
+    addSolidWall(sideWidth, thickness, room.x + (halfGap + sideWidth / 2), z);
+  };
+
+  const addVerticalDoorWall = (x: number) => {
+    const sideDepth = Math.max(0, visualD / 2 - halfGap);
+    addSolidWall(thickness, sideDepth, x, room.z - (halfGap + sideDepth / 2));
+    addSolidWall(thickness, sideDepth, x, room.z + (halfGap + sideDepth / 2));
+  };
+
+  if (doorSide === "north") addHorizontalDoorWall(room.z - visualD / 2);
+  if (doorSide === "south") addHorizontalDoorWall(room.z + visualD / 2);
+  if (doorSide === "east") addVerticalDoorWall(room.x + visualW / 2);
+  if (doorSide === "west") addVerticalDoorWall(room.x - visualW / 2);
+
+  // Every room gets a clear framed doorway. The leaf is swung open so the
+  // entrance remains visually and physically clear for the staff routes.
+  if (doorSide === "north" || doorSide === "south") {
+    const doorZ = doorSide === "north" ? room.z - visualD / 2 : room.z + visualD / 2;
+    [-1, 1].forEach((side) => {
+      const post = roundedBox(0.12, doorH, 0.12, frameMat);
+      post.position.set(room.x + side * halfGap, doorH / 2, doorZ);
+      scene.add(post);
+    });
+    const header = roundedBox(doorW + 0.24, 0.12, 0.12, frameMat);
+    header.position.set(room.x, doorH, doorZ);
+    scene.add(header);
+
+    const leaf = roundedBox(doorW, doorH - 0.12, 0.08, doorMat);
+    leaf.position.set(
+      room.x - halfGap,
+      (doorH - 0.12) / 2,
+      doorSide === "north" ? doorZ - doorW / 2 : doorZ + doorW / 2,
+    );
+    leaf.rotation.y = Math.PI / 2;
+    leaf.castShadow = true;
+    scene.add(leaf);
+  } else {
+    const doorX = doorSide === "east" ? room.x + visualW / 2 : room.x - visualW / 2;
+    [-1, 1].forEach((side) => {
+      const post = roundedBox(0.12, doorH, 0.12, frameMat);
+      post.position.set(doorX, doorH / 2, room.z + side * halfGap);
+      scene.add(post);
+    });
+    const header = roundedBox(0.12, 0.12, doorW + 0.24, frameMat);
+    header.position.set(doorX, doorH, room.z);
+    scene.add(header);
+
+    const leaf = roundedBox(0.08, doorH - 0.12, doorW, doorMat);
+    leaf.position.set(
+      doorSide === "east" ? doorX - doorW / 2 : doorX + doorW / 2,
+      (doorH - 0.12) / 2,
+      room.z - halfGap,
+    );
+    leaf.rotation.y = doorSide === "east" ? Math.PI / 2 : -Math.PI / 2;
+    leaf.castShadow = true;
+    scene.add(leaf);
+  }
 
   const label = makeTextSprite(room.name, "#475569");
   label.position.set(room.x, 2.75, room.z - visualD / 2 + 0.7);
@@ -521,6 +571,10 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
     addDesk(scene, 8.25, -6, 0, "Support");
     addDesk(scene, 11.75, -6, 0, "Support");
 
+    // Two shared desks for the Open Office team.
+    addDesk(scene, -2.75, 10, 0, "Open");
+    addDesk(scene, 0.75, 10, 0, "Open");
+
     const table = roundedBox(5.5, 0.28, 2.4, new THREE.MeshStandardMaterial({ color: 0x9a6848, roughness: 0.65 }));
     table.position.set(0, 1.05, -6);
     scene.add(table);
@@ -596,14 +650,53 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
           }
         }
 
-        const seated = !person.walking && person.status === "Working";
-        if (seated) {
-          group.position.y += (-0.38 - group.position.y) * Math.min(1, delta * 8);
-          group.rotation.x += (0.04 - group.rotation.x) * Math.min(1, delta * 8);
-        } else {
-          group.position.y += (0 - group.position.y) * Math.min(1, delta * 8);
-          group.rotation.x += (0 - group.rotation.x) * Math.min(1, delta * 8);
+        const seated =
+          !person.walking &&
+          (person.status === "Working" || person.status === "Meeting" || person.status === "Break");
+        const bodyParts = group.userData.bodyParts as {
+          legs: THREE.Group;
+          torso: THREE.Object3D;
+          head: THREE.Object3D;
+          hairCap: THREE.Object3D;
+          armL: THREE.Object3D;
+          armR: THREE.Object3D;
+          label: THREE.Object3D;
+        } | undefined;
+
+        if (bodyParts) {
+          if (seated) {
+            bodyParts.legs.position.y += (0.12 - bodyParts.legs.position.y) * Math.min(1, delta * 8);
+            bodyParts.legs.scale.y += (0.56 - bodyParts.legs.scale.y) * Math.min(1, delta * 8);
+            bodyParts.torso.position.y += (0.94 - bodyParts.torso.position.y) * Math.min(1, delta * 8);
+            bodyParts.head.position.y += (1.72 - bodyParts.head.position.y) * Math.min(1, delta * 8);
+            bodyParts.hairCap.position.y += (1.84 - bodyParts.hairCap.position.y) * Math.min(1, delta * 8);
+            bodyParts.armL.position.y += (0.98 - bodyParts.armL.position.y) * Math.min(1, delta * 8);
+            bodyParts.armR.position.y += (0.98 - bodyParts.armR.position.y) * Math.min(1, delta * 8);
+            bodyParts.label.position.y += (2.42 - bodyParts.label.position.y) * Math.min(1, delta * 8);
+          } else {
+            bodyParts.legs.position.y += (0 - bodyParts.legs.position.y) * Math.min(1, delta * 8);
+            bodyParts.legs.scale.y += (1 - bodyParts.legs.scale.y) * Math.min(1, delta * 8);
+            bodyParts.torso.position.y += (1.35 - bodyParts.torso.position.y) * Math.min(1, delta * 8);
+            bodyParts.head.position.y += (2.15 - bodyParts.head.position.y) * Math.min(1, delta * 8);
+            bodyParts.hairCap.position.y += (2.27 - bodyParts.hairCap.position.y) * Math.min(1, delta * 8);
+            bodyParts.armL.position.y += (1.35 - bodyParts.armL.position.y) * Math.min(1, delta * 8);
+            bodyParts.armR.position.y += (1.35 - bodyParts.armR.position.y) * Math.min(1, delta * 8);
+            bodyParts.label.position.y += (2.85 - bodyParts.label.position.y) * Math.min(1, delta * 8);
+          }
         }
+
+        const poseTarget = activitySpotForStaff(
+          person.department,
+          person.status as "Working" | "Meeting" | "Break",
+          person.id,
+        );
+        const targetRotation = typeof poseTarget.rotation === "number" ? poseTarget.rotation : 0;
+        let rotationDelta = targetRotation - group.rotation.y;
+        rotationDelta = Math.atan2(Math.sin(rotationDelta), Math.cos(rotationDelta));
+        group.rotation.y += rotationDelta * Math.min(1, delta * 8);
+
+        group.position.y += (0 - group.position.y) * Math.min(1, delta * 8);
+        group.rotation.x += (0 - group.rotation.x) * Math.min(1, delta * 8);
 
         group.traverse((child) => {
           if (child instanceof THREE.Mesh && child.userData.selected) child.scale.setScalar(1.12);
