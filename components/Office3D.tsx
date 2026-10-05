@@ -330,7 +330,7 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
     controls.enableDamping = true;
     controls.dampingFactor = 0.07;
     controls.minDistance = 8;
-    controls.maxDistance = 42;
+    controls.maxDistance = 34;
     controls.maxPolarAngle = Math.PI * 0.47;
     controls.minPolarAngle = 0.28;
     controls.target.set(0, 0, 1);
@@ -346,13 +346,49 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
     sun.shadow.camera.bottom = -24;
     scene.add(sun);
 
-    const base = new THREE.Mesh(
-      new THREE.BoxGeometry(25, 0.4, 22),
-      new THREE.MeshStandardMaterial({ color: 0xb69b7e, roughness: 0.9 })
+    // Continuous foundation: room footprints extend beyond the previous 25x22 slab.
+    // The larger slab closes the underside/gaps and gives every camera angle a finished edge.
+    const foundationMaterial = new THREE.MeshStandardMaterial({
+      color: 0xbca489,
+      roughness: 0.92,
+      metalness: 0,
+    });
+
+    const foundation = new THREE.Mesh(
+      new THREE.BoxGeometry(32, 0.55, 30),
+      foundationMaterial
     );
-    base.position.y = -0.22;
-    base.receiveShadow = true;
-    scene.add(base);
+    foundation.position.y = -0.3;
+    foundation.receiveShadow = true;
+    scene.add(foundation);
+
+    // A low perimeter curb covers the exposed outside edges without boxing in the rooms.
+    const curbMaterial = new THREE.MeshStandardMaterial({
+      color: 0x9f866d,
+      roughness: 0.9,
+      metalness: 0,
+    });
+    const curbH = 0.42;
+    const curbW = 32;
+    const curbD = 30;
+    const curbT = 0.22;
+    const curbY = 0.02;
+
+    const addCurb = (width: number, depth: number, x: number, z: number) => {
+      const curb = new THREE.Mesh(
+        new THREE.BoxGeometry(width, curbH, depth),
+        curbMaterial
+      );
+      curb.position.set(x, curbY, z);
+      curb.receiveShadow = true;
+      curb.castShadow = true;
+      scene.add(curb);
+    };
+
+    addCurb(curbW, curbT, 0, -curbD / 2 + curbT / 2);
+    addCurb(curbW, curbT, 0, curbD / 2 - curbT / 2);
+    addCurb(curbT, curbD, -curbW / 2 + curbT / 2, 0);
+    addCurb(curbT, curbD, curbW / 2 - curbT / 2, 0);
 
     ROOM_DATA.forEach((room) => buildRoom(scene, room));
 
