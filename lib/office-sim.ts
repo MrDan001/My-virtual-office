@@ -210,24 +210,26 @@ export function advanceActor(
 ) {
   const destination = finalPoint ?? officeNodes[goal];
   const currentRoom = person.location && officeNodes[person.location] ? person.location : "Open Office";
-  let navigation = person.navigation;
+  const existingNavigation = person.navigation;
 
-  const needsNewRoute = !navigation
-    || navigation.goal !== goal
-    || !samePoint(navigation.finalPoint, destination)
-    || navigation.index >= navigation.steps.length;
+  const needsNewRoute = !existingNavigation
+    || existingNavigation.goal !== goal
+    || !samePoint(existingNavigation.finalPoint, destination)
+    || existingNavigation.index >= existingNavigation.steps.length;
 
-  if (needsNewRoute) navigation = buildNavigation(currentRoom, goal, destination);
+  const activeNavigation = needsNewRoute
+    ? buildNavigation(currentRoom, goal, destination)
+    : existingNavigation;
 
   let x = person.x;
   let y = person.y;
   let location = currentRoom;
-  let index = navigation.index;
+  let index = activeNavigation.index;
   let guard = 0;
 
-  while (index < navigation.steps.length && guard < 4) {
+  while (index < activeNavigation.steps.length && guard < 4) {
     guard += 1;
-    const step = navigation.steps[index];
+    const step = activeNavigation.steps[index];
     const moved = moveToward({ x, y }, step, speed);
     x = moved.x;
     y = moved.y;
@@ -236,11 +238,11 @@ export function advanceActor(
     index += 1;
   }
 
-  const arrived = index >= navigation.steps.length;
+  const arrived = index >= activeNavigation.steps.length;
   return {
     x,
     y,
     location: arrived ? goal : location,
-    navigation: arrived ? undefined : { ...navigation, index },
+    navigation: arrived ? undefined : { ...activeNavigation, index },
   };
 }
