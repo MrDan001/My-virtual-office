@@ -33,12 +33,12 @@ type Task = {
 };
 
 const seedStaff: Staff[] = [
-  { id: 1, name: "Sarah Johnson", role: "Team Lead", department: "Management", status: "Meeting", task: "Weekly standup", x: 44, y: 25, color: "#f59e0b", location: "Meeting Room" },
-  { id: 2, name: "Mike Williams", role: "Product Designer", department: "Design", status: "Working", task: "Landing page", x: 18, y: 50, color: "#22c55e", location: "Design Studio" },
-  { id: 3, name: "Emma Davis", role: "Marketing", department: "Marketing", status: "Working", task: "Campaign review", x: 42, y: 45, color: "#a855f7", location: "Open Office" },
-  { id: 4, name: "James Brown", role: "Accountant", department: "Finance", status: "Away", task: "Payroll", x: 51, y: 55, color: "#ef4444", location: "Finance" },
-  { id: 5, name: "Lina Wilson", role: "Support Agent", department: "Support", status: "Working", task: "Customer inbox", x: 80, y: 20, color: "#06b6d4", location: "Support" },
-  { id: 6, name: "David Miller", role: "Operations", department: "Operations", status: "Break", task: "Inventory check", x: 86.5, y: 82, color: "#3b82f6", location: "Break Room" },
+  { id: 1, name: "Sarah Johnson", role: "Team Lead", department: "Management", status: "Working", task: "Team management", x: 8.16, y: 13.40, color: "#f59e0b", location: "Manager Office", walking: false },
+  { id: 2, name: "Mike Williams", role: "Product Designer", department: "Design", status: "Working", task: "Design review", x: 24.72, y: 55.29, color: "#22c55e", location: "Design Studio", walking: false },
+  { id: 3, name: "Emma Davis", role: "Marketing", department: "Marketing", status: "Working", task: "Campaign work", x: 39.54, y: 89.24, color: "#a855f7", location: "Open Office", walking: false },
+  { id: 4, name: "James Brown", role: "Accountant", department: "Finance", status: "Working", task: "Processing payroll", x: 59.59, y: 62.35, color: "#ef4444", location: "Finance", walking: false },
+  { id: 5, name: "Lina Wilson", role: "Support Agent", department: "Support", status: "Working", task: "Customer inbox", x: 78.77, y: 21.34, color: "#06b6d4", location: "Support", walking: false },
+  { id: 6, name: "David Miller", role: "Operations", department: "Operations", status: "Working", task: "Operations queue", x: 53.49, y: 89.24, color: "#3b82f6", location: "Open Office", walking: false },
 ];
 
 const waypoints = [
@@ -128,7 +128,7 @@ function Topbar({ page, onAdd }: { page: Page; onAdd: () => void }) {
   return <header className="topbar"><div><h1>{title}</h1><p>{page === "dashboard" ? "Here’s what’s happening in your office today." : `Manage your ${page} from one place.`}</p></div><div className="top-actions"><label className="search"><Icon name="search" /><input placeholder="Search anything..." /></label><button className="icon-button"><Icon name="bell" /><b>3</b></button><button className="top-add" onClick={onAdd}><Icon name="plus" /> Add employee</button><div className="date-chip">{new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</div><div className="user-avatar small">AD</div></div></header>;
 }
 
-function Dashboard({ staff, running, setRunning, onSelect, onAdd, setPage }: { staff: Staff[]; running: boolean; setRunning: (v: boolean) => void; onSelect: (s: Staff) => void; onAdd: () => void; setPage: (p: Page) => void }) {
+function Dashboard({ staff, running, setRunning, onSelect, onAdd, setPage, meetingCall, onSummon }: { staff: Staff[]; running: boolean; setRunning: (v: boolean) => void; onSelect: (s: Staff) => void; onAdd: () => void; setPage: (p: Page) => void; meetingCall: boolean; onSummon: () => void }) {
   const working = staff.filter((s) => s.status === "Working").length;
   return <div className="content">
     <div className="stats-grid">
@@ -139,7 +139,7 @@ function Dashboard({ staff, running, setRunning, onSelect, onAdd, setPage }: { s
     </div>
     <div className="dashboard-grid">
       <section className="panel office-panel">
-        <div className="panel-head"><div><h2>Office View</h2><p>See your people and workplace activity live.</p></div><div className="scene-controls"><span className="live-tag"><i />Live</span><button onClick={() => setRunning(!running)}>{<Icon name={running ? "pause" : "play"} />} {running ? "Pause" : "Run"} </button><button onClick={() => setPage("office")} className="view-link">Open full view <Icon name="arrow" /></button></div></div>
+        <div className="panel-head"><div><h2>Office View</h2><p>See your people and workplace activity live.</p></div><div className="scene-controls"><span className="live-tag"><i />Live</span><button onClick={() => setRunning(!running)}>{<Icon name={running ? "pause" : "play"} />} {running ? "Pause" : "Run"} </button><button onClick={onSummon}>{meetingCall ? "Release staff" : "Summon all"}</button><button onClick={() => setPage("office")} className="view-link">Open full view <Icon name="arrow" /></button></div></div>
         <OfficeScene staff={staff} running={running} onSelect={onSelect} />
       </section>
       <aside className="side-stack">
@@ -277,6 +277,7 @@ export default function Home() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [staff, setStaff] = useState<Staff[]>(seedStaff);
   const [running, setRunning] = useState(true);
+  const [meetingCall, setMeetingCall] = useState(false);
   const [selected, setSelected] = useState<Staff | null>(null);
   const [adding, setAdding] = useState(false);
   const [clock, setClock] = useState("09:42 AM");
@@ -308,13 +309,17 @@ export default function Home() {
     const t = setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
       setStaff((current) => current.map((person) => {
-        if (person.status === "Away") return { ...person, walking: false };
+        if (person.status === "Away" && !meetingCall) return { ...person, walking: false };
 
-        const routine = routineForStaff(person.department, person.id, now);
-        const targetRoom = targetRoomForStaff(person.department, routine.status);
-        const targetPoint = activitySpotForStaff(person.department, routine.status, person.id);
-        const next = advanceActor(person, targetRoom, 0.42, targetPoint);
-        const arrived = next.location === targetRoom && isAtTarget(next, targetPoint, 0.9);
+        const routine = meetingCall
+          ? { status: "Meeting" as const, task: "All-hands meeting" }
+          : routineForStaff(person.department, person.id, now);
+        const targetRoom = meetingCall ? "Meeting Room" : targetRoomForStaff(person.department, routine.status);
+        const targetPoint = meetingCall
+          ? activitySpotForStaff(person.department, "Meeting", person.id)
+          : activitySpotForStaff(person.department, routine.status, person.id);
+        const next = advanceActor(person, targetRoom, 1.15, targetPoint);
+        const arrived = next.location === targetRoom && isAtTarget(next, targetPoint, 0.7);
 
         return {
           ...person,
@@ -324,9 +329,19 @@ export default function Home() {
           task: arrived ? routine.task : `Walking to ${targetRoom}`,
         };
       }));
-    }, 700);
+    }, 250);
     return () => clearInterval(t);
-  }, [running]);
+  }, [running, meetingCall]);
+
+  const summonAllToMeeting = () => {
+    setMeetingCall(true);
+    setRunning(true);
+  };
+
+  const releaseAllStaff = () => {
+    setMeetingCall(false);
+    setRunning(true);
+  };
 
   const addEmployee = async (newStaff: Omit<Staff, "id" | "x" | "y">) => {
     try {
@@ -351,7 +366,7 @@ export default function Home() {
 
   const content = useMemo(() => {
     if (page === "dashboard") {
-      return <Dashboard staff={staff} running={running} setRunning={setRunning} onSelect={setSelected} onAdd={() => setAdding(true)} setPage={setPage} />;
+      return <Dashboard staff={staff} running={running} setRunning={setRunning} onSelect={setSelected} onAdd={() => setAdding(true)} setPage={setPage} meetingCall={meetingCall} onSummon={meetingCall ? releaseAllStaff : summonAllToMeeting} />;
     }
     if (page === "office") {
       const activeRoom = selectedRoom;
@@ -365,6 +380,9 @@ export default function Home() {
             {activeRoom && <span className="room-selected"><Icon name="pin"/> {activeRoom}</span>}
             <button className={editingLayout ? "primary" : "secondary"} onClick={() => setEditingLayout((value) => !value)}>
               {editingLayout ? "Finish layout" : "Edit layout"}
+            </button>
+            <button className={meetingCall ? "primary" : "secondary"} onClick={meetingCall ? releaseAllStaff : summonAllToMeeting}>
+              {meetingCall ? "Release staff" : "Summon all to meeting"}
             </button>
             <button className={running ? "secondary" : "primary"} onClick={() => setRunning(!running)}>
               <Icon name={running ? "pause" : "play"} /> {running ? "Pause simulation" : "Resume simulation"}
@@ -390,7 +408,7 @@ export default function Home() {
     if (page === "staff") return <StaffPage staff={staff} onSelect={setSelected} onAdd={() => setAdding(true)} />;
     if (page === "tasks") return <TasksPage staff={staff} />;
     return <SimplePage page={page} staff={staff} />;
-  }, [page, staff, running, selectedRoom, layout, editingLayout]);
+  }, [page, staff, running, meetingCall, selectedRoom, layout, editingLayout]);
   return <div className={`app-shell theme-${theme}`}>
     <Sidebar page={page} setPage={setPage} theme={theme} setTheme={setTheme} onAdd={() => setAdding(true)} />
     <main className="main"><Topbar page={page} onAdd={() => setAdding(true)} /><div className="clock-strip"><span><i className="live-dot" /> Live office simulation</span><strong>{clock}</strong><span>{dbConfigured ? "SQLite connected" : "Local prototype mode"}</span></div>{content}</main>
