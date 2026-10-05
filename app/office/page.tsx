@@ -2,15 +2,7 @@
 
 import { useEffect, useState } from "react";
 import OfficeView from "../../components/OfficeView";
-import {
-  activitySpotForStaff,
-  advanceActor,
-  homeRoomForDepartment,
-  isAtTarget,
-  routineForStaff,
-  targetRoomForStaff,
-  type OfficeRoom,
-} from "../../lib/office-sim";
+import { type OfficeRoom } from "../../lib/office-sim";
 
 type StaffStatus = "Working" | "Meeting" | "Break" | "Away";
 
@@ -25,7 +17,6 @@ type Staff = {
   y: number;
   color: string;
   location?: OfficeRoom;
-  walking?: boolean;
 };
 
 const seedStaff: Staff[] = [
@@ -39,7 +30,6 @@ const seedStaff: Staff[] = [
 
 export default function VirtualOfficePage() {
   const [staff, setStaff] = useState<Staff[]>(seedStaff);
-  const [running, setRunning] = useState(true);
   const [selected, setSelected] = useState<Staff | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<OfficeRoom | null>(null);
 
@@ -49,37 +39,6 @@ export default function VirtualOfficePage() {
       if (saved) setStaff(JSON.parse(saved) as Staff[]);
     } catch {}
   }, []);
-
-  useEffect(() => {
-    if (!running) return;
-
-    const timer = window.setInterval(() => {
-      const now = Math.floor(Date.now() / 1000);
-
-      setStaff((current) =>
-        current.map((person) => {
-          if (person.status === "Away") return { ...person, walking: false };
-
-          const routine = routineForStaff(person.department, person.id, now);
-          const targetRoom = targetRoomForStaff(person.department, routine.status);
-          const targetPoint = activitySpotForStaff(person.department, routine.status, person.id);
-          const next = advanceActor(person, targetRoom, 0.42, targetPoint);
-          const arrived =
-            next.location === targetRoom && isAtTarget(next, targetPoint, 0.9);
-
-          return {
-            ...person,
-            status: routine.status,
-            ...next,
-            walking: !arrived,
-            task: arrived ? routine.task : `Walking to ${targetRoom}`,
-          };
-        }),
-      );
-    }, 700);
-
-    return () => window.clearInterval(timer);
-  }, [running]);
 
   useEffect(() => {
     try {
@@ -117,7 +76,7 @@ export default function VirtualOfficePage() {
               Virtual Office
             </h1>
             <p style={{ margin: 0, color: "#728097", fontSize: 14 }}>
-              Watch your team move through the workplace, work at their desks and gather in shared rooms.
+              View your team in the workplace at their assigned desks and rooms.
             </p>
           </div>
 
@@ -137,21 +96,6 @@ export default function VirtualOfficePage() {
             >
               ← Dashboard
             </a>
-            <button
-              onClick={() => setRunning((value) => !value)}
-              style={{
-                border: 0,
-                borderRadius: 10,
-                padding: "11px 14px",
-                background: running ? "#172338" : "#3b74dd",
-                color: "#fff",
-                fontSize: 12,
-                fontWeight: 800,
-                cursor: "pointer",
-              }}
-            >
-              {running ? "Pause simulation" : "Resume simulation"}
-            </button>
             <span
               style={{
                 border: "1px solid #d9e1ea",
@@ -178,7 +122,6 @@ export default function VirtualOfficePage() {
         >
           <OfficeView
             staff={staff}
-            running={running}
             onSelect={setSelected}
             onRoomSelect={setSelectedRoom}
             selectedRoom={selectedRoom}
