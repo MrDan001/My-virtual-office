@@ -20,15 +20,28 @@ export type RoutineState = {
   task: string;
 };
 
+const WORLD_MIN_X = -14.34;
+const WORLD_MAX_X = 14.34;
+const WORLD_MIN_Z = -9.84;
+const WORLD_MAX_Z = 12.84;
+
+function point(x: number, z: number, rotation = 0) {
+  return {
+    x: ((x - WORLD_MIN_X) / (WORLD_MAX_X - WORLD_MIN_X)) * 100,
+    y: ((z - WORLD_MIN_Z) / (WORLD_MAX_Z - WORLD_MIN_Z)) * 100,
+    rotation,
+  };
+}
+
 export const officeNodes: Record<OfficeRoom, OfficeNode> = {
-  Reception: { room: "Reception", x: 38, y: 91, neighbors: ["Open Office", "Support"] },
-  "Manager Office": { room: "Manager Office", x: 17, y: 19, neighbors: ["Open Office", "Meeting Room"] },
-  "Meeting Room": { room: "Meeting Room", x: 51, y: 19, neighbors: ["Manager Office", "Open Office", "Support"] },
-  "Design Studio": { room: "Design Studio", x: 20, y: 68, neighbors: ["Open Office", "Support"] },
-  Finance: { room: "Finance", x: 56, y: 68, neighbors: ["Open Office", "Meeting Room", "Break Room"] },
-  Support: { room: "Support", x: 84, y: 28, neighbors: ["Reception", "Meeting Room", "Design Studio", "Break Room"] },
-  "Break Room": { room: "Break Room", x: 84, y: 75, neighbors: ["Support", "Finance", "Open Office"] },
-  "Open Office": { room: "Open Office", x: 49, y: 53, neighbors: ["Reception", "Manager Office", "Meeting Room", "Design Studio", "Finance", "Break Room"] },
+  Reception: point(0, 9.8),
+  "Manager Office": point(-10, -6),
+  "Meeting Room": point(0, -6),
+  "Design Studio": point(-9, 3.5),
+  Finance: point(1, 3.5),
+  Support: point(10, -6),
+  "Break Room": point(10, 5),
+  "Open Office": point(-1, 10),
 };
 
 export function findPath(start: OfficeRoom, goal: OfficeRoom): OfficeRoom[] {
@@ -63,14 +76,6 @@ export function homeRoomForDepartment(department: string): OfficeRoom {
     Marketing: "Open Office",
   };
   return map[department] ?? "Open Office";
-}
-
-function point(x: number, z: number, rotation = 0) {
-  return {
-    x: ((x + 11) / 22) * 100,
-    y: ((z + 9.5) / 19) * 100,
-    rotation,
-  };
 }
 
 export function deskSpotForStaff(department: string, id: number) {
