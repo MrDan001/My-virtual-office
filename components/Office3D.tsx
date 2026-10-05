@@ -352,6 +352,38 @@ function addStaff(scene: THREE.Scene, person: Staff) {
   hairCap.position.y = 2.27;
   group.add(hairCap);
 
+  // Simple human facial features so the staff read as people rather than
+  // anonymous capsules. The face is built in the character's forward (+Z)
+  // direction, so it remains correct while the actor turns naturally.
+  const eyeWhite = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.55 });
+  const eyeDark = new THREE.MeshStandardMaterial({ color: 0x172033, roughness: 0.35 });
+  const lip = new THREE.MeshStandardMaterial({ color: 0x8f3f45, roughness: 0.65 });
+
+  [-0.12, 0.12].forEach((eyeX) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), eyeWhite);
+    eye.position.set(eyeX, 2.18, 0.315);
+    group.add(eye);
+
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), eyeDark);
+    pupil.position.set(eyeX, 2.18, 0.36);
+    group.add(pupil);
+  });
+
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.11, 8), skin);
+  nose.rotation.x = Math.PI / 2;
+  nose.position.set(0, 2.08, 0.34);
+  group.add(nose);
+
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.025, 0.018), lip);
+  mouth.position.set(0, 2.0, 0.325);
+  group.add(mouth);
+
+  [-1, 1].forEach((side) => {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), skin);
+    ear.position.set(side * 0.335, 2.12, 0);
+    group.add(ear);
+  });
+
   const armL = roundedBox(0.18, 0.75, 0.18, shirt);
   const armR = roundedBox(0.18, 0.75, 0.18, shirt);
   armL.position.set(-0.5, 1.35, 0);
@@ -783,7 +815,7 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
           current.z += (dz / distance) * step;
         }
 
-        const gait = Math.sin(clock.elapsedTime * 11.5);
+        const gait = Math.sin(clock.elapsedTime * 9.5);
         const gaitData = group.userData.gait as {
           legL: THREE.Object3D;
           legR: THREE.Object3D;
@@ -797,14 +829,14 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
           let angle = desired - group.rotation.y;
           angle = Math.atan2(Math.sin(angle), Math.cos(angle));
           group.rotation.y += angle * Math.min(1, delta * 12);
-          group.position.y += (Math.sin(clock.elapsedTime * 11.5) * 0.025 - group.position.y) * Math.min(1, delta * 15);
+          group.position.y += (Math.sin(clock.elapsedTime * 19) * 0.035 - group.position.y) * Math.min(1, delta * 18);
 
           if (gaitData) {
-            gaitData.legL.rotation.x = gait * 0.62;
-            gaitData.legR.rotation.x = -gait * 0.62;
-            gaitData.armL.rotation.x = -gait * 0.5;
-            gaitData.armR.rotation.x = gait * 0.5;
-            gaitData.torso.rotation.z = gait * 0.035;
+            gaitData.legL.rotation.x = gait * 0.72;
+            gaitData.legR.rotation.x = -gait * 0.72;
+            gaitData.armL.rotation.x = -gait * 0.58;
+            gaitData.armR.rotation.x = gait * 0.58;
+            gaitData.torso.rotation.z = gait * 0.018;
           }
         } else {
           const seated = person.status === "Working" || person.status === "Meeting";
