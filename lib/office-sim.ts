@@ -237,8 +237,14 @@ function findRoomPath(room: OfficeRoom, start: { x: number; y: number }, goal: {
   }];
   const cameFrom = new Map<string, string>();
   const bestG = new Map<string, number>([[key(startCell), 0]]);
-  const neighbors = [-1, 0, 1].flatMap((dc) => [-1, 0, 1].map((dr) => [dc, dr] as const))
-    .filter(([dc, dr]) => dc !== 0 || dr !== 0);
+  // Use cardinal movement for human-like corridor walking. Diagonal grid
+  // shortcuts were creating curved/orbit-like approaches around the meeting table.
+  const neighbors = [
+    [-1, 0],
+    [1, 0],
+    [0, -1],
+    [0, 1],
+  ] as const;
 
   while (open.length) {
     open.sort((a, b) => a.f - b.f);
@@ -268,8 +274,7 @@ function findRoomPath(room: OfficeRoom, start: { x: number; y: number }, goal: {
       const point = toPoint(next);
       if (blocked(point)) continue;
 
-      const diagonal = dc !== 0 && dr !== 0;
-      const cost = diagonal ? 1.414 : 1;
+      const cost = 1;
       const tentativeG = (bestG.get(currentKey) ?? Infinity) + cost;
       const nextKey = key(next);
       if (tentativeG >= (bestG.get(nextKey) ?? Infinity)) continue;
