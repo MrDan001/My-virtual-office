@@ -236,6 +236,7 @@ function buildExteriorShell(scene: THREE.Scene) {
   const maxX = 14.34;
   const minZ = -9.84;
   const maxZ = 12.84;
+  const centerZ = (minZ + maxZ) / 2;
 
   const wallHeight = 2.5;
   const wallThickness = 0.38;
@@ -263,8 +264,8 @@ function buildExteriorShell(scene: THREE.Scene) {
   // corner so the adjoining wall and corner posts physically overlap.
   addWall(maxX - minX + wallThickness * 2 + cornerOverlap, wallThickness, 0, minZ);
   addWall(maxX - minX + wallThickness * 2 + cornerOverlap, wallThickness, 0, maxZ);
-  addWall(wallThickness, maxZ - minZ + wallThickness * 2 + cornerOverlap, minX, 0);
-  addWall(wallThickness, maxZ - minZ + wallThickness * 2 + cornerOverlap, maxX, 0);
+  addWall(wallThickness, maxZ - minZ + wallThickness * 2 + cornerOverlap, minX, centerZ);
+  addWall(wallThickness, maxZ - minZ + wallThickness * 2 + cornerOverlap, maxX, centerZ);
 
   // Solid corner posts at the two historically visible seam locations, plus
   // matching posts at the opposite corners to keep the shell structurally uniform.
@@ -307,8 +308,8 @@ function buildExteriorShell(scene: THREE.Scene) {
 
   addSkirt(maxX - minX + skirtT * 2, skirtT, 0, minZ);
   addSkirt(maxX - minX + skirtT * 2, skirtT, 0, maxZ);
-  addSkirt(skirtT, maxZ - minZ + skirtT * 2, minX, 0);
-  addSkirt(skirtT, maxZ - minZ + skirtT * 2, maxX, 0);
+  addSkirt(skirtT, maxZ - minZ + skirtT * 2, minX, centerZ);
+  addSkirt(skirtT, maxZ - minZ + skirtT * 2, maxX, centerZ);
 
   // A continuous office floor closes all small gaps between individual room slabs.
   // It sits directly on the foundation and below the room-specific floors/furniture.
