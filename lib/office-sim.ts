@@ -311,6 +311,13 @@ export function findPath(start: OfficeRoom, goal: OfficeRoom): OfficeRoom[] {
       const next = [...path, neighbor];
       if (neighbor === goal) return next;
       seen.add(neighbor);
+      queue.push(next);
+    }
+  }
+
+  return [start];
+}
+
 function buildNavigation(
   start: OfficeRoom,
   goal: OfficeRoom,
@@ -331,7 +338,7 @@ function buildNavigation(
     const route = ROOM_PORTALS[fromRoom]?.[toRoom];
     if (!route) return { goal, finalPoint, steps: [], index: 0 };
 
-    const approachStart = i === 0 ? current : route.from;
+    const approachStart = i === 0 ? current : route.to;
     if (!appendRoomPath(steps, fromRoom, approachStart, route.from)) {
       return { goal, finalPoint, steps: [], index: 0 };
     }
@@ -348,11 +355,6 @@ function buildNavigation(
   const finalRoom = rooms[rooms.length - 1];
   if (!appendRoomPath(steps, finalRoom, current, finalPoint)) {
     return { goal, finalPoint, steps: [], index: 0 };
-  }
-
-  return { goal, finalPoint, steps, index: 0 };
-}
-
   }
 
   return { goal, finalPoint, steps, index: 0 };
