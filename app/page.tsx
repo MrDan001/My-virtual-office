@@ -20,6 +20,7 @@ type Staff = {
   color: string;
   location?: OfficeRoom;
   walking?: boolean;
+  navigation?: import("../lib/office-sim").NavigationState;
 };
 
 type Task = {
