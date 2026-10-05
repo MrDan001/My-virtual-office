@@ -227,6 +227,57 @@ function buildWall(
   scene.add(wall);
 }
 
+function buildExteriorShell(scene: THREE.Scene) {
+  // Overall room footprint bounds, expanded slightly so the shell overlaps
+  // the room edges and sits firmly on the continuous foundation.
+  const minX = -14.18;
+  const maxX = 14.18;
+  const minZ = -9.68;
+  const maxZ = 12.68;
+
+  const wallHeight = 2.5;
+  const wallThickness = 0.28;
+  const wallMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd1c2af,
+    roughness: 0.86,
+    metalness: 0,
+  });
+
+  const addWall = (width: number, depth: number, x: number, z: number) => {
+    const wall = new THREE.Mesh(
+      new THREE.BoxGeometry(width, wallHeight, depth),
+      wallMaterial,
+    );
+    wall.position.set(x, wallHeight / 2, z);
+    wall.castShadow = true;
+    wall.receiveShadow = true;
+    scene.add(wall);
+  };
+
+  // Continuous perimeter: rear, front, left and right.
+  // These are deliberately outside the internal room walls.
+  addWall(maxX - minX + wallThickness, wallThickness, 0, minZ);
+  addWall(maxX - minX + wallThickness, wallThickness, 0, maxZ);
+  addWall(wallThickness, maxZ - minZ + wallThickness, minX, 0);
+  addWall(wallThickness, maxZ - minZ + wallThickness, maxX, 0);
+
+  // A continuous office floor closes all small gaps between individual room slabs.
+  // It sits directly on the foundation and below the room-specific floors/furniture.
+  const floorMaterial = new THREE.MeshStandardMaterial({
+    color: 0xe4e0d8,
+    roughness: 0.92,
+    metalness: 0,
+  });
+
+  const officeFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(maxX - minX, 0.1, maxZ - minZ),
+    floorMaterial,
+  );
+  officeFloor.position.set(0, 0.05, (minZ + maxZ) / 2);
+  officeFloor.receiveShadow = true;
+  scene.add(officeFloor);
+}
+
 function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
   const mat = new THREE.MeshStandardMaterial({ color: room.color, roughness: 0.8, metalness: 0.02 });
   const floor = roundedBox(room.w, 0.12, room.d, mat);
@@ -355,10 +406,10 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
     });
 
     const foundation = new THREE.Mesh(
-      new THREE.BoxGeometry(32, 0.55, 30),
+      new THREE.BoxGeometry(32, 0.7, 30),
       foundationMaterial
     );
-    foundation.position.y = -0.3;
+    foundation.position.y = -0.375;
     foundation.receiveShadow = true;
     scene.add(foundation);
 
@@ -389,6 +440,8 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
     addCurb(curbW, curbT, 0, curbD / 2 - curbT / 2);
     addCurb(curbT, curbD, -curbW / 2 + curbT / 2, 0);
     addCurb(curbT, curbD, curbW / 2 - curbT / 2, 0);
+
+    buildExteriorShell(scene);
 
     ROOM_DATA.forEach((room) => buildRoom(scene, room));
 
