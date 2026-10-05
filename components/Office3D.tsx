@@ -64,10 +64,15 @@ const ROOM_DOORS: Record<OfficeRoom, DoorSide> = {
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
+const WORLD_MIN_X = -14.34;
+const WORLD_MAX_X = 14.34;
+const WORLD_MIN_Z = -9.84;
+const WORLD_MAX_Z = 12.84;
+
 function worldFromPercent(x: number, y: number) {
   return {
-    x: (x / 100) * 22 - 11,
-    z: (y / 100) * 19 - 9.5,
+    x: WORLD_MIN_X + (x / 100) * (WORLD_MAX_X - WORLD_MIN_X),
+    z: WORLD_MIN_Z + (y / 100) * (WORLD_MAX_Z - WORLD_MIN_Z),
   };
 }
 
