@@ -25,12 +25,10 @@ type Staff = {
   y: number;
   color: string;
   location?: OfficeRoom;
-  walking?: boolean;
 };
 
 type Props = {
   staff: Staff[];
-  running: boolean;
   onSelect: (staff: Staff) => void;
   onRoomSelect?: (room: OfficeRoom) => void;
   selectedRoom?: OfficeRoom | null;
