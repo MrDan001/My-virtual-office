@@ -140,6 +140,7 @@ export function routineForStaff(department: string, id: number, unixSeconds: num
   return { status: "Working", task: "Focused work" };
 }
 
+// Final movement tuning: callers pass the human-scale walking speed used by the 3D viewer.
 export function advanceActor(
   person: { x: number; y: number; location?: OfficeRoom },
   goal: OfficeRoom,
