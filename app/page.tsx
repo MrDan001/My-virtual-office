@@ -109,7 +109,6 @@ function StatCard({ label, value, note, icon, tone }: { label: string; value: st
 
 function OfficeScene({ staff, onSelect, onRoomSelect, selectedRoom }: {
   staff: Staff[];
-  running: boolean;
   onSelect: (s: Staff) => void;
   onRoomSelect?: (room: OfficeRoom) => void;
   selectedRoom?: OfficeRoom | null;
