@@ -335,7 +335,13 @@ function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
     metalness: 0.02,
   });
 
-  const floor = roundedBox(room.w, 0.12, room.d, mat);
+  // Pull each room footprint inward on every side to create wider circulation
+  // passages while keeping the room centers and overall office layout unchanged.
+  const passageInset = 0.5;
+  const visualW = Math.max(1, room.w - passageInset * 2);
+  const visualD = Math.max(1, room.d - passageInset * 2);
+
+  const floor = roundedBox(visualW, 0.12, visualD, mat);
   floor.position.set(room.x, 0.12, room.z);
   floor.userData.room = room.name;
   floor.receiveShadow = true;
@@ -365,32 +371,32 @@ function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
   };
 
   addSolidWall(
-    room.w + thickness,
+    visualW + thickness,
     thickness,
     room.x,
-    room.z - room.d / 2,
+    room.z - visualD / 2,
   );
   addSolidWall(
-    room.w + thickness,
+    visualW + thickness,
     thickness,
     room.x,
-    room.z + room.d / 2,
+    room.z + visualD / 2,
   );
   addSolidWall(
     thickness,
-    room.d,
-    room.x - room.w / 2,
+    visualD,
+    room.x - visualW / 2,
     room.z,
   );
   addSolidWall(
     thickness,
-    room.d,
-    room.x + room.w / 2,
+    visualD,
+    room.x + visualW / 2,
     room.z,
   );
 
   const label = makeTextSprite(room.name, "#475569");
-  label.position.set(room.x, 2.75, room.z - room.d / 2 + 0.7);
+  label.position.set(room.x, 2.75, room.z - visualD / 2 + 0.7);
   label.scale.set(2.3, 0.55, 1);
   label.userData.room = room.name;
   scene.add(label);
