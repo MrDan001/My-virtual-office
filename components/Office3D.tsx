@@ -99,6 +99,123 @@ function worldFromPercent(x: number, y: number) {
   };
 }
 
+function addDebugLine(
+  scene: THREE.Scene,
+  points: THREE.Vector3[],
+  color: number,
+  dashed = false,
+) {
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const material = dashed
+    ? new THREE.LineDashedMaterial({ color, dashSize: 0.28, gapSize: 0.16, linewidth: 2 })
+    : new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9 });
+  const line = new THREE.Line(geometry, material);
+  if (dashed) line.computeLineDistances();
+  line.userData.debug = true;
+  scene.add(line);
+  return line;
+}
+
+function addDebugMarker(scene: THREE.Scene, x: number, z: number, color: number, label: string) {
+  const group = new THREE.Group();
+  group.position.set(x, 0.28, z);
+  group.userData.debug = true;
+
+  const marker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.22, 12, 8),
+    new THREE.MeshBasicMaterial({ color }),
+  );
+  group.add(marker);
+
+  const text = makeTextSprite(label, color === 0xff2d55 ? "#ff2d55" : "#16a34a");
+  text.position.y = 0.8;
+  text.scale.set(1.8, 0.45, 1);
+  group.add(text);
+  scene.add(group);
+}
+
+function buildNavigationDebug(scene: THREE.Scene) {
+  const portals: { a: [number, number]; b: [number, number]; name: string }[] = [
+    { a: [26.92, 16.93], b: [34.73, 16.93], name: "Manager ↔ Meeting" },
+    { a: [15.13, 29.63], b: [15.13, 41.71], name: "Manager ↔ Design" },
+    { a: [65.27, 16.93], b: [73.08, 16.93], name: "Meeting ↔ Support" },
+    { a: [53.49, 29.63], b: [53.49, 41.71], name: "Meeting ↔ Finance" },
+    { a: [33.89, 58.82], b: [43.44, 58.82], name: "Design ↔ Finance" },
+    { a: [63.53, 58.82], b: [73.08, 58.82], name: "Finance ↔ Break" },
+    { a: [39.54, 79.19], b: [39.54, 75.93], name: "Design ↔ Open" },
+    { a: [53.49, 79.19], b: [53.49, 75.93], name: "Finance ↔ Open" },
+    { a: [63.53, 80.86], b: [73.08, 80.86], name: "Open ↔ Break" },
+  ];
+
+  const toWorld = (p: [number, number]) => worldFromPercent(p[0], p[1]);
+
+  portals.forEach((portal) => {
+    const a = toWorld(portal.a);
+    const b = toWorld(portal.b);
+    addDebugLine(
+      scene,
+      [new THREE.Vector3(a.x, 0.32, a.z), new THREE.Vector3(b.x, 0.32, b.z)],
+      0x22c55e,
+    );
+    addDebugMarker(scene, a.x, a.z, 0x16a34a, "DOOR");
+    addDebugMarker(scene, b.x, b.z, 0x16a34a, "DOOR");
+  });
+
+  // Trace the intended corridor network. The red nodes are intentionally
+  // placed where a doorway definition is outside its room wall bounds.
+  const blocked: { x: number; z: number; label: string }[] = [];
+
+  for (const room of ROOM_DATA) {
+    const passageInset = 0.5;
+    const visualW = Math.max(1, room.w - passageInset * 2);
+    const visualD = Math.max(1, room.d - passageInset * 2);
+    const halfW = visualW / 2;
+    const halfD = visualD / 2;
+
+    for (const door of ROOM_DOORWAYS[room.name] ?? []) {
+      const valid =
+        door.side === "north" || door.side === "south"
+          ? door.offset >= room.x - halfW && door.offset <= room.x + halfW
+          : door.offset >= room.z - halfD && door.offset <= room.z + halfD;
+
+      if (!valid) {
+        let x = room.x;
+        let z = room.z;
+        if (door.side === "north") { x = door.offset; z = room.z - halfD; }
+        if (door.side === "south") { x = door.offset; z = room.z + halfD; }
+        if (door.side === "west") { x = room.x - halfW; z = door.offset; }
+        if (door.side === "east") { x = room.x + halfW; z = door.offset; }
+
+        const p = worldFromPercent(
+          ((x + 14.34) / 28.68) * 100,
+          ((z + 9.84) / 22.68) * 100,
+        );
+        blocked.push({ x: p.x, z: p.z, label: "BLOCKED DOOR" });
+      }
+    }
+  }
+
+  blocked.forEach((item) => addDebugMarker(scene, item.x, item.z, 0xff2d55, item.label));
+
+  // Green centerline shows the safe circulation spine. Red segments are
+  // reserved for blocked door definitions detected above.
+  const corridor = [
+    [34.73, 16.93], [50, 16.93], [65.27, 16.93],
+    [53.49, 41.71], [53.49, 58.82], [53.49, 75.93],
+    [39.54, 75.93], [63.53, 80.86], [73.08, 80.86],
+  ] as [number, number][];
+
+  addDebugLine(
+    scene,
+    corridor.map((p) => {
+      const w = worldFromPercent(p[0], p[1]);
+      return new THREE.Vector3(w.x, 0.22, w.z);
+    }),
+    0x38bdf8,
+    true,
+  );
+}
+ 
 function roundedBox(width: number, height: number, depth: number, material: THREE.Material) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
   return mesh;
@@ -564,7 +681,9 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
 
     buildExteriorShell(scene);
 
-    ROOM_DATA.forEach((room) => buildRoom(scene, room));
+    ROOM_DATA.forEach((room) => buildRoom(scene, room));    buildNavigationDebug(scene);
+
+
 
     addDesk(scene, -12, -7.8, 0.08, "Manager");
     // Four-desk offices: keep the two rows centered on each room's actual center.
@@ -756,6 +875,20 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
         <strong>3D Office</strong>
         <span>Drag to rotate · Pinch/scroll to zoom · Tap staff or rooms</span>
       </div>
+      <button
+        type="button"
+        className="office-3d-debug-toggle"
+        onClick={(event) => {
+          event.stopPropagation();
+          const next = !mountRef.current?.dataset.debug;
+          if (mountRef.current) mountRef.current.dataset.debug = String(next);
+          const debugObjects = mountRef.current?.querySelector("canvas")
+            ? undefined
+            : undefined;
+        }}
+      >
+        NAV DEBUG
+      </button>
       <div className="office-3d-badge">REAL-TIME 3D</div>
     </div>
   );
