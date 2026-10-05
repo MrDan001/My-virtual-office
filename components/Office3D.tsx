@@ -494,6 +494,31 @@ function addStaff(scene: THREE.Scene, person: Staff) {
   scene.add(group);
   return group;
 }
+function addChair(scene: THREE.Scene, x: number, z: number, rotation = 0) {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+  group.rotation.y = rotation;
+
+  const seatMat = new THREE.MeshStandardMaterial({ color: 0x536b7c, roughness: 0.6 });
+  const metal = new THREE.MeshStandardMaterial({ color: 0x9aa4ad, metalness: 0.6, roughness: 0.3 });
+
+  const seat = roundedBox(0.82, 0.18, 0.82, seatMat);
+  seat.position.y = 0.72;
+  seat.castShadow = true;
+  group.add(seat);
+
+  const back = roundedBox(0.76, 0.95, 0.14, seatMat);
+  back.position.set(0, 1.15, -0.30);
+  back.castShadow = true;
+  group.add(back);
+
+  const stem = roundedBox(0.1, 0.65, 0.1, metal);
+  stem.position.y = 0.34;
+  group.add(stem);
+
+  scene.add(group);
+}
+
 function buildWall(
   scene: THREE.Scene,
   width: number,
