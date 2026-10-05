@@ -27,12 +27,10 @@ type Staff = {
   y: number;
   color: string;
   location?: OfficeRoom;
-  walking?: boolean;
 };
 
 type Props = {
   staff: Staff[];
-  running: boolean;
   onSelect: (staff: Staff) => void;
   onRoomSelect?: (room: OfficeRoom) => void;
   selectedRoom?: OfficeRoom | null;
@@ -99,125 +97,6 @@ function worldFromPercent(x: number, y: number) {
   };
 }
 
-function addDebugLine(
-  scene: THREE.Scene,
-  points: THREE.Vector3[],
-  color: number,
-  dashed = false,
-) {
-  const geometry = new THREE.BufferGeometry().setFromPoints(points);
-  const material = dashed
-    ? new THREE.LineDashedMaterial({ color, dashSize: 0.28, gapSize: 0.16, linewidth: 2 })
-    : new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9 });
-  const line = new THREE.Line(geometry, material);
-  if (dashed) line.computeLineDistances();
-  line.userData.debug = true;
-  line.visible = false;
-  scene.add(line);
-  return line;
-}
-
-function addDebugMarker(scene: THREE.Scene, x: number, z: number, color: number, label: string) {
-  const group = new THREE.Group();
-  group.position.set(x, 0.28, z);
-  group.userData.debug = true;
-
-  const marker = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 12, 8),
-    new THREE.MeshBasicMaterial({ color }),
-  );
-  group.add(marker);
-
-  const text = makeTextSprite(label, color === 0xff2d55 ? "#ff2d55" : "#16a34a");
-  text.position.y = 0.8;
-  text.scale.set(1.8, 0.45, 1);
-  group.add(text);
-  group.visible = false;
-  scene.add(group);
-}
-
-function buildNavigationDebug(scene: THREE.Scene) {
-  const portals: { a: [number, number]; b: [number, number]; name: string }[] = [
-    { a: [26.92, 16.93], b: [34.73, 16.93], name: "Manager ↔ Meeting" },
-    { a: [15.13, 29.63], b: [15.13, 41.71], name: "Manager ↔ Design" },
-    { a: [65.27, 16.93], b: [73.08, 16.93], name: "Meeting ↔ Support" },
-    { a: [53.49, 29.63], b: [53.49, 41.71], name: "Meeting ↔ Finance" },
-    { a: [33.89, 58.82], b: [43.44, 58.82], name: "Design ↔ Finance" },
-    { a: [63.53, 58.82], b: [73.08, 58.82], name: "Finance ↔ Break" },
-    { a: [39.54, 79.19], b: [39.54, 75.93], name: "Design ↔ Open" },
-    { a: [53.49, 79.19], b: [53.49, 75.93], name: "Finance ↔ Open" },
-    { a: [63.53, 80.86], b: [73.08, 80.86], name: "Open ↔ Break" },
-  ];
-
-  const toWorld = (p: [number, number]) => worldFromPercent(p[0], p[1]);
-
-  portals.forEach((portal) => {
-    const a = toWorld(portal.a);
-    const b = toWorld(portal.b);
-    addDebugLine(
-      scene,
-      [new THREE.Vector3(a.x, 0.32, a.z), new THREE.Vector3(b.x, 0.32, b.z)],
-      0x22c55e,
-    );
-    addDebugMarker(scene, a.x, a.z, 0x16a34a, "DOOR");
-    addDebugMarker(scene, b.x, b.z, 0x16a34a, "DOOR");
-  });
-
-  // Trace the intended corridor network. The red nodes are intentionally
-  // placed where a doorway definition is outside its room wall bounds.
-  const blocked: { x: number; z: number; label: string }[] = [];
-
-  for (const room of ROOM_DATA) {
-    const passageInset = 0.5;
-    const visualW = Math.max(1, room.w - passageInset * 2);
-    const visualD = Math.max(1, room.d - passageInset * 2);
-    const halfW = visualW / 2;
-    const halfD = visualD / 2;
-
-    for (const door of ROOM_DOORWAYS[room.name] ?? []) {
-      const valid =
-        door.side === "north" || door.side === "south"
-          ? door.offset >= room.x - halfW && door.offset <= room.x + halfW
-          : door.offset >= room.z - halfD && door.offset <= room.z + halfD;
-
-      if (!valid) {
-        let x = room.x;
-        let z = room.z;
-        if (door.side === "north") { x = door.offset; z = room.z - halfD; }
-        if (door.side === "south") { x = door.offset; z = room.z + halfD; }
-        if (door.side === "west") { x = room.x - halfW; z = door.offset; }
-        if (door.side === "east") { x = room.x + halfW; z = door.offset; }
-
-        const p = worldFromPercent(
-          ((x + 14.34) / 28.68) * 100,
-          ((z + 9.84) / 22.68) * 100,
-        );
-        blocked.push({ x: p.x, z: p.z, label: "BLOCKED DOOR" });
-      }
-    }
-  }
-
-  blocked.forEach((item) => addDebugMarker(scene, item.x, item.z, 0xff2d55, item.label));
-
-  // Green centerline shows the safe circulation spine. Red segments are
-  // reserved for blocked door definitions detected above.
-  const corridor = [
-    [34.73, 16.93], [50, 16.93], [65.27, 16.93],
-    [53.49, 41.71], [53.49, 58.82], [53.49, 75.93],
-    [39.54, 75.93], [63.53, 80.86], [73.08, 80.86],
-  ] as [number, number][];
-
-  addDebugLine(
-    scene,
-    corridor.map((p) => {
-      const w = worldFromPercent(p[0], p[1]);
-      return new THREE.Vector3(w.x, 0.22, w.z);
-    }),
-    0x38bdf8,
-    true,
-  );
-}
- 
 function roundedBox(width: number, height: number, depth: number, material: THREE.Material) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
   return mesh;
@@ -396,9 +275,7 @@ function addStaff(scene: THREE.Scene, person: Staff) {
   label.position.y = 2.85;
   group.add(label);
 
-  group.userData.gait = { legs, legL, legR, armL, armR, torso };
-
-  if ((person.status === "Working" || person.status === "Meeting") && !person.walking) {
+  if (person.status === "Working" || person.status === "Meeting") {
     group.position.y = -0.38;
     group.rotation.x = 0.04;
   }
@@ -617,13 +494,11 @@ function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
 export default function Office3D({ staff, running, onSelect, onRoomSelect, selectedRoom }: Props) {
   const mountRef = useRef<HTMLDivElement>(null);
   const staffRef = useRef(staff);
-  const runningRef = useRef(running);
   const onSelectRef = useRef(onSelect);
   const onRoomSelectRef = useRef(onRoomSelect);
   const selectedRoomRef = useRef(selectedRoom);
 
   useEffect(() => { staffRef.current = staff; }, [staff]);
-  useEffect(() => { runningRef.current = running; }, [running]);
   useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
   useEffect(() => { onRoomSelectRef.current = onRoomSelect; }, [onRoomSelect]);
   useEffect(() => { selectedRoomRef.current = selectedRoom; }, [selectedRoom]);
@@ -715,11 +590,7 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
 
     buildExteriorShell(scene);
 
-    ROOM_DATA.forEach((room) => buildRoom(scene, room));    buildNavigationDebug(scene);
-
-
-
-    addDesk(scene, -12, -7.8, 0.08, "Manager");
+    ROOM_DATA.forEach((room) => buildRoom(scene, room));    addDesk(scene, -12, -7.8, 0.08, "Manager");
     // Four-desk offices: keep the two rows centered on each room's actual center.
     addDesk(scene, -10.75, 1.7, 0, "Design");
     addDesk(scene, -7.25, 1.7, 0, "Design");
@@ -786,13 +657,7 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
 
     const clock = new THREE.Clock();
     const animate = () => {
-      const delta = Math.min(clock.getDelta(), 0.05);
       controls.update();
-
-      const debugEnabled = mount.dataset.debug === "true";
-      scene.traverse((object) => {
-        if (object.userData.debug) object.visible = debugEnabled;
-      });
 
       staffRef.current.forEach((person) => {
         let group = staffGroups.get(person.id);
@@ -800,71 +665,6 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
           group = addStaff(scene, person);
           staffGroups.set(person.id, group);
         }
-
-        const target = worldFromPercent(person.x, person.y);
-        const current = group.position;
-        const dx = target.x - current.x;
-        const dz = target.z - current.z;
-        const distance = Math.hypot(dx, dz);
-        const walking = Boolean(person.walking);
-        const moveSpeed = walking ? 2.25 : 4.5;
-        const maxStep = runningRef.current ? moveSpeed * delta : 0;
-        if (distance > 0.01 && maxStep > 0) {
-          const step = Math.min(distance, maxStep);
-          current.x += (dx / distance) * step;
-          current.z += (dz / distance) * step;
-        }
-
-        const gait = Math.sin(clock.elapsedTime * 9.5);
-        const gaitData = group.userData.gait as {
-          legL: THREE.Object3D;
-          legR: THREE.Object3D;
-          armL: THREE.Object3D;
-          armR: THREE.Object3D;
-          torso: THREE.Object3D;
-        } | undefined;
-
-        if (walking) {
-          const desired = Math.atan2(dx, dz);
-          let angle = desired - group.rotation.y;
-          angle = Math.atan2(Math.sin(angle), Math.cos(angle));
-          group.rotation.y += angle * Math.min(1, delta * 12);
-          group.position.y += (Math.sin(clock.elapsedTime * 19) * 0.035 - group.position.y) * Math.min(1, delta * 18);
-
-          if (gaitData) {
-            gaitData.legL.rotation.x = gait * 0.72;
-            gaitData.legR.rotation.x = -gait * 0.72;
-            gaitData.armL.rotation.x = -gait * 0.58;
-            gaitData.armR.rotation.x = gait * 0.58;
-            gaitData.torso.rotation.z = gait * 0.018;
-          }
-        } else {
-          const seated = person.status === "Working" || person.status === "Meeting";
-          const settleY = seated ? -0.38 : 0;
-          group.position.y += (settleY - group.position.y) * Math.min(1, delta * 9);
-          group.rotation.x += ((seated ? 0.04 : 0) - group.rotation.x) * Math.min(1, delta * 9);
-
-          let seatFacing = 0;
-          if (person.status === "Meeting") {
-            seatFacing = person.y < 17 ? 0 : Math.PI;
-          } else if (person.status === "Working") {
-            const slot = (Math.max(1, person.id) - 1) % 4;
-            seatFacing = (person.department === "Design" || person.department === "Finance") && slot >= 2 ? Math.PI : 0;
-          }
-
-          let facingDelta = seatFacing - group.rotation.y;
-          facingDelta = Math.atan2(Math.sin(facingDelta), Math.cos(facingDelta));
-          group.rotation.y += facingDelta * Math.min(1, delta * 10);
-
-          if (gaitData) {
-            gaitData.legL.rotation.x += (0 - gaitData.legL.rotation.x) * Math.min(1, delta * 12);
-            gaitData.legR.rotation.x += (0 - gaitData.legR.rotation.x) * Math.min(1, delta * 12);
-            gaitData.armL.rotation.x += (0 - gaitData.armL.rotation.x) * Math.min(1, delta * 12);
-            gaitData.armR.rotation.x += (0 - gaitData.armR.rotation.x) * Math.min(1, delta * 12);
-            gaitData.torso.rotation.z += (0 - gaitData.torso.rotation.z) * Math.min(1, delta * 12);
-          }
-        }
-
         group.traverse((child) => {
           if (child instanceof THREE.Mesh && child.userData.selected) child.scale.setScalar(1.12);
         });
@@ -914,20 +714,6 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
         <strong>3D Office</strong>
         <span>Drag to rotate · Pinch/scroll to zoom · Tap staff or rooms</span>
       </div>
-      <button
-        type="button"
-        className="office-3d-debug-toggle"
-        onClick={(event) => {
-          event.stopPropagation();
-          const root = mountRef.current;
-          if (!root) return;
-          const next = root.dataset.debug !== "true";
-          root.dataset.debug = String(next);
-          event.currentTarget.textContent = next ? "HIDE NAV DEBUG" : "NAV DEBUG";
-        }}
-      >
-        NAV DEBUG
-      </button>
       <div className="office-3d-badge">REAL-TIME 3D</div>
     </div>
   );
