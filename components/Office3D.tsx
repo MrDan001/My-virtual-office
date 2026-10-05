@@ -506,18 +506,20 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
     ROOM_DATA.forEach((room) => buildRoom(scene, room));
 
     addDesk(scene, -12, -7.8, 0.08, "Manager");
-    addDesk(scene, -9, 1.8, 0, "Design");
-    addDesk(scene, -5.5, 1.8, 0, "Design");
-    addDesk(scene, -9, 5.8, Math.PI, "Design");
-    addDesk(scene, -5.5, 5.8, Math.PI, "Design");
-    addDesk(scene, 0, 1.8, 0, "Finance");
-    addDesk(scene, 3.5, 1.8, 0, "Finance");
-    addDesk(scene, 0, 5.8, Math.PI, "Finance");
-    addDesk(scene, 3.5, 5.8, Math.PI, "Finance");
-    addDesk(scene, 7.5, -7.7, 0, "Support");
-    addDesk(scene, 11, -7.7, 0, "Support");
-    addDesk(scene, 7.5, -3.8, Math.PI, "Support");
-    addDesk(scene, 11, -3.8, Math.PI, "Support");
+    // Four-desk offices: keep the two rows centered on each room's actual center.
+    addDesk(scene, -10.75, 1.7, 0, "Design");
+    addDesk(scene, -7.25, 1.7, 0, "Design");
+    addDesk(scene, -10.75, 5.3, Math.PI, "Design");
+    addDesk(scene, -7.25, 5.3, Math.PI, "Design");
+
+    addDesk(scene, -0.75, 1.7, 0, "Finance");
+    addDesk(scene, 2.75, 1.7, 0, "Finance");
+    addDesk(scene, -0.75, 5.3, Math.PI, "Finance");
+    addDesk(scene, 2.75, 5.3, Math.PI, "Finance");
+
+    // Support sits beside the Break Room, so it uses only two centered desks.
+    addDesk(scene, 8.25, -6, 0, "Support");
+    addDesk(scene, 11.75, -6, 0, "Support");
 
     const table = roundedBox(5.5, 0.28, 2.4, new THREE.MeshStandardMaterial({ color: 0x9a6848, roughness: 0.65 }));
     table.position.set(0, 1.05, -6);
