@@ -20,28 +20,15 @@ export type RoutineState = {
   task: string;
 };
 
-const WORLD_MIN_X = -14.34;
-const WORLD_MAX_X = 14.34;
-const WORLD_MIN_Z = -9.84;
-const WORLD_MAX_Z = 12.84;
-
-function point(x: number, z: number, rotation = 0) {
-  return {
-    x: ((x - WORLD_MIN_X) / (WORLD_MAX_X - WORLD_MIN_X)) * 100,
-    y: ((z - WORLD_MIN_Z) / (WORLD_MAX_Z - WORLD_MIN_Z)) * 100,
-    rotation,
-  };
-}
-
 export const officeNodes: Record<OfficeRoom, OfficeNode> = {
-  Reception: point(0, 9.8),
-  "Manager Office": point(-10, -6),
-  "Meeting Room": point(0, -6),
-  "Design Studio": point(-9, 3.5),
-  Finance: point(1, 3.5),
-  Support: point(10, -6),
-  "Break Room": point(10, 5),
-  "Open Office": point(-1, 10),
+  Reception: { room: "Reception", x: 38, y: 91, neighbors: ["Open Office", "Support"] },
+  "Manager Office": { room: "Manager Office", x: 17, y: 19, neighbors: ["Open Office", "Meeting Room"] },
+  "Meeting Room": { room: "Meeting Room", x: 51, y: 19, neighbors: ["Manager Office", "Open Office", "Support"] },
+  "Design Studio": { room: "Design Studio", x: 20, y: 68, neighbors: ["Open Office", "Support"] },
+  Finance: { room: "Finance", x: 56, y: 68, neighbors: ["Open Office", "Meeting Room", "Break Room"] },
+  Support: { room: "Support", x: 84, y: 28, neighbors: ["Reception", "Meeting Room", "Design Studio", "Break Room"] },
+  "Break Room": { room: "Break Room", x: 84, y: 75, neighbors: ["Support", "Finance", "Open Office"] },
+  "Open Office": { room: "Open Office", x: 49, y: 53, neighbors: ["Reception", "Manager Office", "Meeting Room", "Design Studio", "Finance", "Break Room"] },
 };
 
 export function findPath(start: OfficeRoom, goal: OfficeRoom): OfficeRoom[] {
@@ -79,41 +66,15 @@ export function homeRoomForDepartment(department: string): OfficeRoom {
 }
 
 export function deskSpotForStaff(department: string, id: number) {
-  const positions: Record<OfficeRoom, { x: number; y: number; rotation: number }[]> = {
-    Reception: [point(-1, 10.8, Math.PI)],
-    "Manager Office": [point(-12, -6.8, Math.PI)],
-    "Meeting Room": [
-      point(-2.2, -4.15, Math.PI),
-      point(-0.75, -4.15, Math.PI),
-      point(0.75, -4.15, Math.PI),
-      point(2.2, -4.15, Math.PI),
-    ],
-    "Design Studio": [
-      point(-10.75, 2.7, Math.PI),
-      point(-7.25, 2.7, Math.PI),
-      point(-10.75, 4.3, 0),
-      point(-7.25, 4.3, 0),
-    ],
-    Finance: [
-      point(-0.75, 2.7, Math.PI),
-      point(2.75, 2.7, Math.PI),
-      point(-0.75, 4.3, 0),
-      point(2.75, 4.3, 0),
-    ],
-    Support: [
-      point(8.25, -5, Math.PI),
-      point(11.75, -5, Math.PI),
-    ],
-    "Break Room": [
-      point(12, 5.5, Math.PI),
-      point(10, 7.5, -Math.PI / 2),
-      point(8, 5.5, 0),
-      point(10, 3.5, Math.PI / 2),
-    ],
-    "Open Office": [
-      point(-2.75, 11, Math.PI),
-      point(0.75, 11, Math.PI),
-    ],
+  const positions: Record<OfficeRoom, { x: number; y: number }[]> = {
+    Reception: [{ x: 38, y: 88 }],
+    "Manager Office": [{ x: 17, y: 23 }, { x: 24, y: 23 }],
+    "Meeting Room": [{ x: 43, y: 25 }, { x: 48, y: 25 }, { x: 53, y: 25 }, { x: 58, y: 25 }],
+    "Design Studio": [{ x: 18, y: 50 }, { x: 29, y: 50 }, { x: 18, y: 78 }, { x: 29, y: 78 }],
+    Finance: [{ x: 51, y: 55 }, { x: 61, y: 55 }, { x: 51, y: 83 }, { x: 61, y: 83 }],
+    Support: [{ x: 80, y: 20 }, { x: 88, y: 20 }, { x: 80, y: 38 }, { x: 88, y: 38 }],
+    "Break Room": [{ x: 80, y: 72 }, { x: 88, y: 72 }, { x: 80, y: 82 }, { x: 88, y: 82 }],
+    "Open Office": [{ x: 42, y: 45 }, { x: 51, y: 45 }, { x: 42, y: 70 }, { x: 51, y: 70 }],
   };
 
   const room = homeRoomForDepartment(department);
@@ -158,7 +119,7 @@ export function advanceActor(
   person: { x: number; y: number; location?: OfficeRoom },
   goal: OfficeRoom,
   speed = 0.65,
-  finalPoint?: { x: number; y: number; rotation?: number },
+  finalPoint?: { x: number; y: number },
 ) {
   const start = person.location && officeNodes[person.location] ? person.location : "Open Office";
   const path = findPath(start, goal);
@@ -190,21 +151,21 @@ export function activitySpotForStaff(
 
   if (status === "Meeting") {
     const seats = [
-      point(-2.2, -4.15, Math.PI),
-      point(-0.75, -4.15, Math.PI),
-      point(0.75, -4.15, Math.PI),
-      point(2.2, -4.15, Math.PI),
-      point(-2.2, -7.85, 0),
-      point(2.2, -7.85, 0),
+      { x: 44, y: 25 },
+      { x: 48.5, y: 25 },
+      { x: 53, y: 25 },
+      { x: 57.5, y: 25 },
+      { x: 44, y: 29 },
+      { x: 57.5, y: 29 },
     ];
     return seats[(Math.max(1, id) - 1) % seats.length];
   }
 
   const seats = [
-    point(12, 5.5, Math.PI),
-    point(10, 7.5, -Math.PI / 2),
-    point(8, 5.5, 0),
-    point(10, 3.5, Math.PI / 2),
+    { x: 79.5, y: 72 },
+    { x: 86.5, y: 72 },
+    { x: 79.5, y: 82 },
+    { x: 86.5, y: 82 },
   ];
   return seats[(Math.max(1, id) - 1) % seats.length];
 }
