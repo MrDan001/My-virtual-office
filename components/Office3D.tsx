@@ -142,17 +142,17 @@ function addDesk(scene: THREE.Scene, x: number, z: number, rotation = 0, label =
   });
 
   const monitor = roundedBox(0.85, 0.55, 0.08, dark);
-  monitor.position.set(0, 1.62, 0.22);
+  monitor.position.set(0, 1.62, 0.42);
   group.add(monitor);
   const screen = new THREE.Mesh(
     new THREE.BoxGeometry(0.68, 0.38, 0.02),
     new THREE.MeshStandardMaterial({ color: 0x73a9b8, emissive: 0x19333b, emissiveIntensity: 0.35 })
   );
-  screen.position.set(0, 1.62, 0.175);
+  screen.position.set(0, 1.62, 0.375);
   group.add(screen);
 
   const keyboard = roundedBox(0.8, 0.05, 0.3, chrome);
-  keyboard.position.set(0, 1.39, 0.42);
+  keyboard.position.set(0, 1.39, 0.20);
   group.add(keyboard);
 
   const chair = new THREE.Mesh(
@@ -214,8 +214,14 @@ function staffDeskFacing(person: Staff) {
 function addStaff(scene: THREE.Scene, person: Staff) {
   const group = new THREE.Group();
   const p = worldFromPercent(person.x, person.y);
+  const deskRotation = staffDeskFacing(person);
+  // Staff occupy the chair side of the desk, not the desk center.
+  // The same rotation is used by the desk so monitor -> keyboard -> person
+  // always form one coherent workstation.
+  p.x += Math.sin(deskRotation) * -1.0;
+  p.z += Math.cos(deskRotation) * -1.0;
   group.position.set(p.x, 0, p.z);
-  group.rotation.y = staffDeskFacing(person);
+  group.rotation.y = deskRotation;
   group.userData.staffId = person.id;
   group.scale.setScalar(1.08);
 
@@ -382,21 +388,21 @@ function addStaff(scene: THREE.Scene, person: Staff) {
   addSegment(
     "left forearm",
     new THREE.Vector3(-0.45, elbowY, 0.5),
-    new THREE.Vector3(-0.30, wristY, 0.47),
+    new THREE.Vector3(-0.30, wristY, 0.25),
     0.09,
     skinSoft,
   );
   addSegment(
     "right forearm",
     new THREE.Vector3(0.45, elbowY, 0.5),
-    new THREE.Vector3(0.30, wristY, 0.47),
+    new THREE.Vector3(0.30, wristY, 0.25),
     0.09,
     skinSoft,
   );
 
   [-0.34, 0.34].forEach((x) => {
     const hand = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), skin);
-    hand.position.set(x, 1.18, 0.50);
+    hand.position.set(x, 1.18, 0.28);
     hand.scale.set(1, 0.82, 1.18);
     hand.castShadow = true;
     group.add(hand);
