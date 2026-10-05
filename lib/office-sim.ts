@@ -20,6 +20,17 @@ export type OfficeNode = {
   neighbors: OfficeRoom[];
 };
 
+export const officeNodes: Record<OfficeRoom, OfficeNode> = {
+  Reception: { room: "Reception", x: 38, y: 91, neighbors: ["Open Office"] },
+  "Manager Office": { room: "Manager Office", x: 17, y: 19, neighbors: ["Meeting Room", "Design Studio"] },
+  "Meeting Room": { room: "Meeting Room", x: 51, y: 19, neighbors: ["Manager Office", "Support", "Finance"] },
+  "Design Studio": { room: "Design Studio", x: 20, y: 68, neighbors: ["Manager Office", "Finance", "Open Office"] },
+  Finance: { room: "Finance", x: 56, y: 68, neighbors: ["Meeting Room", "Design Studio", "Break Room", "Open Office"] },
+  Support: { room: "Support", x: 84, y: 28, neighbors: ["Meeting Room"] },
+  "Break Room": { room: "Break Room", x: 84, y: 75, neighbors: ["Finance", "Open Office"] },
+  "Open Office": { room: "Open Office", x: 49, y: 53, neighbors: ["Design Studio", "Finance", "Break Room", "Reception"] },
+};
+
 const distanceBetween = (a: { x: number; y: number }, b: { x: number; y: number }) =>
   Math.hypot(a.x - b.x, a.y - b.y);
 
