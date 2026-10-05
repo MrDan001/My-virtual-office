@@ -67,21 +67,46 @@ export function homeRoomForDepartment(department: string): OfficeRoom {
 
 export function deskSpotForStaff(department: string, id: number) {
   const positions: Record<OfficeRoom, { x: number; y: number }[]> = {
-    Reception: [{ x: 38, y: 88 }],
-    "Manager Office": [{ x: 17, y: 23 }, { x: 24, y: 23 }],
-    "Meeting Room": [{ x: 43, y: 25 }, { x: 48, y: 25 }, { x: 53, y: 25 }, { x: 58, y: 25 }],
-    "Design Studio": [{ x: 18, y: 50 }, { x: 29, y: 50 }, { x: 18, y: 78 }, { x: 29, y: 78 }],
-    Finance: [{ x: 51, y: 55 }, { x: 61, y: 55 }, { x: 51, y: 83 }, { x: 61, y: 83 }],
-    Support: [{ x: 80, y: 20 }, { x: 88, y: 20 }, { x: 80, y: 38 }, { x: 88, y: 38 }],
-    "Break Room": [{ x: 80, y: 72 }, { x: 88, y: 72 }, { x: 80, y: 82 }, { x: 88, y: 82 }],
-    "Open Office": [{ x: 42, y: 45 }, { x: 51, y: 45 }, { x: 42, y: 70 }, { x: 51, y: 70 }],
+    Reception: [{ x: 38.0, y: 93.0 }],
+    "Manager Office": [{ x: 8.16, y: 13.40 }],
+    "Meeting Room": [
+      { x: 42.33, y: 25.09 },
+      { x: 47.38, y: 25.09 },
+      { x: 52.62, y: 25.09 },
+      { x: 57.67, y: 25.09 },
+    ],
+    "Design Studio": [
+      { x: 12.52, y: 55.29 },
+      { x: 24.72, y: 55.29 },
+      { x: 12.52, y: 62.35 },
+      { x: 24.72, y: 62.35 },
+    ],
+    Finance: [
+      { x: 47.38, y: 55.29 },
+      { x: 59.59, y: 55.29 },
+      { x: 47.38, y: 62.35 },
+      { x: 59.59, y: 62.35 },
+    ],
+    Support: [
+      { x: 78.77, y: 21.34 },
+      { x: 90.97, y: 21.34 },
+    ],
+    "Break Room": [
+      { x: 78.77, y: 73.06 },
+      { x: 90.97, y: 73.06 },
+      { x: 78.77, y: 90.68 },
+      { x: 90.97, y: 90.68 },
+    ],
+    "Open Office": [
+      { x: 39.54, y: 89.24 },
+      { x: 53.49, y: 89.24 },
+    ],
   };
 
   const room = homeRoomForDepartment(department);
   const list = positions[room];
   return list[(Math.max(1, id) - 1) % list.length];
 }
-
 export function targetRoomForStaff(department: string, status: string): OfficeRoom {
   if (status === "Meeting") return "Meeting Room";
   if (status === "Break") return "Break Room";
@@ -151,25 +176,26 @@ export function activitySpotForStaff(
 
   if (status === "Meeting") {
     const seats = [
-      { x: 44, y: 25 },
-      { x: 48.5, y: 25 },
-      { x: 53, y: 25 },
-      { x: 57.5, y: 25 },
-      { x: 44, y: 29 },
-      { x: 57.5, y: 29 },
+      { x: 42.33, y: 25.09 },
+      { x: 47.38, y: 25.09 },
+      { x: 52.62, y: 25.09 },
+      { x: 57.67, y: 25.09 },
+      { x: 42.33, y: 8.77 },
+      { x: 47.38, y: 8.77 },
+      { x: 52.62, y: 8.77 },
+      { x: 57.67, y: 8.77 },
     ];
     return seats[(Math.max(1, id) - 1) % seats.length];
   }
 
   const seats = [
-    { x: 79.5, y: 72 },
-    { x: 86.5, y: 72 },
-    { x: 79.5, y: 82 },
-    { x: 86.5, y: 82 },
+    { x: 78.77, y: 73.06 },
+    { x: 90.97, y: 73.06 },
+    { x: 78.77, y: 90.68 },
+    { x: 90.97, y: 90.68 },
   ];
   return seats[(Math.max(1, id) - 1) % seats.length];
 }
-
 export function isAtTarget(
   person: { x: number; y: number },
   target: { x: number; y: number },
