@@ -166,7 +166,7 @@ const FURNITURE_BLOCKS: Record<OfficeRoom, Rect[]> = Object.fromEntries(
   ]),
 ) as Record<OfficeRoom, Rect[]>;
 
-const NAV_GRID = 1.15;
+const NAV_GRID = 0.55;
 const NAV_CLEARANCE = 0.35;
 
 function pointInsideRect(point: { x: number; y: number }, rect: Rect, padding = 0) {
