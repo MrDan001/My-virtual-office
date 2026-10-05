@@ -8,6 +8,11 @@ export type OfficeRoom =
   | "Break Room"
   | "Open Office";
 
+export type RoutineState = {
+  status: "Working" | "Meeting" | "Break";
+  task: string;
+};
+
 export type OfficeNode = {
   room: OfficeRoom;
   x: number;
