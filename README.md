@@ -1,20 +1,18 @@
 # My Virtual Office
 
-OfficeHub is a Sims-inspired virtual workplace built with Next.js and designed for Vercel.
+OfficeHub is a clean-slate virtual workplace foundation built with Next.js and designed for Vercel.
 
 ## Current build
 
 - Responsive OfficeHub dashboard
-- Live animated office floorplan
-- Staff characters with role-driven routines
-- Connected room navigation graph
-- Clickable staff profiles and rooms
-- Persistent employee and task APIs
+- Interactive architectural 3D office shell
+- Rooms, walls, door openings and circulation spaces
+- Standalone task system with no employee assignment coupling
 - SQLite-compatible Turso/libSQL data layer
-- Task creation and persistent completion
-- Local-persistent office layout editor
 - Light/dark mode
-- GitHub Actions build workflow
+- Clean foundation for rebuilding staff and furniture from scratch
+
+The current office intentionally contains **no staff, desks, chairs, furniture, movement system or legacy staff-management layer**.
 
 ## Runtime
 
@@ -25,18 +23,16 @@ TURSO_DATABASE_URL=...
 TURSO_AUTH_TOKEN=...
 ```
 
-When configured, the API creates/migrates the employee, task and office-event tables automatically.
+When configured, the API creates the standalone task schema and performs a one-time cleanup migration for the removed legacy staff/event tables.
 
 ## Vercel
 
 Turso is available as a Vercel Marketplace Serverless SQLite integration. Connect the integration to the Vercel project so `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are supplied to the app.
 
-## Product roadmap
+## Next build phase
 
-1. Authentication and workspace accounts
-2. Rich character sprites and directional walking animations
-3. Real schedules, meetings and shift rules
-4. Office furniture/object editor
-5. Staff task queues driving movement and state
-6. Permissions and audit events
-7. Vercel production deployment and observability
+1. Design the new staff/worker UI independently
+2. Add the new staff data model
+3. Add furniture/workstations without blocking room entrances or circulation
+4. Add staff placement and movement only after the physical layout is stable
+5. Connect real schedules, meetings, tasks and integrations
