@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import Office3D from "../components/Office3D";
-import { activitySpotForStaff, homeRoomForDepartment, type OfficeRoom } from "../lib/office-sim";
+import type { OfficeRoom } from "../lib/office-sim";
 
 type Page = "dashboard" | "office" | "staff" | "tasks" | "schedule" | "reports" | "settings";
 type StaffStatus = "Working" | "Meeting" | "Break" | "Away";
@@ -15,10 +15,7 @@ type Staff = {
   department: string;
   status: StaffStatus;
   task: string;
-  x: number;
-  y: number;
   color: string;
-  location?: OfficeRoom;
 };
 
 type Task = {
@@ -31,59 +28,7 @@ type Task = {
   dueLabel: string;
 };
 
-const seedStaff: Staff[] = [
-  { id: 1, name: "Sarah Johnson", role: "Team Lead", department: "Management", status: "Working", task: "Team management", x: 8.44, y: 4.60, color: "#f59e0b", location: "Manager Office" },
-  { id: 2, name: "Mike Williams", role: "Product Designer", department: "Design", status: "Working", task: "Design review", x: 24.72, y: 46.47, color: "#22c55e", location: "Design Studio" },
-  { id: 3, name: "Emma Davis", role: "Marketing", department: "Marketing", status: "Working", task: "Campaign work", x: 39.54, y: 80.42, color: "#a855f7", location: "Open Office" },
-  { id: 4, name: "James Brown", role: "Accountant", department: "Finance", status: "Working", task: "Processing payroll", x: 59.59, y: 71.17, color: "#ef4444", location: "Finance" },
-  { id: 5, name: "Lina Wilson", role: "Support Agent", department: "Support", status: "Working", task: "Customer inbox", x: 78.77, y: 12.53, color: "#06b6d4", location: "Support" },
-  { id: 6, name: "David Miller", role: "Operations", department: "Operations", status: "Working", task: "Operations queue", x: 53.49, y: 80.42, color: "#3b82f6", location: "Open Office" },
-];
-
-function assignStaffToDesks(people: Staff[]) {
-  return people.map((person) => {
-    const position = activitySpotForStaff(person.department, "Working", person.id);
-    return {
-      ...person,
-      status: "Working" as StaffStatus,
-      task: person.department === "Finance"
-        ? "Processing payroll"
-        : person.department === "Support"
-          ? "Customer inbox"
-          : person.department === "Design"
-            ? "Design review"
-            : person.department === "Management"
-              ? "Team management"
-              : person.department === "Marketing"
-                ? "Campaign work"
-                : "Operations queue",
-      ...position,
-      location: homeRoomForDepartment(person.department),
-    };
-  });
-}
-
-const waypoints = [
-  { x: 19, y: 74, room: "Support" }, { x: 32, y: 37, room: "Design" },
-  { x: 53, y: 70, room: "Open Office" }, { x: 79, y: 69, room: "Finance" },
-  { x: 68, y: 34, room: "Meeting Room" }, { x: 60, y: 17, room: "Break Room" },
-  { x: 43, y: 17, room: "Corridor" }, { x: 83, y: 33, room: "Manager" },
-];
-
 const avatar = (name: string) => name.split(" ").map((part) => part[0]).join("").slice(0, 2);
-
-type RoomLayout = { x: number; y: number; w: number; h: number };
-
-const DEFAULT_LAYOUT: Record<OfficeRoom, RoomLayout> = {
-  Reception: { x: 35, y: 84, w: 8, h: 10 },
-  "Manager Office": { x: 3, y: 5, w: 27, h: 28 },
-  "Meeting Room": { x: 34, y: 5, w: 34, h: 28 },
-  "Design Studio": { x: 3, y: 38, w: 38, h: 59 },
-  Finance: { x: 45, y: 38, w: 23, h: 59 },
-  Support: { x: 72, y: 5, w: 25, h: 44 },
-  "Break Room": { x: 72, y: 53, w: 25, h: 44 },
-  "Open Office": { x: 35, y: 34, w: 34, h: 61 },
-};
 
 function Icon({ name }: { name: string }) {
   const icons: Record<string, string> = {
@@ -107,22 +52,14 @@ function StatCard({ label, value, note, icon, tone }: { label: string; value: st
   );
 }
 
-function OfficeScene({ staff, onSelect, onRoomSelect, selectedRoom }: {
-  staff: Staff[];
-  onSelect: (s: Staff) => void;
+function OfficeScene({
+  onRoomSelect,
+  selectedRoom,
+}: {
   onRoomSelect?: (room: OfficeRoom) => void;
   selectedRoom?: OfficeRoom | null;
-  layout?: Record<OfficeRoom, RoomLayout>;
-  editing?: boolean;
 }) {
-  return (
-    <Office3D
-      staff={staff}
-      onSelect={onSelect}
-      onRoomSelect={onRoomSelect}
-      selectedRoom={selectedRoom}
-    />
-  );
+  return <Office3D onRoomSelect={onRoomSelect} selectedRoom={selectedRoom} />;
 }
 
 function Sidebar({ page, setPage, theme, setTheme, onAdd }: { page: Page; setPage: (p: Page) => void; theme: "light" | "dark"; setTheme: (t: "light" | "dark") => void; onAdd: () => void }) {
@@ -152,15 +89,15 @@ function Dashboard({ staff, onSelect, onAdd, setPage }: { staff: Staff[]; onSele
   const working = staff.filter((s) => s.status === "Working").length;
   return <div className="content">
     <div className="stats-grid">
-      <StatCard label="Total staff" value={String(staff.length)} note="+2 from last week" icon="people" tone="blue" />
-      <StatCard label="Active today" value={String(working)} note="+5 pending" icon="briefcase" tone="green" />
-      <StatCard label="Meetings today" value="3" note="1 upcoming" icon="calendar" tone="purple" />
-      <StatCard label="Office occupancy" value="85%" note="10 of 12 desks" icon="office" tone="orange" />
+      <StatCard label="Total staff" value={String(staff.length)} note="Workspace reset" icon="people" tone="blue" />
+      <StatCard label="Active today" value={String(working)} note="No staff loaded" icon="briefcase" tone="green" />
+      <StatCard label="Meetings today" value="0" note="No meetings yet" icon="calendar" tone="purple" />
+      <StatCard label="Office occupancy" value="0%" note="No desks configured" icon="office" tone="orange" />
     </div>
     <div className="dashboard-grid">
       <section className="panel office-panel">
-        <div className="panel-head"><div><h2>Office View</h2><p>See your people and workplace activity live.</p></div><div className="scene-controls"><span className="live-tag"><i />Live</span><button onClick={() => setPage("office")} className="view-link">Open full view <Icon name="arrow" /></button></div></div>
-        <OfficeScene staff={staff} onSelect={onSelect} />
+        <div className="panel-head"><div><h2>Office View</h2><p>Empty shell ready for the new office build.</p></div><div className="scene-controls"><span className="live-tag"><i />Live</span><button onClick={() => setPage("office")} className="view-link">Open full view <Icon name="arrow" /></button></div></div>
+        <OfficeScene />
       </section>
       <aside className="side-stack">
         <section className="panel schedule-panel"><div className="panel-head compact"><div><h2>Today’s schedule</h2><p>Monday, Apr 28</p></div><button className="text-button" onClick={() => setPage("schedule")}>View all</button></div>
@@ -276,13 +213,13 @@ function SimplePage({ page, staff }: { page: Exclude<Page, "dashboard" | "office
   const copy: Record<typeof page, { title: string; desc: string; cards: [string, string][] }> = {
     schedule: { title: "Schedule", desc: "Plan meetings, shifts and focused work blocks.", cards: [["Today", "3 meetings · 6 staff blocks"], ["Tomorrow", "2 meetings · 4 staff blocks"], ["This week", "14 scheduled activities · 82% coverage"]] },
     reports: { title: "Reports", desc: "See where the team spends time and where work gets done.", cards: [["Productivity", "+12% vs last week"], ["Attendance", "96% average"], ["Meetings", "18h total this week"]] },
-    settings: { title: "Settings", desc: "Configure your office, notifications and workspace.", cards: [["Workspace", "Main office · 12 desks"], ["Notifications", "Email + in-app enabled"], ["Appearance", "System-aware theme"]] },
+    settings: { title: "Settings", desc: "Configure your office, notifications and workspace.", cards: [["Workspace", "Office shell · no desks installed"], ["Notifications", "Email + in-app enabled"], ["Appearance", "System-aware theme"]] },
   };
   const data = copy[page];
   return <div className="content"><section className="panel simple-page"><h2>{data.title}</h2><p>{data.desc}</p><div className="simple-cards">{data.cards.map(([a,b]) => <div key={a} className="simple-card"><span>{a}</span><strong>{b}</strong></div>)}</div><div className="placeholder-banner"><Icon name="spark"/><div><strong>{staff.length} teammates are currently connected.</strong><span>This area is ready for the next layer of real business data.</span></div></div></section></div>;
 }
 
-function StaffModal({ onClose, onSave }: { onClose: () => void; onSave: (s: Omit<Staff, "id" | "x" | "y">) => void | Promise<void> }) {
+function StaffModal({ onClose, onSave }: { onClose: () => void; onSave: (s: Omit<Staff, "id">) => void | Promise<void> }) {
   const [name, setName] = useState(""); const [role, setRole] = useState(""); const [department, setDepartment] = useState("Operations");
   return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-head"><div><h2>Add new employee</h2><p>Give a teammate a place in the virtual office.</p></div><button className="close-button" onClick={onClose}>×</button></div><div className="avatar-upload"><div className="upload-avatar">+</div><div><strong>Profile photo</strong><span>Optional for now</span></div></div><label>Full name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex Morgan" /></label><label>Role<input value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Sales Manager" /></label><label>Department<select value={department} onChange={(e) => setDepartment(e.target.value)}>{["Management","Design","Marketing","Finance","Support","Operations"].map((x) => <option key={x}>{x}</option>)}</select></label><div className="modal-actions"><button onClick={onClose} className="secondary">Cancel</button><button disabled={!name.trim() || !role.trim()} className="primary" onClick={() => { void onSave({ name: name.trim(), role: role.trim(), department, status: "Working", task: "Getting started", color: "#3b82f6" }); onClose(); }}>Add employee</button></div></div></div>;
 }
@@ -295,52 +232,48 @@ function StaffDrawer({ staff, onClose }: { staff: Staff | null; onClose: () => v
 export default function Home() {
   const [page, setPage] = useState<Page>("dashboard");
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [staff, setStaff] = useState<Staff[]>(seedStaff);
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [selected, setSelected] = useState<Staff | null>(null);
   const [adding, setAdding] = useState(false);
   const [clock, setClock] = useState("09:42 AM");
   const [dbConfigured, setDbConfigured] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const [layout, setLayout] = useState<Record<OfficeRoom, RoomLayout>>(DEFAULT_LAYOUT);
-  const [editingLayout, setEditingLayout] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<OfficeRoom | null>(null);
 
   useEffect(() => {
     try {
-      const savedLayout = localStorage.getItem("officehub:layout");
-      if (savedLayout) setLayout({ ...DEFAULT_LAYOUT, ...(JSON.parse(savedLayout) as Record<OfficeRoom, RoomLayout>) });
-      const saved = localStorage.getItem("officehub:staff");
-      if (saved) setStaff(assignStaffToDesks(JSON.parse(saved) as Staff[]));
+      localStorage.removeItem("officehub:staff");
+      localStorage.removeItem("officehub:layout");
     } catch {}
-    void fetch("/api/staff").then(async (res) => {
-      if (!res.ok) return;
-      const data = await res.json();
-      setDbConfigured(Boolean(data.configured));
-      if (Array.isArray(data.staff) && data.staff.length > 0) setStaff(assignStaffToDesks(data.staff as unknown as Staff[]));
-    }).catch(() => {}).finally(() => setHydrated(true));
+
+    void fetch("/api/staff")
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json();
+        setDbConfigured(Boolean(data.configured));
+      })
+      .catch(() => {})
+      .finally(() => setHydrated(true));
   }, []);
-  useEffect(() => { if (hydrated) localStorage.setItem("officehub:staff", JSON.stringify(staff)); }, [staff, hydrated]);
-  useEffect(() => { if (hydrated) localStorage.setItem("officehub:layout", JSON.stringify(layout)); }, [layout, hydrated]);
   useEffect(() => { const tick = () => setClock(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })); tick(); const t = setInterval(tick, 30000); return () => clearInterval(t); }, []);
-  const addEmployee = async (newStaff: Omit<Staff, "id" | "x" | "y">) => {
+  const addEmployee = async (newStaff: Omit<Staff, "id">) => {
     try {
-      const res = await fetch("/api/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newStaff) });
+      const res = await fetch("/api/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newStaff),
+      });
       if (res.ok) {
         const data = await res.json();
         setDbConfigured(Boolean(data.configured));
         if (data.staff) {
-          const saved = data.staff as Staff;
-          const position = activitySpotForStaff(saved.department, "Working", saved.id);
-          setStaff((current) => [{ ...saved, x: position.x, y: position.y, location: homeRoomForDepartment(saved.department) }, ...current]);
+          setStaff((current) => [data.staff as Staff, ...current]);
           return;
         }
       }
     } catch {}
-    setStaff((current) => {
-      const id = Date.now();
-      const position = activitySpotForStaff(newStaff.department, "Working", id);
-      return [...current, { ...newStaff, id, x: position.x, y: position.y, location: homeRoomForDepartment(newStaff.department) }];
-    });
+
+    setStaff((current) => [...current, { ...newStaff, id: Date.now() }]);
   };
 
   const content = useMemo(() => {
@@ -348,35 +281,27 @@ export default function Home() {
       return <Dashboard staff={staff} onSelect={setSelected} onAdd={() => setAdding(true)} setPage={setPage} />;
     }
     if (page === "office") {
-      const activeRoom = selectedRoom;
       return <div className="content"><section className="panel office-page">
         <div className="section-toolbar">
           <div>
             <h2>Live office</h2>
-            <p>{editingLayout ? "Layout editor: select a room and reposition it with the controls." : "Static office view — staff are seated at their assigned desks."}</p>
+            <p>Empty office shell — rooms, walls and circulation spaces are ready for rebuilding.</p>
           </div>
-          <div className="office-actions"></div>
         </div>
-        <OfficeScene staff={staff} onSelect={setSelected} onRoomSelect={setSelectedRoom} selectedRoom={activeRoom} layout={layout} editing={editingLayout}/>
-        {activeRoom && <div className="room-inspector">
+        <OfficeScene onRoomSelect={setSelectedRoom} selectedRoom={selectedRoom} />
+        {selectedRoom && <div className="room-inspector">
           <div>
-            <strong>{activeRoom}</strong>
-            <span>{staff.filter((s) => (s.location ?? homeRoomForDepartment(s.department)) === activeRoom).length} staff linked · {editingLayout ? "move the room with the controls" : "inspect room activity"}</span>
+            <strong>{selectedRoom}</strong>
+            <span>Blank space · no desks or staff installed.</span>
           </div>
-          {editingLayout ? <div className="move-controls">
-            <button className="secondary" onClick={() => setLayout((current) => ({ ...current, [activeRoom]: { ...current[activeRoom], y: Math.max(0, current[activeRoom].y - 2) } }))}>↑</button>
-            <button className="secondary" onClick={() => setLayout((current) => ({ ...current, [activeRoom]: { ...current[activeRoom], x: Math.max(0, current[activeRoom].x - 2) } }))}>←</button>
-            <button className="secondary" onClick={() => setLayout((current) => ({ ...current, [activeRoom]: { ...current[activeRoom], x: Math.min(100 - current[activeRoom].w, current[activeRoom].x + 2) } }))}>→</button>
-            <button className="secondary" onClick={() => setLayout((current) => ({ ...current, [activeRoom]: { ...current[activeRoom], y: Math.min(100 - current[activeRoom].h, current[activeRoom].y + 2) } }))}>↓</button>
-            <button className="secondary" onClick={() => setLayout(DEFAULT_LAYOUT)}>Reset</button>
-          </div> : <button className="secondary" onClick={() => setSelectedRoom(null)}>Close</button>}
+          <button className="secondary" onClick={() => setSelectedRoom(null)}>Close</button>
         </div>}
       </section></div>;
     }
     if (page === "staff") return <StaffPage staff={staff} onSelect={setSelected} onAdd={() => setAdding(true)} />;
     if (page === "tasks") return <TasksPage staff={staff} />;
     return <SimplePage page={page} staff={staff} />;
-  }, [page, staff, selectedRoom, layout, editingLayout]);
+  }, [page, staff, selectedRoom]);
   return <div className={`app-shell theme-${theme}`}>
     <Sidebar page={page} setPage={setPage} theme={theme} setTheme={setTheme} onAdd={() => setAdding(true)} />
     <main className="main"><Topbar page={page} onAdd={() => setAdding(true)} /><div className="clock-strip"><span><i className="live-dot" /> Live office</span><strong>{clock}</strong><span>{dbConfigured ? "SQLite connected" : "Local prototype mode"}</span></div>{content}</main>
