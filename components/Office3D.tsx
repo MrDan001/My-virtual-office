@@ -491,7 +491,7 @@ function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
   label.userData.room = room.name;
   scene.add(label);
 }
-export default function Office3D({ staff, running, onSelect, onRoomSelect, selectedRoom }: Props) {
+export default function Office3D({ staff, onSelect, onRoomSelect, selectedRoom }: Props) {
   const mountRef = useRef<HTMLDivElement>(null);
   const staffRef = useRef(staff);
   const onSelectRef = useRef(onSelect);
