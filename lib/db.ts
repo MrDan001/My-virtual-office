@@ -28,12 +28,10 @@ export async function ensureSchema(db: Client) {
       `CREATE TABLE IF NOT EXISTS tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
-        assignee_id INTEGER,
         priority TEXT NOT NULL DEFAULT 'Medium',
         status TEXT NOT NULL DEFAULT 'Pending',
         due_label TEXT NOT NULL DEFAULT 'Today',
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (assignee_id) REFERENCES employees(id) ON DELETE SET NULL
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       )`,
       `CREATE TABLE IF NOT EXISTS office_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,6 +47,31 @@ export async function ensureSchema(db: Client) {
     ],
     "write",
   );
+
+  // Existing installations may still have the legacy tasks.assignee_id column.
+  // Rebuild the table once so the database itself no longer carries task-to-employee coupling.
+  const taskColumns = await db.execute("PRAGMA table_info(tasks)");
+  const hasAssigneeId = taskColumns.rows.some((row) => String(row.name) === "assignee_id");
+
+  if (hasAssigneeId) {
+    await db.batch(
+      [
+        `CREATE TABLE tasks_clean (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          priority TEXT NOT NULL DEFAULT 'Medium',
+          status TEXT NOT NULL DEFAULT 'Pending',
+          due_label TEXT NOT NULL DEFAULT 'Today',
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `INSERT INTO tasks_clean (id, title, priority, status, due_label, created_at)
+         SELECT id, title, priority, status, due_label, created_at FROM tasks`,
+        `DROP TABLE tasks`,
+        `ALTER TABLE tasks_clean RENAME TO tasks`,
+      ],
+      "write",
+    );
+  }
 
   const columns = await db.execute("PRAGMA table_info(employees)");
   const hasLocation = columns.rows.some((row) => String(row.name) === "location");
