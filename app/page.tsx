@@ -21,8 +21,6 @@ type Staff = {
 type Task = {
   id: number;
   title: string;
-  assigneeId?: number;
-  assignee: string;
   priority: "High" | "Medium" | "Low";
   status: "Pending" | "In Progress" | "Completed";
   dueLabel: string;
@@ -117,23 +115,20 @@ function StaffPage({ staff, onSelect, onAdd }: { staff: Staff[]; onSelect: (s: S
   return <div className="content"><section className="panel"><div className="section-toolbar"><div><h2>Staff directory</h2><p>Manage team members, roles and current activity.</p></div><button className="primary" onClick={onAdd}><Icon name="plus" /> Add staff</button></div><div className="filter-row"><button className="filter active">All {staff.length}</button>{departments.map((d) => <button className="filter" key={d}>{d} {staff.filter((s) => s.department === d).length}</button>)}<label className="table-search"><Icon name="search"/><input placeholder="Search staff..." /></label></div><div className="staff-table"><div className="table-row head"><span>Name</span><span>Role</span><span>Department</span><span>Status</span><span>Task</span></div>{staff.map((person) => <button className="table-row" key={person.id} onClick={() => onSelect(person)}><span className="name-cell"><span className="person-avatar" style={{ background: person.color }}>{avatar(person.name)}</span><strong>{person.name}</strong></span><span>{person.role}</span><span>{person.department}</span><span><StatusPill status={person.status}/></span><span>{person.task}</span></button>)}</div></section></div>;
 }
 
-function TasksPage({ staff }: { staff: Staff[] }) {
+function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Task["priority"]>("Medium");
-  const [assigneeId, setAssigneeId] = useState<number | "">(staff[0]?.id ?? "");
 
   useEffect(() => {
     void fetch("/api/tasks").then(async (res) => {
       if (!res.ok) return;
       const data = await res.json();
-      if (Array.isArray(data.tasks) && data.tasks.length) {
+      if (Array.isArray(data.tasks)) {
         setTasks(data.tasks.map((task: Record<string, unknown>) => ({
           id: Number(task.id),
           title: String(task.title),
-          assigneeId: task.assignee_id ? Number(task.assignee_id) : undefined,
-          assignee: String(task.assignee_name ?? "Unassigned"),
           priority: String(task.priority) as Task["priority"],
           status: String(task.status) as Task["status"],
           dueLabel: String(task.due_label ?? "Today"),
@@ -142,57 +137,48 @@ function TasksPage({ staff }: { staff: Staff[] }) {
     }).catch(() => {});
   }, []);
 
-  const defaults: Task[] = staff.slice(0, 5).map((person, i) => ({
-    id: -i - 1,
-    title: ["Update product catalog", "Design new landing page", "Process payroll", "Reply to client emails", "Inventory check"][i],
-    assigneeId: person.id,
-    assignee: person.name,
-    priority: ["High", "Medium", "High", "Medium", "Low"][i] as Task["priority"],
-    status: "Pending",
-    dueLabel: "Today",
-  }));
-
-  const visibleTasks = tasks.length ? tasks : defaults;
-
   const createTask = async () => {
     const clean = title.trim();
     if (!clean) return;
-    const assignee = staff.find((person) => person.id === assigneeId);
+
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: clean, priority, assigneeId: assignee?.id ?? null }),
+        body: JSON.stringify({ title: clean, priority }),
       });
       if (res.ok) {
         const data = await res.json();
         setTasks((current) => [{
           id: Number(data.id ?? Date.now()),
           title: clean,
-          assigneeId: assignee?.id,
-          assignee: assignee?.name ?? "Unassigned",
           priority,
           status: "Pending",
           dueLabel: "Today",
-        }, ...current.filter((task) => task.id > 0)]);
-        setTitle(""); setCreating(false); return;
+        }, ...current]);
+        setTitle("");
+        setCreating(false);
+        return;
       }
     } catch {}
+
     setTasks((current) => [{
-      id: Date.now(), title: clean, assigneeId: assignee?.id,
-      assignee: assignee?.name ?? "Unassigned", priority, status: "Pending", dueLabel: "Today",
-    }, ...(current.length ? current : defaults)]);
-    setTitle(""); setCreating(false);
+      id: Date.now(),
+      title: clean,
+      priority,
+      status: "Pending",
+      dueLabel: "Today",
+    }, ...current]);
+    setTitle("");
+    setCreating(false);
   };
 
   const toggleTask = async (id: number) => {
-    const currentTask = visibleTasks.find((task) => task.id === id);
+    const currentTask = tasks.find((task) => task.id === id);
     if (!currentTask) return;
     const status: Task["status"] = currentTask.status === "Completed" ? "Pending" : "Completed";
-    setTasks((current) => {
-      const source = current.length ? current : defaults;
-      return source.map((task) => task.id === id ? { ...task, status } : task);
-    });
+    setTasks((current) => current.map((task) => task.id === id ? { ...task, status } : task));
+
     if (id > 0) {
       try {
         const res = await fetch("/api/tasks", {
@@ -207,8 +193,9 @@ function TasksPage({ staff }: { staff: Staff[] }) {
     }
   };
 
-  return <div className="content"><section className="panel"><div className="section-toolbar"><div><h2>Tasks</h2><p>Keep work moving across the office.</p></div><button className="primary" onClick={() => setCreating(true)}><Icon name="plus"/> New task</button></div><div className="task-grid">{visibleTasks.map((item) => <div className={`task-card ${item.status === "Completed" ? "task-done" : ""}`} key={item.id}><button className="task-title" onClick={() => toggleTask(item.id)}><span className={`checkbox ${item.status === "Completed" ? "checked" : ""}`}>{item.status === "Completed" ? "✓" : ""}</span><strong>{item.title}</strong><span className={`priority ${item.priority.toLowerCase()}`}>{item.priority}</span></button><p>Assigned to {item.assignee}</p><div className="task-footer"><span>{item.status === "Completed" ? "Completed" : `Due ${item.dueLabel.toLowerCase()}`}</span><span>{item.status === "Completed" ? "✓" : "•"}</span></div></div>)}</div></section>{creating && <div className="modal-backdrop" onMouseDown={() => setCreating(false)}><div className="modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-head"><div><h2>New task</h2><p>Create work and assign it directly to a teammate.</p></div><button className="close-button" onClick={() => setCreating(false)}>×</button></div><label>Task title<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Review customer requests" /></label><label>Assignee<select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value ? Number(e.target.value) : "")}><option value="">Unassigned</option>{staff.map((person) => <option value={person.id} key={person.id}>{person.name}</option>)}</select></label><label>Priority<select value={priority} onChange={(e) => setPriority(e.target.value as Task["priority"])}>{["High","Medium","Low"].map((x) => <option key={x}>{x}</option>)}</select></label><div className="modal-actions"><button onClick={() => setCreating(false)} className="secondary">Cancel</button><button onClick={createTask} disabled={!title.trim()} className="primary">Create task</button></div></div></div>}</div>;
+  return <div className="content"><section className="panel"><div className="section-toolbar"><div><h2>Tasks</h2><p>Keep work moving across the office.</p></div><button className="primary" onClick={() => setCreating(true)}><Icon name="plus"/> New task</button></div><div className="task-grid">{tasks.map((item) => <div className={`task-card ${item.status === "Completed" ? "task-done" : ""}`} key={item.id}><button className="task-title" onClick={() => toggleTask(item.id)}><span className={`checkbox ${item.status === "Completed" ? "checked" : ""}`}>{item.status === "Completed" ? "✓" : ""}</span><strong>{item.title}</strong><span className={`priority ${item.priority.toLowerCase()}`}>{item.priority}</span></button><div className="task-footer"><span>{item.status === "Completed" ? "Completed" : `Due ${item.dueLabel.toLowerCase()}`}</span><span>{item.status === "Completed" ? "✓" : "•"}</span></div></div>)}</div></section>{creating && <div className="modal-backdrop" onMouseDown={() => setCreating(false)}><div className="modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-head"><div><h2>New task</h2><p>Create a standalone piece of work for the office.</p></div><button className="close-button" onClick={() => setCreating(false)}>×</button></div><label>Task title<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Review customer requests" /></label><label>Priority<select value={priority} onChange={(e) => setPriority(e.target.value as Task["priority"])}>{["High","Medium","Low"].map((x) => <option key={x}>{x}</option>)}</select></label><div className="modal-actions"><button onClick={() => setCreating(false)} className="secondary">Cancel</button><button onClick={createTask} disabled={!title.trim()} className="primary">Create task</button></div></div></div>}</div>;
 }
+
 function SimplePage({ page, staff }: { page: Exclude<Page, "dashboard" | "office" | "staff" | "tasks">; staff: Staff[] }) {
   const copy: Record<typeof page, { title: string; desc: string; cards: [string, string][] }> = {
     schedule: { title: "Schedule", desc: "Plan meetings, shifts and focused work blocks.", cards: [["Today", "3 meetings · 6 staff blocks"], ["Tomorrow", "2 meetings · 4 staff blocks"], ["This week", "14 scheduled activities · 82% coverage"]] },
@@ -299,7 +286,7 @@ export default function Home() {
       </section></div>;
     }
     if (page === "staff") return <StaffPage staff={staff} onSelect={setSelected} onAdd={() => setAdding(true)} />;
-    if (page === "tasks") return <TasksPage staff={staff} />;
+    if (page === "tasks") return <TasksPage />;
     return <SimplePage page={page} staff={staff} />;
   }, [page, staff, selectedRoom]);
   return <div className={`app-shell theme-${theme}`}>
