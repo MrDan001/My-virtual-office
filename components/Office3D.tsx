@@ -142,24 +142,24 @@ function addDesk(scene: THREE.Scene, x: number, z: number, rotation = 0, label =
   });
 
   const monitor = roundedBox(0.85, 0.55, 0.08, dark);
-  monitor.position.set(0, 1.62, -0.2);
+  monitor.position.set(0, 1.62, 0.22);
   group.add(monitor);
   const screen = new THREE.Mesh(
     new THREE.BoxGeometry(0.68, 0.38, 0.02),
     new THREE.MeshStandardMaterial({ color: 0x73a9b8, emissive: 0x19333b, emissiveIntensity: 0.35 })
   );
-  screen.position.set(0, 1.62, -0.245);
+  screen.position.set(0, 1.62, 0.175);
   group.add(screen);
 
   const keyboard = roundedBox(0.8, 0.05, 0.3, chrome);
-  keyboard.position.set(0, 1.39, 0.22);
+  keyboard.position.set(0, 1.39, 0.42);
   group.add(keyboard);
 
   const chair = new THREE.Mesh(
     new THREE.BoxGeometry(0.9, 0.18, 0.9),
     new THREE.MeshStandardMaterial({ color: 0x40566b, roughness: 0.65 })
   );
-  chair.position.set(0, 0.72, 1.0);
+  chair.position.set(0, 0.72, -1.0);
   group.add(chair);
 
   if (label) {
@@ -205,10 +205,10 @@ function staffDeskFacing(person: Staff) {
   // Desk monitors are always on the opposite side of the chair.
   // Rows whose desks are rotated by PI therefore use the opposite character facing.
   if (person.department === "Design" || person.department === "Finance") {
-    return slot >= 2 ? 0 : Math.PI;
+    return slot >= 2 ? Math.PI : 0;
   }
 
-  return Math.PI;
+  return 0;
 }
 
 function addStaff(scene: THREE.Scene, person: Staff) {
@@ -368,35 +368,35 @@ function addStaff(scene: THREE.Scene, person: Staff) {
   addSegment(
     "left upper arm",
     new THREE.Vector3(-0.43, shoulderY, 0.13),
-    new THREE.Vector3(-0.45, elbowY, 0.5),
+    new THREE.Vector3(-0.45, elbowY, 0.36),
     0.105,
     shirtDark,
   );
   addSegment(
     "right upper arm",
     new THREE.Vector3(0.43, shoulderY, 0.13),
-    new THREE.Vector3(0.45, elbowY, 0.5),
+    new THREE.Vector3(0.45, elbowY, 0.36),
     0.105,
     shirtDark,
   );
   addSegment(
     "left forearm",
     new THREE.Vector3(-0.45, elbowY, 0.5),
-    new THREE.Vector3(-0.34, wristY, 0.86),
+    new THREE.Vector3(-0.30, wristY, 0.47),
     0.09,
     skinSoft,
   );
   addSegment(
     "right forearm",
     new THREE.Vector3(0.45, elbowY, 0.5),
-    new THREE.Vector3(0.34, wristY, 0.86),
+    new THREE.Vector3(0.30, wristY, 0.47),
     0.09,
     skinSoft,
   );
 
   [-0.34, 0.34].forEach((x) => {
     const hand = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), skin);
-    hand.position.set(x, 1.18, 0.89);
+    hand.position.set(x, 1.18, 0.50);
     hand.scale.set(1, 0.82, 1.18);
     hand.castShadow = true;
     group.add(hand);
