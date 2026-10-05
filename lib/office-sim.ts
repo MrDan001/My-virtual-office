@@ -106,7 +106,7 @@ const ROOM_WORLD_BOUNDS: Record<OfficeRoom, Rect> = {
   Reception: { minX: -2, maxX: 2, minY: 9, maxY: 12 },
   "Manager Office": { minX: -13.5, maxX: -6.5, minY: -9.5, maxY: -2.5 },
   "Meeting Room": { minX: -4.5, maxX: 4.5, minY: -9.5, maxY: -2.5 },
-  Design Studio: { minX: -13.5, maxX: -4.5, minY: -0.5, maxY: 7.5 },
+  "Design Studio": { minX: -13.5, maxX: -4.5, minY: -0.5, maxY: 7.5 },
   Finance: { minX: -2, maxX: 4, minY: -0.5, maxY: 7.5 },
   Support: { minX: 6.5, maxX: 13.5, minY: -9.5, maxY: -2.5 },
   "Break Room": { minX: 6.5, maxX: 13.5, minY: 1, maxY: 9 },
@@ -121,7 +121,7 @@ const furnitureBlocksWorld: Record<OfficeRoom, Rect[]> = {
   "Meeting Room": [
     { minX: -2.8, maxX: 2.8, minY: -7.25, maxY: -4.75 },
   ],
-  Design Studio: [
+  "Design Studio": [
     { minX: -12.15, maxX: -9.35, minY: 1.0, maxY: 2.4 },
     { minX: -8.65, maxX: -5.85, minY: 1.0, maxY: 2.4 },
     { minX: -12.15, maxX: -9.35, minY: 4.6, maxY: 6.0 },
