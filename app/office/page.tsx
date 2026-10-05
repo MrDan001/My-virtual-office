@@ -21,10 +21,10 @@ type Staff = {
 
 const seedStaff: Staff[] = [
   { id: 1, name: "Sarah Johnson", role: "Team Lead", department: "Management", status: "Meeting", task: "Weekly standup", x: 44, y: 25, color: "#f59e0b", location: "Meeting Room" },
-  { id: 2, name: "Mike Williams", role: "Product Designer", department: "Design", status: "Working", task: "Landing page", x: 24.72, y: 46.47, color: "#22c55e", location: "Design Studio" },
-  { id: 3, name: "Emma Davis", role: "Marketing", department: "Marketing", status: "Working", task: "Campaign review", x: 39.54, y: 80.42, color: "#a855f7", location: "Open Office" },
-  { id: 4, name: "James Brown", role: "Accountant", department: "Finance", status: "Away", task: "Payroll", x: 59.59, y: 71.17, color: "#ef4444", location: "Finance" },
-  { id: 5, name: "Lina Wilson", role: "Support Agent", department: "Support", status: "Working", task: "Customer inbox", x: 78.77, y: 12.53, color: "#06b6d4", location: "Support" },
+  { id: 2, name: "Mike Williams", role: "Product Designer", department: "Design", status: "Working", task: "Landing page", x: 24.72, y: 55.29, color: "#22c55e", location: "Design Studio" },
+  { id: 3, name: "Emma Davis", role: "Marketing", department: "Marketing", status: "Working", task: "Campaign review", x: 39.54, y: 89.24, color: "#a855f7", location: "Open Office" },
+  { id: 4, name: "James Brown", role: "Accountant", department: "Finance", status: "Away", task: "Payroll", x: 59.59, y: 62.35, color: "#ef4444", location: "Finance" },
+  { id: 5, name: "Lina Wilson", role: "Support Agent", department: "Support", status: "Working", task: "Customer inbox", x: 78.77, y: 21.34, color: "#06b6d4", location: "Support" },
   { id: 6, name: "David Miller", role: "Operations", department: "Operations", status: "Break", task: "Inventory check", x: 78.77, y: 90.68, color: "#3b82f6", location: "Break Room" },
 ];
 
