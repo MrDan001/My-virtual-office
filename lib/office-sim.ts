@@ -39,35 +39,35 @@ export const officeNodes: Record<OfficeRoom, OfficeNode> = {
 const ROOM_PORTALS: Record<string, Record<string, Portal>> = {
   "Manager Office": {
     "Meeting Room": portal(26.92, 16.93, 34.73, 16.93),
-    "Design Studio": portal(15.13, 29.63, 15.13, 39.51),
+    "Design Studio": portal(15.13, 29.63, 15.13, 41.71),
   },
   "Meeting Room": {
     "Manager Office": portal(34.73, 16.93, 26.92, 16.93),
     Support: portal(65.27, 16.93, 73.08, 16.93),
-    Finance: portal(50.0, 29.63, 53.49, 39.51),
+    Finance: portal(53.49, 29.63, 53.49, 41.71),
   },
   Support: {
     "Meeting Room": portal(73.08, 16.93, 65.27, 16.93),
   },
   "Design Studio": {
-    "Manager Office": portal(15.13, 39.51, 15.13, 29.63),
-    Finance: portal(33.89, 58.82, 45.19, 58.82),
-    "Open Office": portal(18.62, 75.93, 39.54, 76.98),
+    "Manager Office": portal(15.13, 41.71, 15.13, 29.63),
+    Finance: portal(33.89, 58.82, 43.44, 58.82),
+    "Open Office": portal(39.54, 75.93, 39.54, 79.19),
   },
   Finance: {
-    "Meeting Room": portal(53.49, 39.51, 50.0, 29.63),
-    "Design Studio": portal(45.19, 58.82, 33.89, 58.82),
-    "Break Room": portal(66.11, 58.82, 73.08, 58.82),
-    "Open Office": portal(53.49, 75.93, 53.49, 76.98),
+    "Meeting Room": portal(53.49, 41.71, 53.49, 29.63),
+    "Design Studio": portal(43.44, 58.82, 33.89, 58.82),
+    "Break Room": portal(63.53, 58.82, 73.08, 58.82),
+    "Open Office": portal(53.49, 75.93, 53.49, 79.19),
   },
   "Break Room": {
-    Finance: portal(73.08, 58.82, 66.11, 58.82),
-    "Open Office": portal(73.08, 80.86, 65.27, 80.86),
+    Finance: portal(73.08, 58.82, 63.53, 58.82),
+    "Open Office": portal(73.08, 80.86, 63.53, 80.86),
   },
   "Open Office": {
-    "Design Studio": portal(39.54, 76.98, 18.62, 75.93),
-    Finance: portal(53.49, 76.98, 53.49, 75.93),
-    "Break Room": portal(65.27, 80.86, 73.08, 80.86),
+    "Design Studio": portal(39.54, 79.19, 39.54, 75.93),
+    Finance: portal(53.49, 79.19, 53.49, 75.93),
+    "Break Room": portal(63.53, 80.86, 73.08, 80.86),
   },
 };
 
