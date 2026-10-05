@@ -311,14 +311,19 @@ export function findPath(start: OfficeRoom, goal: OfficeRoom): OfficeRoom[] {
       const next = [...path, neighbor];
       if (neighbor === goal) return next;
       seen.add(neighbor);
-function buildNavigation(start: OfficeRoom, goal: OfficeRoom, finalPoint: { x: number; y: number }): NavigationState {
+function buildNavigation(
+  start: OfficeRoom,
+  goal: OfficeRoom,
+  startPoint: { x: number; y: number },
+  finalPoint: { x: number; y: number },
+): NavigationState {
   const rooms = findPath(start, goal);
   if (rooms[rooms.length - 1] !== goal) {
     return { goal, finalPoint, steps: [], index: 0 };
   }
 
   const steps: NavigationStep[] = [];
-  let current = { ...personAnchor(start) };
+  let current = { ...startPoint };
 
   for (let i = 0; i < rooms.length - 1; i += 1) {
     const fromRoom = rooms[i];
@@ -346,10 +351,6 @@ function buildNavigation(start: OfficeRoom, goal: OfficeRoom, finalPoint: { x: n
   }
 
   return { goal, finalPoint, steps, index: 0 };
-}
-
-function personAnchor(room: OfficeRoom) {
-  return { x: officeNodes[room].x, y: officeNodes[room].y };
 }
 
   }
@@ -444,7 +445,7 @@ export function advanceActor(
     || existingNavigation.index >= existingNavigation.steps.length;
 
   const activeNavigation = needsNewRoute
-    ? buildNavigation(currentRoom, goal, destination)
+    ? buildNavigation(currentRoom, goal, { x: person.x, y: person.y }, destination)
     : existingNavigation;
 
   if (!activeNavigation.steps.length) {
