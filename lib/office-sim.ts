@@ -13,78 +13,6 @@ export type RoutineState = {
   task: string;
 };
 
-export type OfficeNode = {
-  room: OfficeRoom;
-  x: number;
-  y: number;
-  neighbors: OfficeRoom[];
-};
-
-export const officeNodes: Record<OfficeRoom, OfficeNode> = {
-  Reception: { room: "Reception", x: 38, y: 91, neighbors: ["Open Office"] },
-  "Manager Office": { room: "Manager Office", x: 17, y: 19, neighbors: ["Meeting Room", "Design Studio"] },
-  "Meeting Room": { room: "Meeting Room", x: 51, y: 19, neighbors: ["Manager Office", "Support", "Finance"] },
-  "Design Studio": { room: "Design Studio", x: 20, y: 68, neighbors: ["Manager Office", "Finance", "Open Office"] },
-  Finance: { room: "Finance", x: 56, y: 68, neighbors: ["Meeting Room", "Design Studio", "Break Room", "Open Office"] },
-  Support: { room: "Support", x: 84, y: 28, neighbors: ["Meeting Room"] },
-  "Break Room": { room: "Break Room", x: 84, y: 75, neighbors: ["Finance", "Open Office"] },
-  "Open Office": { room: "Open Office", x: 49, y: 53, neighbors: ["Design Studio", "Finance", "Break Room", "Reception"] },
-};
-
-const distanceBetween = (a: { x: number; y: number }, b: { x: number; y: number }) =>
-  Math.hypot(a.x - b.x, a.y - b.y);
-
-export function findPath(start: OfficeRoom, goal: OfficeRoom): OfficeRoom[] {
-  if (start === goal) return [start];
-
-  const queue: OfficeRoom[][] = [[start]];
-  const seen = new Set<OfficeRoom>([start]);
-
-  while (queue.length) {
-    const path = queue.shift()!;
-    const room = path[path.length - 1];
-
-    for (const neighbor of officeNodes[room].neighbors) {
-      if (seen.has(neighbor)) continue;
-      const next = [...path, neighbor];
-      if (neighbor === goal) return next;
-      seen.add(neighbor);
-      queue.push(next);
-    }
-  }
-
-  return [start, goal];
-}
-
-export function advanceActor(
-  person: { x: number; y: number; location?: OfficeRoom },
-  goal: OfficeRoom,
-  speed = 0.65,
-  finalPoint?: { x: number; y: number },
-) {
-  const start = person.location && officeNodes[person.location] ? person.location : "Open Office";
-  const path = findPath(start, goal);
-  const nextRoom = path[1] ?? goal;
-  const target = nextRoom === goal && finalPoint ? finalPoint : officeNodes[nextRoom];
-
-  const distance = distanceBetween(person, target);
-
-  if (distance <= speed) {
-    return {
-      x: target.x,
-      y: target.y,
-      location: nextRoom,
-    };
-  }
-
-  const ratio = speed / distance;
-  return {
-    x: person.x + (target.x - person.x) * ratio,
-    y: person.y + (target.y - person.y) * ratio,
-    location: start,
-  };
-}
-
 export function homeRoomForDepartment(department: string): OfficeRoom {
   const map: Record<string, OfficeRoom> = {
     Management: "Manager Office",
@@ -139,39 +67,6 @@ export function deskSpotForStaff(department: string, id: number) {
   const list = positions[room];
   return list[(Math.max(1, id) - 1) % list.length];
 }
-export function targetRoomForStaff(department: string, status: string): OfficeRoom {
-  if (status === "Meeting") return "Meeting Room";
-  if (status === "Break") return "Break Room";
-  return homeRoomForDepartment(department);
-}
-
-export function routineForStaff(department: string, id: number, unixSeconds: number): RoutineState {
-  const cycleLength = 360;
-  const phase = (unixSeconds + id * 47) % cycleLength;
-
-  if (phase < 285) {
-    const taskByDepartment: Record<string, string> = {
-      Finance: "Processing payroll",
-      Support: "Customer inbox",
-      Design: "Design review",
-      Marketing: "Campaign work",
-      Operations: "Operations queue",
-      Management: "Team management",
-    };
-    return { status: "Working", task: taskByDepartment[department] ?? "Focused work" };
-  }
-
-  if (phase < 325 && department !== "Support") {
-    return { status: "Meeting", task: "Team sync" };
-  }
-
-  if (phase < 360) {
-    return { status: "Break", task: "Taking a short break" };
-  }
-
-  return { status: "Working", task: "Focused work" };
-}
-
 export function activitySpotForStaff(
   department: string,
   status: "Working" | "Meeting" | "Break",
@@ -200,11 +95,4 @@ export function activitySpotForStaff(
     { x: 90.97, y: 90.68 },
   ];
   return seats[(Math.max(1, id) - 1) % seats.length];
-}
-export function isAtTarget(
-  person: { x: number; y: number },
-  target: { x: number; y: number },
-  tolerance = 0.7,
-) {
-  return Math.hypot(person.x - target.x, person.y - target.y) <= tolerance;
 }
