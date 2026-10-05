@@ -521,6 +521,10 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
     addDesk(scene, 8.25, -6, 0, "Support");
     addDesk(scene, 11.75, -6, 0, "Support");
 
+    // Open Office gets two centered desks for Operations + Marketing.
+    addDesk(scene, -3, 9.4, 0, "Open");
+    addDesk(scene, 1, 9.4, 0, "Open");
+
     const table = roundedBox(5.5, 0.28, 2.4, new THREE.MeshStandardMaterial({ color: 0x9a6848, roughness: 0.65 }));
     table.position.set(0, 1.05, -6);
     scene.add(table);
@@ -583,26 +587,64 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
         const dx = target.x - current.x;
         const dz = target.z - current.z;
         const distance = Math.hypot(dx, dz);
-        const smoothing = runningRef.current ? Math.min(1, delta * (person.walking ? 4.5 : 8)) : 0;
-        if (distance > 0.01 && smoothing > 0) {
-          current.x += dx * smoothing;
-          current.z += dz * smoothing;
-          if (person.walking) {
-            const desired = Math.atan2(dx, dz);
-            let angle = desired - group.rotation.y;
-            angle = Math.atan2(Math.sin(angle), Math.cos(angle));
-            group.rotation.y += angle * Math.min(1, delta * 8);
-            group.position.y = Math.sin(clock.elapsedTime * 9) * 0.025;
-          }
+        const walking = Boolean(person.walking);
+        const moveSpeed = walking ? 2.25 : 4.5;
+        const maxStep = runningRef.current ? moveSpeed * delta : 0;
+        if (distance > 0.01 && maxStep > 0) {
+          const step = Math.min(distance, maxStep);
+          current.x += (dx / distance) * step;
+          current.z += (dz / distance) * step;
         }
 
-        const seated = !person.walking && person.status === "Working";
-        if (seated) {
-          group.position.y += (-0.38 - group.position.y) * Math.min(1, delta * 8);
-          group.rotation.x += (0.04 - group.rotation.x) * Math.min(1, delta * 8);
+        const gait = Math.sin(clock.elapsedTime * 11.5);
+        const gaitData = group.userData.gait as {
+          legs: THREE.Group;
+          legL: THREE.Object3D;
+          legR: THREE.Object3D;
+          armL: THREE.Object3D;
+          armR: THREE.Object3D;
+          torso: THREE.Object3D;
+        } | undefined;
+
+        if (walking) {
+          const desired = Math.atan2(dx, dz);
+          let angle = desired - group.rotation.y;
+          angle = Math.atan2(Math.sin(angle), Math.cos(angle));
+          group.rotation.y += angle * Math.min(1, delta * 12);
+          group.position.y += (Math.sin(clock.elapsedTime * 11.5) * 0.025 - group.position.y) * Math.min(1, delta * 15);
+
+          if (gaitData) {
+            gaitData.legL.rotation.x = gait * 0.62;
+            gaitData.legR.rotation.x = -gait * 0.62;
+            gaitData.armL.rotation.x = -gait * 0.5;
+            gaitData.armR.rotation.x = gait * 0.5;
+            gaitData.torso.rotation.z = gait * 0.035;
+          }
         } else {
-          group.position.y += (0 - group.position.y) * Math.min(1, delta * 8);
-          group.rotation.x += (0 - group.rotation.x) * Math.min(1, delta * 8);
+          const seated = person.status === "Working" || person.status === "Meeting";
+          const settleY = seated ? -0.38 : 0;
+          group.position.y += (settleY - group.position.y) * Math.min(1, delta * 9);
+          group.rotation.x += ((seated ? 0.04 : 0) - group.rotation.x) * Math.min(1, delta * 9);
+
+          let seatFacing = 0;
+          if (person.status === "Meeting") {
+            seatFacing = person.y < 17 ? 0 : Math.PI;
+          } else if (person.status === "Working") {
+            const slot = (Math.max(1, person.id) - 1) % 4;
+            seatFacing = (person.department === "Design" || person.department === "Finance") && slot >= 2 ? Math.PI : 0;
+          }
+
+          let facingDelta = seatFacing - group.rotation.y;
+          facingDelta = Math.atan2(Math.sin(facingDelta), Math.cos(facingDelta));
+          group.rotation.y += facingDelta * Math.min(1, delta * 10);
+
+          if (gaitData) {
+            gaitData.legL.rotation.x += (0 - gaitData.legL.rotation.x) * Math.min(1, delta * 12);
+            gaitData.legR.rotation.x += (0 - gaitData.legR.rotation.x) * Math.min(1, delta * 12);
+            gaitData.armL.rotation.x += (0 - gaitData.armL.rotation.x) * Math.min(1, delta * 12);
+            gaitData.armR.rotation.x += (0 - gaitData.armR.rotation.x) * Math.min(1, delta * 12);
+            gaitData.torso.rotation.z += (0 - gaitData.torso.rotation.z) * Math.min(1, delta * 12);
+          }
         }
 
         group.traverse((child) => {
