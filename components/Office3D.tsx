@@ -48,6 +48,44 @@ const ROOM_DATA: { name: OfficeRoom; x: number; z: number; w: number; d: number;
   { name: "Break Room", x: 10, z: 5, w: 8, d: 9, color: 0xf0eadf },
 ];
 
+type DoorSide = "north" | "south" | "east" | "west";
+
+const ROOM_DOORWAYS: Record<OfficeRoom, { side: DoorSide; offset: number }[]> = {
+  Reception: [],
+  "Manager Office": [
+    { side: "east", offset: -6 },
+    { side: "south", offset: -10 },
+  ],
+  "Meeting Room": [
+    { side: "west", offset: -6 },
+    { side: "east", offset: -6 },
+    { side: "south", offset: 0 },
+  ],
+  Support: [
+    { side: "west", offset: -6 },
+  ],
+  "Design Studio": [
+    { side: "north", offset: -10 },
+    { side: "east", offset: 3.5 },
+    { side: "south", offset: -9 },
+  ],
+  Finance: [
+    { side: "north", offset: 1 },
+    { side: "west", offset: 3.5 },
+    { side: "east", offset: 3.5 },
+    { side: "south", offset: 1 },
+  ],
+  "Open Office": [
+    { side: "north", offset: -3 },
+    { side: "north", offset: 1 },
+    { side: "east", offset: 8.5 },
+  ],
+  "Break Room": [
+    { side: "west", offset: 3.5 },
+    { side: "west", offset: 8.5 },
+  ],
+};
+
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
 function worldFromPercent(x: number, y: number) {
@@ -358,15 +396,15 @@ function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
 
   const wallH = 2.35;
   const thickness = 0.18;
+  const doorwayWidth = 1.8;
 
-  // For this cleanup pass every room wall is fully closed.
-  // No doorway cuts, no frame gaps and no broken wall segments.
   const addSolidWall = (
     width: number,
     depth: number,
     x: number,
     z: number,
   ) => {
+    if (width <= 0.08 || depth <= 0.08) return;
     const wall = roundedBox(width, wallH, depth, wallMat);
     wall.position.set(x, wallH / 2, z);
     wall.castShadow = true;
@@ -374,29 +412,49 @@ function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
     scene.add(wall);
   };
 
-  addSolidWall(
-    visualW + thickness,
-    thickness,
-    room.x,
+  const doors = ROOM_DOORWAYS[room.name] ?? [];
+
+  const horizontalWall = (z: number, centers: number[]) => {
+    const left = room.x - (visualW + thickness) / 2;
+    const right = room.x + (visualW + thickness) / 2;
+    let cursor = left;
+    for (const center of [...centers].sort((a, b) => a - b)) {
+      const openingLeft = Math.max(left, center - doorwayWidth / 2);
+      const openingRight = Math.min(right, center + doorwayWidth / 2);
+      addSolidWall(openingLeft - cursor, thickness, (cursor + openingLeft) / 2, z);
+      cursor = Math.max(cursor, openingRight);
+    }
+    addSolidWall(right - cursor, thickness, (cursor + right) / 2, z);
+  };
+
+  const verticalWall = (x: number, centers: number[]) => {
+    const top = room.z - visualD / 2;
+    const bottom = room.z + visualD / 2;
+    let cursor = top;
+    for (const center of [...centers].sort((a, b) => a - b)) {
+      const openingTop = Math.max(top, center - doorwayWidth / 2);
+      const openingBottom = Math.min(bottom, center + doorwayWidth / 2);
+      addSolidWall(thickness, openingTop - cursor, x, (cursor + openingTop) / 2);
+      cursor = Math.max(cursor, openingBottom);
+    }
+    addSolidWall(thickness, bottom - cursor, x, (cursor + bottom) / 2);
+  };
+
+  horizontalWall(
     room.z - visualD / 2,
+    doors.filter((d) => d.side === "north").map((d) => d.offset),
   );
-  addSolidWall(
-    visualW + thickness,
-    thickness,
-    room.x,
+  horizontalWall(
     room.z + visualD / 2,
+    doors.filter((d) => d.side === "south").map((d) => d.offset),
   );
-  addSolidWall(
-    thickness,
-    visualD,
+  verticalWall(
     room.x - visualW / 2,
-    room.z,
+    doors.filter((d) => d.side === "west").map((d) => d.offset),
   );
-  addSolidWall(
-    thickness,
-    visualD,
+  verticalWall(
     room.x + visualW / 2,
-    room.z,
+    doors.filter((d) => d.side === "east").map((d) => d.offset),
   );
 
   const label = makeTextSprite(room.name, "#475569");
@@ -405,7 +463,6 @@ function buildRoom(scene: THREE.Scene, room: typeof ROOM_DATA[number]) {
   label.userData.room = room.name;
   scene.add(label);
 }
-
 export default function Office3D({ staff, running, onSelect, onRoomSelect, selectedRoom }: Props) {
   const mountRef = useRef<HTMLDivElement>(null);
   const staffRef = useRef(staff);
