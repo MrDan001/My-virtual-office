@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import Office3D from "../components/Office3D";
-import { activitySpotForStaff, advanceActor, homeRoomForDepartment, isAtTarget, officeNodes, targetRoomForStaff, routineForStaff, type OfficeRoom } from "../lib/office-sim";
+import { activitySpotForStaff, homeRoomForDepartment, type OfficeRoom } from "../lib/office-sim";
 
 type Page = "dashboard" | "office" | "staff" | "tasks" | "schedule" | "reports" | "settings";
 type StaffStatus = "Working" | "Meeting" | "Break" | "Away";
@@ -19,7 +19,6 @@ type Staff = {
   y: number;
   color: string;
   location?: OfficeRoom;
-  walking?: boolean;
 };
 
 type Task = {
@@ -60,7 +59,6 @@ function assignStaffToDesks(people: Staff[]) {
                 : "Operations queue",
       ...position,
       location: homeRoomForDepartment(person.department),
-      walking: false,
     };
   });
 }
@@ -109,7 +107,7 @@ function StatCard({ label, value, note, icon, tone }: { label: string; value: st
   );
 }
 
-function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom }: {
+function OfficeScene({ staff, onSelect, onRoomSelect, selectedRoom }: {
   staff: Staff[];
   running: boolean;
   onSelect: (s: Staff) => void;
@@ -121,7 +119,6 @@ function OfficeScene({ staff, running, onSelect, onRoomSelect, selectedRoom }: {
   return (
     <Office3D
       staff={staff}
-      running={running}
       onSelect={onSelect}
       onRoomSelect={onRoomSelect}
       selectedRoom={selectedRoom}
@@ -152,7 +149,7 @@ function Topbar({ page, onAdd }: { page: Page; onAdd: () => void }) {
   return <header className="topbar"><div><h1>{title}</h1><p>{page === "dashboard" ? "Here’s what’s happening in your office today." : `Manage your ${page} from one place.`}</p></div><div className="top-actions"><label className="search"><Icon name="search" /><input placeholder="Search anything..." /></label><button className="icon-button"><Icon name="bell" /><b>3</b></button><button className="top-add" onClick={onAdd}><Icon name="plus" /> Add employee</button><div className="date-chip">{new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</div><div className="user-avatar small">AD</div></div></header>;
 }
 
-function Dashboard({ staff, running, setRunning, onSelect, onAdd, setPage, meetingCall, onSummon }: { staff: Staff[]; running: boolean; setRunning: (v: boolean) => void; onSelect: (s: Staff) => void; onAdd: () => void; setPage: (p: Page) => void; meetingCall: boolean; onSummon: () => void }) {
+function Dashboard({ staff, onSelect, onAdd, setPage }: { staff: Staff[]; onSelect: (s: Staff) => void; onAdd: () => void; setPage: (p: Page) => void }) {
   const working = staff.filter((s) => s.status === "Working").length;
   return <div className="content">
     <div className="stats-grid">
@@ -163,8 +160,8 @@ function Dashboard({ staff, running, setRunning, onSelect, onAdd, setPage, meeti
     </div>
     <div className="dashboard-grid">
       <section className="panel office-panel">
-        <div className="panel-head"><div><h2>Office View</h2><p>See your people and workplace activity live.</p></div><div className="scene-controls"><span className="live-tag"><i />Live</span><button onClick={() => setRunning(!running)}>{<Icon name={running ? "pause" : "play"} />} {running ? "Pause" : "Run"} </button><button onClick={onSummon}>{meetingCall ? "Release staff" : "Summon all"}</button><button onClick={() => setPage("office")} className="view-link">Open full view <Icon name="arrow" /></button></div></div>
-        <OfficeScene staff={staff} running={running} onSelect={onSelect} />
+        <div className="panel-head"><div><h2>Office View</h2><p>See your people and workplace activity live.</p></div><div className="scene-controls"><span className="live-tag"><i />Live</span><button onClick={() => setPage("office")} className="view-link">Open full view <Icon name="arrow" /></button></div></div>
+        <OfficeScene staff={staff} onSelect={onSelect} />
       </section>
       <aside className="side-stack">
         <section className="panel schedule-panel"><div className="panel-head compact"><div><h2>Today’s schedule</h2><p>Monday, Apr 28</p></div><button className="text-button" onClick={() => setPage("schedule")}>View all</button></div>
@@ -300,8 +297,6 @@ export default function Home() {
   const [page, setPage] = useState<Page>("dashboard");
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [staff, setStaff] = useState<Staff[]>(seedStaff);
-  const [running, setRunning] = useState(true);
-  const [meetingCall, setMeetingCall] = useState(false);
   const [selected, setSelected] = useState<Staff | null>(null);
   const [adding, setAdding] = useState(false);
   const [clock, setClock] = useState("09:42 AM");
@@ -328,45 +323,6 @@ export default function Home() {
   useEffect(() => { if (hydrated) localStorage.setItem("officehub:staff", JSON.stringify(staff)); }, [staff, hydrated]);
   useEffect(() => { if (hydrated) localStorage.setItem("officehub:layout", JSON.stringify(layout)); }, [layout, hydrated]);
   useEffect(() => { const tick = () => setClock(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })); tick(); const t = setInterval(tick, 30000); return () => clearInterval(t); }, []);
-  useEffect(() => {
-    if (!running) return;
-    const t = setInterval(() => {
-      const now = Math.floor(Date.now() / 1000);
-      setStaff((current) => current.map((person) => {
-        if (person.status === "Away" && !meetingCall) return { ...person, walking: false };
-
-        const routine = meetingCall
-          ? { status: "Meeting" as const, task: "All-hands meeting" }
-          : routineForStaff(person.department, person.id, now);
-        const targetRoom = meetingCall ? "Meeting Room" : targetRoomForStaff(person.department, routine.status);
-        const targetPoint = meetingCall
-          ? activitySpotForStaff(person.department, "Meeting", person.id)
-          : activitySpotForStaff(person.department, routine.status, person.id);
-        const next = advanceActor(person, targetRoom, 1.15, targetPoint);
-        const arrived = next.location === targetRoom && isAtTarget(next, targetPoint, 0.7);
-
-        return {
-          ...person,
-          status: routine.status as StaffStatus,
-          ...next,
-          walking: !arrived,
-          task: arrived ? routine.task : `Walking to ${targetRoom}`,
-        };
-      }));
-    }, 250);
-    return () => clearInterval(t);
-  }, [running, meetingCall]);
-
-  const summonAllToMeeting = () => {
-    setMeetingCall(true);
-    setRunning(true);
-  };
-
-  const releaseAllStaff = () => {
-    setMeetingCall(false);
-    setRunning(true);
-  };
-
   const addEmployee = async (newStaff: Omit<Staff, "id" | "x" | "y">) => {
     try {
       const res = await fetch("/api/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newStaff) });
@@ -390,7 +346,7 @@ export default function Home() {
 
   const content = useMemo(() => {
     if (page === "dashboard") {
-      return <Dashboard staff={staff} running={running} setRunning={setRunning} onSelect={setSelected} onAdd={() => setAdding(true)} setPage={setPage} meetingCall={meetingCall} onSummon={meetingCall ? releaseAllStaff : summonAllToMeeting} />;
+      return <Dashboard staff={staff} onSelect={setSelected} onAdd={() => setAdding(true)} setPage={setPage} />;
     }
     if (page === "office") {
       const activeRoom = selectedRoom;
@@ -398,22 +354,11 @@ export default function Home() {
         <div className="section-toolbar">
           <div>
             <h2>Live office</h2>
-            <p>{editingLayout ? "Layout editor: select a room and reposition it with the controls." : running ? "Simulation running — staff follow role-based routines and connected room routes." : "Simulation paused."}</p>
+            <p>{editingLayout ? "Layout editor: select a room and reposition it with the controls." : "Static office view — staff are seated at their assigned desks."}</p>
           </div>
-          <div className="office-actions">
-            {activeRoom && <span className="room-selected"><Icon name="pin"/> {activeRoom}</span>}
-            <button className={editingLayout ? "primary" : "secondary"} onClick={() => setEditingLayout((value) => !value)}>
-              {editingLayout ? "Finish layout" : "Edit layout"}
-            </button>
-            <button className={meetingCall ? "primary" : "secondary"} onClick={meetingCall ? releaseAllStaff : summonAllToMeeting}>
-              {meetingCall ? "Release staff" : "Summon all to meeting"}
-            </button>
-            <button className={running ? "secondary" : "primary"} onClick={() => setRunning(!running)}>
-              <Icon name={running ? "pause" : "play"} /> {running ? "Pause simulation" : "Resume simulation"}
-            </button>
-          </div>
+          <div className="office-actions"></div>
         </div>
-        <OfficeScene staff={staff} running={running} onSelect={setSelected} onRoomSelect={setSelectedRoom} selectedRoom={activeRoom} layout={layout} editing={editingLayout}/>
+        <OfficeScene staff={staff} onSelect={setSelected} onRoomSelect={setSelectedRoom} selectedRoom={activeRoom} layout={layout} editing={editingLayout}/>
         {activeRoom && <div className="room-inspector">
           <div>
             <strong>{activeRoom}</strong>
@@ -432,10 +377,10 @@ export default function Home() {
     if (page === "staff") return <StaffPage staff={staff} onSelect={setSelected} onAdd={() => setAdding(true)} />;
     if (page === "tasks") return <TasksPage staff={staff} />;
     return <SimplePage page={page} staff={staff} />;
-  }, [page, staff, running, meetingCall, selectedRoom, layout, editingLayout]);
+  }, [page, staff, selectedRoom, layout, editingLayout]);
   return <div className={`app-shell theme-${theme}`}>
     <Sidebar page={page} setPage={setPage} theme={theme} setTheme={setTheme} onAdd={() => setAdding(true)} />
-    <main className="main"><Topbar page={page} onAdd={() => setAdding(true)} /><div className="clock-strip"><span><i className="live-dot" /> Live office simulation</span><strong>{clock}</strong><span>{dbConfigured ? "SQLite connected" : "Local prototype mode"}</span></div>{content}</main>
+    <main className="main"><Topbar page={page} onAdd={() => setAdding(true)} /><div className="clock-strip"><span><i className="live-dot" /> Live office</span><strong>{clock}</strong><span>{dbConfigured ? "SQLite connected" : "Local prototype mode"}</span></div>{content}</main>
     <StaffDrawer staff={selected} onClose={() => setSelected(null)} />
     {adding && <StaffModal onClose={() => setAdding(false)} onSave={addEmployee} />}
   </div>;
