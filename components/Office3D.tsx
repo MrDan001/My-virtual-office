@@ -189,96 +189,345 @@ function addChair(scene: THREE.Scene, x: number, z: number, rotation = 0) {
   scene.add(group);
 }
 
+function staffDeskFacing(person: Staff) {
+  const slot = (Math.max(1, person.id) - 1) % 4;
+
+  if (person.location === "Meeting Room") {
+    return person.y < 17 ? 0 : Math.PI;
+  }
+
+  if (person.location === "Break Room") {
+    const dx = person.x - 84;
+    const dy = person.y - 81;
+    return Math.atan2(-dx, -dy);
+  }
+
+  // Desk monitors are always on the opposite side of the chair.
+  // Rows whose desks are rotated by PI therefore use the opposite character facing.
+  if (person.department === "Design" || person.department === "Finance") {
+    return slot >= 2 ? 0 : Math.PI;
+  }
+
+  return Math.PI;
+}
+
 function addStaff(scene: THREE.Scene, person: Staff) {
   const group = new THREE.Group();
   const p = worldFromPercent(person.x, person.y);
   group.position.set(p.x, 0, p.z);
+  group.rotation.y = staffDeskFacing(person);
   group.userData.staffId = person.id;
+  group.scale.setScalar(1.08);
 
-  const shirt = new THREE.MeshStandardMaterial({ color: new THREE.Color(person.color), roughness: 0.75 });
-  const skin = new THREE.MeshStandardMaterial({ color: 0xc98761, roughness: 0.8 });
-  const hair = new THREE.MeshStandardMaterial({ color: 0x38291f, roughness: 0.9 });
-  const shoe = new THREE.MeshStandardMaterial({ color: 0x20242a, roughness: 0.7 });
+  const skinTones = [0xf2c7aa, 0xd99b73, 0xb87352, 0x97563d, 0x75412f, 0x563125];
+  const hairTones = [0x17120f, 0x2a1c16, 0x4a2d20, 0x6b432c, 0x211c26];
+  const eyeTones = [0x302018, 0x4b2d1d, 0x25354d, 0x17251d];
 
-  const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(0.55, 24),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18 })
-  );
-  shadow.rotation.x = -Math.PI / 2;
-  shadow.position.y = 0.02;
-  group.add(shadow);
-
-  const legs = new THREE.Group();
-  const legL = roundedBox(0.22, 0.85, 0.22, shoe);
-  const legR = roundedBox(0.22, 0.85, 0.22, shoe);
-  legL.position.set(-0.18, 0.52, 0);
-  legR.position.set(0.18, 0.52, 0);
-  legs.add(legL, legR);
-  group.add(legs);
-
-  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.7, 6, 12), shirt);
-  torso.position.y = 1.35;
-  group.add(torso);
-
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 18, 14), skin);
-  head.position.y = 2.15;
-  group.add(head);
-
-  const hairCap = new THREE.Mesh(
-    new THREE.SphereGeometry(0.36, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.5),
-    hair
-  );
-  hairCap.position.y = 2.27;
-  group.add(hairCap);
-
-  // Simple human facial features so the staff read as people rather than
-  // anonymous capsules. The face is built in the character's forward (+Z)
-  // direction, so it remains correct while the actor turns naturally.
-  const eyeWhite = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.55 });
-  const eyeDark = new THREE.MeshStandardMaterial({ color: 0x172033, roughness: 0.35 });
-  const lip = new THREE.MeshStandardMaterial({ color: 0x8f3f45, roughness: 0.65 });
-
-  [-0.12, 0.12].forEach((eyeX) => {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), eyeWhite);
-    eye.position.set(eyeX, 2.18, 0.315);
-    group.add(eye);
-
-    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), eyeDark);
-    pupil.position.set(eyeX, 2.18, 0.36);
-    group.add(pupil);
+  const skin = new THREE.MeshStandardMaterial({
+    color: skinTones[(person.id - 1) % skinTones.length],
+    roughness: 0.82,
+  });
+  const skinSoft = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(skin.color).offsetHSL(0, -0.03, 0.035),
+    roughness: 0.86,
+  });
+  const hair = new THREE.MeshStandardMaterial({
+    color: hairTones[(person.id - 1) % hairTones.length],
+    roughness: 0.92,
+  });
+  const shirt = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(person.color),
+    roughness: 0.8,
+  });
+  const shirtDark = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(person.color).multiplyScalar(0.72),
+    roughness: 0.84,
+  });
+  const trousers = new THREE.MeshStandardMaterial({
+    color: [0x25324a, 0x3c4654, 0x2f3440][(person.id - 1) % 3],
+    roughness: 0.88,
+  });
+  const shoe = new THREE.MeshStandardMaterial({
+    color: [0x16191f, 0x22262c, 0x30261f][(person.id - 1) % 3],
+    roughness: 0.72,
   });
 
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.11, 8), skin);
-  nose.rotation.x = Math.PI / 2;
-  nose.position.set(0, 2.08, 0.34);
-  group.add(nose);
+  const faceWhite = new THREE.MeshStandardMaterial({ color: 0xfffaf5, roughness: 0.55 });
+  const iris = new THREE.MeshStandardMaterial({
+    color: eyeTones[(person.id - 1) % eyeTones.length],
+    roughness: 0.4,
+  });
+  const pupil = new THREE.MeshStandardMaterial({ color: 0x07080a, roughness: 0.25 });
+  const brow = new THREE.MeshStandardMaterial({
+    color: hairTones[(person.id - 1) % hairTones.length],
+    roughness: 0.95,
+  });
+  const lip = new THREE.MeshStandardMaterial({ color: 0x8e4b4e, roughness: 0.7 });
 
-  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.025, 0.018), lip);
-  mouth.position.set(0, 2.0, 0.325);
-  group.add(mouth);
+  const shadow = new THREE.Mesh(
+    new THREE.CircleGeometry(0.66, 28),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.16 }),
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = 0.018;
+  group.add(shadow);
+
+  const addSegment = (
+    name: string,
+    startPoint: THREE.Vector3,
+    endPoint: THREE.Vector3,
+    radius: number,
+    material: THREE.Material,
+  ) => {
+    const direction = new THREE.Vector3().subVectors(endPoint, startPoint);
+    const length = direction.length();
+    const mesh = new THREE.Mesh(
+      new THREE.CapsuleGeometry(radius, Math.max(0.08, length - radius * 2), 7, 12),
+      material,
+    );
+    mesh.name = name;
+    mesh.position.copy(startPoint).add(endPoint).multiplyScalar(0.5);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    return mesh;
+  };
+
+  // Seated lower body: thighs run toward the computer, knees drop, then shoes rest on the floor.
+  const hipY = 0.88;
+  const kneeY = 0.69;
+  const footY = 0.2;
+  addSegment(
+    "left thigh",
+    new THREE.Vector3(-0.2, hipY, 0.2),
+    new THREE.Vector3(-0.2, kneeY, 0.72),
+    0.17,
+    trousers,
+  );
+  addSegment(
+    "right thigh",
+    new THREE.Vector3(0.2, hipY, 0.2),
+    new THREE.Vector3(0.2, kneeY, 0.72),
+    0.17,
+    trousers,
+  );
+  addSegment(
+    "left shin",
+    new THREE.Vector3(-0.2, kneeY, 0.72),
+    new THREE.Vector3(-0.2, footY, 0.87),
+    0.12,
+    trousers,
+  );
+  addSegment(
+    "right shin",
+    new THREE.Vector3(0.2, kneeY, 0.72),
+    new THREE.Vector3(0.2, footY, 0.87),
+    0.12,
+    trousers,
+  );
+
+  const addShoe = (x: number) => {
+    const foot = roundedBox(0.28, 0.16, 0.58, shoe);
+    foot.position.set(x, 0.11, 1.03);
+    foot.castShadow = true;
+    foot.receiveShadow = true;
+    group.add(foot);
+  };
+  addShoe(-0.2);
+  addShoe(0.2);
+
+  const pelvis = roundedBox(0.72, 0.42, 0.55, trousers);
+  pelvis.position.set(0, 0.91, 0.18);
+  pelvis.rotation.x = -0.08;
+  pelvis.castShadow = true;
+  group.add(pelvis);
+
+  // Torso, collar and shoulders give the figure a recognisable human silhouette.
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.45, 0.72, 8, 16), shirt);
+  torso.position.set(0, 1.43, 0.15);
+  torso.rotation.x = -0.09;
+  torso.scale.set(1, 1, 0.83);
+  torso.castShadow = true;
+  group.add(torso);
+
+  const collar = roundedBox(0.34, 0.08, 0.18, faceWhite);
+  collar.position.set(0, 1.82, 0.43);
+  collar.rotation.x = -0.1;
+  group.add(collar);
+
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.27, 14), skin);
+  neck.position.set(0, 1.92, 0.22);
+  neck.castShadow = true;
+  group.add(neck);
+
+  // Arms are rebuilt as articulated seated arms reaching toward the keyboard.
+  const shoulderY = 1.6;
+  const elbowY = 1.38;
+  const wristY = 1.22;
+  addSegment(
+    "left upper arm",
+    new THREE.Vector3(-0.43, shoulderY, 0.13),
+    new THREE.Vector3(-0.45, elbowY, 0.5),
+    0.105,
+    shirtDark,
+  );
+  addSegment(
+    "right upper arm",
+    new THREE.Vector3(0.43, shoulderY, 0.13),
+    new THREE.Vector3(0.45, elbowY, 0.5),
+    0.105,
+    shirtDark,
+  );
+  addSegment(
+    "left forearm",
+    new THREE.Vector3(-0.45, elbowY, 0.5),
+    new THREE.Vector3(-0.34, wristY, 0.86),
+    0.09,
+    skinSoft,
+  );
+  addSegment(
+    "right forearm",
+    new THREE.Vector3(0.45, elbowY, 0.5),
+    new THREE.Vector3(0.34, wristY, 0.86),
+    0.09,
+    skinSoft,
+  );
+
+  [-0.34, 0.34].forEach((x) => {
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), skin);
+    hand.position.set(x, 1.18, 0.89);
+    hand.scale.set(1, 0.82, 1.18);
+    hand.castShadow = true;
+    group.add(hand);
+  });
+
+  // Full human head with jaw, cheeks, ears, eyes, brows, nose and lips.
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.39, 24, 20), skin);
+  head.position.set(0, 2.3, 0.21);
+  head.scale.set(0.94, 1.08, 0.92);
+  head.castShadow = true;
+  group.add(head);
+
+  const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.32, 20, 16), skinSoft);
+  jaw.position.set(0, 2.15, 0.25);
+  jaw.scale.set(1, 0.68, 0.86);
+  jaw.castShadow = true;
+  group.add(jaw);
 
   [-1, 1].forEach((side) => {
-    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), skin);
-    ear.position.set(side * 0.335, 2.12, 0);
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 10), skin);
+    ear.position.set(side * 0.36, 2.28, 0.21);
+    ear.scale.set(0.72, 1, 0.62);
+    ear.castShadow = true;
     group.add(ear);
   });
 
-  const armL = roundedBox(0.18, 0.75, 0.18, shirt);
-  const armR = roundedBox(0.18, 0.75, 0.18, shirt);
-  armL.position.set(-0.5, 1.35, 0);
-  armR.position.set(0.5, 1.35, 0);
-  armL.rotation.z = -0.15;
-  armR.rotation.z = 0.15;
-  group.add(armL, armR);
+  const eyeSpacing = 0.125 + ((person.id % 3) * 0.012);
+  [-1, 1].forEach((side) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.066, 14, 10), faceWhite);
+    eye.position.set(side * eyeSpacing, 2.31, 0.565);
+    eye.scale.set(1.1, 0.7, 0.7);
+    group.add(eye);
 
-  const label = makeTextSprite(person.name.split(" ")[0]);
-  label.position.y = 2.85;
-  group.add(label);
+    const irisMesh = new THREE.Mesh(new THREE.SphereGeometry(0.037, 12, 10), iris);
+    irisMesh.position.set(side * eyeSpacing, 2.31, 0.618);
+    irisMesh.scale.set(1, 0.92, 0.55);
+    group.add(irisMesh);
 
-  if (person.status === "Working" || person.status === "Meeting") {
-    group.position.y = -0.38;
-    group.rotation.x = 0.04;
+    const pupilMesh = new THREE.Mesh(new THREE.SphereGeometry(0.017, 10, 8), pupil);
+    pupilMesh.position.set(side * eyeSpacing, 2.31, 0.646);
+    group.add(pupilMesh);
+
+    const browMesh = roundedBox(0.14, 0.035, 0.028, brow);
+    browMesh.position.set(side * eyeSpacing, 2.43, 0.585);
+    browMesh.rotation.z = side * -0.08;
+    group.add(browMesh);
+  });
+
+  const noseBridge = new THREE.Mesh(new THREE.CapsuleGeometry(0.042, 0.105, 5, 8), skinSoft);
+  noseBridge.position.set(0, 2.23, 0.59);
+  noseBridge.rotation.x = Math.PI / 2;
+  group.add(noseBridge);
+
+  const noseTip = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 10), skin);
+  noseTip.position.set(0, 2.18, 0.63);
+  noseTip.scale.set(1, 0.88, 0.9);
+  group.add(noseTip);
+
+  const upperLip = roundedBox(0.17, 0.024, 0.035, lip);
+  upperLip.position.set(0, 2.08, 0.602);
+  group.add(upperLip);
+
+  const lowerLip = roundedBox(0.13, 0.028, 0.037, lip);
+  lowerLip.position.set(0, 2.045, 0.61);
+  group.add(lowerLip);
+
+  // Hair variants keep the team visually distinct while retaining human proportions.
+  const hairstyle = (person.id - 1) % 4;
+  if (hairstyle === 0) {
+    const cap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.4, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.53),
+      hair,
+    );
+    cap.position.set(0, 2.46, 0.17);
+    cap.scale.set(1, 0.92, 0.94);
+    group.add(cap);
+  } else if (hairstyle === 1) {
+    const cap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.41, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.66),
+      hair,
+    );
+    cap.position.set(0, 2.43, 0.15);
+    cap.scale.set(1.02, 0.93, 1.0);
+    group.add(cap);
+    const sideLockL = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), hair);
+    const sideLockR = sideLockL.clone();
+    sideLockL.position.set(-0.35, 2.33, 0.16);
+    sideLockR.position.set(0.35, 2.33, 0.16);
+    group.add(sideLockL, sideLockR);
+  } else if (hairstyle === 2) {
+    const cap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.4, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.6),
+      hair,
+    );
+    cap.position.set(0, 2.43, 0.15);
+    group.add(cap);
+    const bun = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), hair);
+    bun.position.set(0, 2.65, -0.08);
+    group.add(bun);
+  } else {
+    const cap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.41, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.57),
+      hair,
+    );
+    cap.position.set(0, 2.46, 0.14);
+    group.add(cap);
+    [-0.27, 0.27].forEach((x) => {
+      const curl = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 12), hair);
+      curl.position.set(x, 2.38, 0.07);
+      group.add(curl);
+    });
   }
+
+  // A subtle face variation reads better at office scale than identical clones.
+  const cheek = new THREE.MeshStandardMaterial({
+    color: skinSoft.color,
+    roughness: 0.88,
+    transparent: true,
+    opacity: 0.38,
+  });
+  [-1, 1].forEach((side) => {
+    const cheekMesh = new THREE.Mesh(new THREE.SphereGeometry(0.105, 12, 10), cheek);
+    cheekMesh.position.set(side * 0.19, 2.18, 0.53);
+    cheekMesh.scale.set(1.2, 0.7, 0.45);
+    group.add(cheekMesh);
+  });
+
+  const nameLabel = makeTextSprite(person.name.split(" ")[0]);
+  nameLabel.position.set(0, 2.95, 0);
+  nameLabel.scale.set(2.0, 0.5, 1);
+  group.add(nameLabel);
 
   scene.add(group);
   return group;
