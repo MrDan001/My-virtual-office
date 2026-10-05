@@ -338,7 +338,7 @@ function buildNavigation(
     const route = ROOM_PORTALS[fromRoom]?.[toRoom];
     if (!route) return { goal, finalPoint, steps: [], index: 0 };
 
-    const approachStart = i === 0 ? current : route.to;
+    const approachStart = current;
     if (!appendRoomPath(steps, fromRoom, approachStart, route.from)) {
       return { goal, finalPoint, steps: [], index: 0 };
     }
