@@ -230,13 +230,15 @@ function buildWall(
 function buildExteriorShell(scene: THREE.Scene) {
   // Overall room footprint bounds, expanded slightly so the shell overlaps
   // the room edges and sits firmly on the continuous foundation.
-  const minX = -14.18;
-  const maxX = 14.18;
-  const minZ = -9.68;
-  const maxZ = 12.68;
+  // Slightly oversize the shell so all perimeter corners and edge joints overlap
+  // instead of leaving hairline openings visible from low camera angles.
+  const minX = -14.34;
+  const maxX = 14.34;
+  const minZ = -9.84;
+  const maxZ = 12.84;
 
   const wallHeight = 2.5;
-  const wallThickness = 0.28;
+  const wallThickness = 0.38;
   const wallMaterial = new THREE.MeshStandardMaterial({
     color: 0xd1c2af,
     roughness: 0.86,
@@ -254,12 +256,38 @@ function buildExteriorShell(scene: THREE.Scene) {
     scene.add(wall);
   };
 
-  // Continuous perimeter: rear, front, left and right.
-  // These are deliberately outside the internal room walls.
-  addWall(maxX - minX + wallThickness, wallThickness, 0, minZ);
-  addWall(maxX - minX + wallThickness, wallThickness, 0, maxZ);
-  addWall(wallThickness, maxZ - minZ + wallThickness, minX, 0);
-  addWall(wallThickness, maxZ - minZ + wallThickness, maxX, 0);
+  // Continuous perimeter. Each wall deliberately overlaps the adjoining wall
+  // at the four corners, eliminating corner seams/gaps.
+  addWall(maxX - minX + wallThickness * 2, wallThickness, 0, minZ);
+  addWall(maxX - minX + wallThickness * 2, wallThickness, 0, maxZ);
+  addWall(wallThickness, maxZ - minZ + wallThickness * 2, minX, 0);
+  addWall(wallThickness, maxZ - minZ + wallThickness * 2, maxX, 0);
+
+  // Continuous lower closure band. This seals the wall-to-floor/foundation
+  // junction so low camera angles cannot see a slit along either side.
+  const skirtMaterial = new THREE.MeshStandardMaterial({
+    color: 0xb59b7d,
+    roughness: 0.9,
+    metalness: 0,
+  });
+  const skirtHeight = 0.46;
+  const skirtT = 0.52;
+
+  const addSkirt = (width: number, depth: number, x: number, z: number) => {
+    const skirt = new THREE.Mesh(
+      new THREE.BoxGeometry(width, skirtHeight, depth),
+      skirtMaterial,
+    );
+    skirt.position.set(x, -0.04, z);
+    skirt.castShadow = true;
+    skirt.receiveShadow = true;
+    scene.add(skirt);
+  };
+
+  addSkirt(maxX - minX + skirtT * 2, skirtT, 0, minZ);
+  addSkirt(maxX - minX + skirtT * 2, skirtT, 0, maxZ);
+  addSkirt(skirtT, maxZ - minZ + skirtT * 2, minX, 0);
+  addSkirt(skirtT, maxZ - minZ + skirtT * 2, maxX, 0);
 
   // A continuous office floor closes all small gaps between individual room slabs.
   // It sits directly on the foundation and below the room-specific floors/furniture.
