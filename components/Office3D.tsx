@@ -112,6 +112,7 @@ function addDebugLine(
   const line = new THREE.Line(geometry, material);
   if (dashed) line.computeLineDistances();
   line.userData.debug = true;
+  line.visible = false;
   scene.add(line);
   return line;
 }
@@ -131,6 +132,7 @@ function addDebugMarker(scene: THREE.Scene, x: number, z: number, color: number,
   text.position.y = 0.8;
   text.scale.set(1.8, 0.45, 1);
   group.add(text);
+  group.visible = false;
   scene.add(group);
 }
 
@@ -755,6 +757,11 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
       const delta = Math.min(clock.getDelta(), 0.05);
       controls.update();
 
+      const debugEnabled = mount.dataset.debug === "true";
+      scene.traverse((object) => {
+        if (object.userData.debug) object.visible = debugEnabled;
+      });
+
       staffRef.current.forEach((person) => {
         let group = staffGroups.get(person.id);
         if (!group) {
@@ -880,11 +887,11 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
         className="office-3d-debug-toggle"
         onClick={(event) => {
           event.stopPropagation();
-          const next = !mountRef.current?.dataset.debug;
-          if (mountRef.current) mountRef.current.dataset.debug = String(next);
-          const debugObjects = mountRef.current?.querySelector("canvas")
-            ? undefined
-            : undefined;
+          const root = mountRef.current;
+          if (!root) return;
+          const next = root.dataset.debug !== "true";
+          root.dataset.debug = String(next);
+          event.currentTarget.textContent = next ? "HIDE NAV DEBUG" : "NAV DEBUG";
         }}
       >
         NAV DEBUG
