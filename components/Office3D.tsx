@@ -51,9 +51,13 @@ const ROOM_DATA: { name: OfficeRoom; x: number; z: number; w: number; d: number;
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
 function worldFromPercent(x: number, y: number) {
+  const minX = -14.34;
+  const maxX = 14.34;
+  const minZ = -9.84;
+  const maxZ = 12.84;
   return {
-    x: (x / 100) * 22 - 11,
-    z: (y / 100) * 19 - 9.5,
+    x: (x / 100) * (maxX - minX) + minX,
+    z: (y / 100) * (maxZ - minZ) + minZ,
   };
 }
 
@@ -203,8 +207,9 @@ function addStaff(scene: THREE.Scene, person: Staff) {
   label.position.y = 2.85;
   group.add(label);
 
-  if (person.status === "Working" && !person.walking) {
-    group.userData.seated = true;
+  group.userData.gait = { legs, legL, legR, armL, armR, torso };
+
+  if ((person.status === "Working" || person.status === "Meeting") && !person.walking) {
     group.position.y = -0.38;
     group.rotation.x = 0.04;
   }
@@ -212,7 +217,6 @@ function addStaff(scene: THREE.Scene, person: Staff) {
   scene.add(group);
   return group;
 }
-
 function buildWall(
   scene: THREE.Scene,
   width: number,
@@ -598,7 +602,6 @@ export default function Office3D({ staff, running, onSelect, onRoomSelect, selec
 
         const gait = Math.sin(clock.elapsedTime * 11.5);
         const gaitData = group.userData.gait as {
-          legs: THREE.Group;
           legL: THREE.Object3D;
           legR: THREE.Object3D;
           armL: THREE.Object3D;
