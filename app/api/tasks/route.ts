@@ -6,11 +6,9 @@ export async function GET() {
   if (!db) return NextResponse.json({ configured: false, tasks: [] });
 
   const result = await db.execute(`
-    SELECT t.id, t.title, t.priority, t.status, t.due_label,
-           e.id AS assignee_id, e.name AS assignee_name
-    FROM tasks t
-    LEFT JOIN employees e ON e.id = t.assignee_id
-    ORDER BY t.id DESC
+    SELECT id, title, priority, status, due_label
+    FROM tasks
+    ORDER BY id DESC
   `);
 
   return NextResponse.json({ configured: true, tasks: result.rows });
@@ -23,13 +21,12 @@ export async function POST(request: Request) {
   const body = await request.json();
   const title = String(body.title ?? "").trim();
   const priority = String(body.priority ?? "Medium");
-  const assigneeId = body.assigneeId ? Number(body.assigneeId) : null;
 
   if (!title) return NextResponse.json({ error: "Task title is required" }, { status: 400 });
 
   const result = await db.execute({
-    sql: "INSERT INTO tasks (title, assignee_id, priority) VALUES (?, ?, ?)",
-    args: [title, assigneeId, priority],
+    sql: "INSERT INTO tasks (title, priority) VALUES (?, ?)",
+    args: [title, priority],
   });
 
   const newId = result.lastInsertRowid;
@@ -60,7 +57,7 @@ export async function PATCH(request: Request) {
 
   await db.execute({ sql: "UPDATE tasks SET status = ? WHERE id = ?", args: [status, id] });
   const result = await db.execute({
-    sql: "SELECT id, title, priority, status, due_label, assignee_id FROM tasks WHERE id = ?",
+    sql: "SELECT id, title, priority, status, due_label FROM tasks WHERE id = ?",
     args: [id],
   });
 
