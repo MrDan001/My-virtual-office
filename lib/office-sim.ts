@@ -167,7 +167,7 @@ const FURNITURE_BLOCKS: Record<OfficeRoom, Rect[]> = Object.fromEntries(
 ) as Record<OfficeRoom, Rect[]>;
 
 const NAV_GRID = 1.15;
-const NAV_CLEARANCE = 1.0;
+const NAV_CLEARANCE = 0.35;
 
 function pointInsideRect(point: { x: number; y: number }, rect: Rect, padding = 0) {
   return point.x >= rect.minX - padding
@@ -204,12 +204,14 @@ function findRoomPath(room: OfficeRoom, start: { x: number; y: number }, goal: {
   const startPoint = clampPointToRoom(start, room);
   const goalPoint = clampPointToRoom(goal, room);
 
-  const blocked = (point: { x: number; y: number }) =>
-    FURNITURE_BLOCKS[room].some((rect) => pointInsideRect(point, rect, NAV_CLEARANCE))
-    || point.x <= bounds.minX
-    || point.x >= bounds.maxX
-    || point.y <= bounds.minY
-    || point.y >= bounds.maxY;
+  const blocked = (point: { x: number; y: number }) => {
+    if (samePoint(point, startPoint) || samePoint(point, goalPoint)) return false;
+    return FURNITURE_BLOCKS[room].some((rect) => pointInsideRect(point, rect, NAV_CLEARANCE))
+      || point.x < bounds.minX - 0.25
+      || point.x > bounds.maxX + 0.25
+      || point.y < bounds.minY - 0.25
+      || point.y > bounds.maxY + 0.25;
+  };
 
   const cols = Math.floor((bounds.maxX - bounds.minX) / NAV_GRID) + 1;
   const rows = Math.floor((bounds.maxY - bounds.minY) / NAV_GRID) + 1;
