@@ -239,6 +239,9 @@ function buildExteriorShell(scene: THREE.Scene) {
 
   const wallHeight = 2.5;
   const wallThickness = 0.38;
+  const cornerOverlap = 0.22;
+  const cornerPostSize = 0.60;
+  const cornerPostPenetration = 0.08;
   const wallMaterial = new THREE.MeshStandardMaterial({
     color: 0xd1c2af,
     roughness: 0.86,
@@ -256,12 +259,30 @@ function buildExteriorShell(scene: THREE.Scene) {
     scene.add(wall);
   };
 
-  // Continuous perimeter. Each wall deliberately overlaps the adjoining wall
-  // at the four corners, eliminating corner seams/gaps.
-  addWall(maxX - minX + wallThickness * 2, wallThickness, 0, minZ);
-  addWall(maxX - minX + wallThickness * 2, wallThickness, 0, maxZ);
-  addWall(wallThickness, maxZ - minZ + wallThickness * 2, minX, 0);
-  addWall(wallThickness, maxZ - minZ + wallThickness * 2, maxX, 0);
+  // Continuous perimeter. Each wall deliberately extends past the nominal
+  // corner so the adjoining wall and corner posts physically overlap.
+  addWall(maxX - minX + wallThickness * 2 + cornerOverlap, wallThickness, 0, minZ);
+  addWall(maxX - minX + wallThickness * 2 + cornerOverlap, wallThickness, 0, maxZ);
+  addWall(wallThickness, maxZ - minZ + wallThickness * 2 + cornerOverlap, minX, 0);
+  addWall(wallThickness, maxZ - minZ + wallThickness * 2 + cornerOverlap, maxX, 0);
+
+  // Solid corner posts at the two historically visible seam locations, plus
+  // matching posts at the opposite corners to keep the shell structurally uniform.
+  const addCornerPost = (x: number, z: number) => {
+    const post = new THREE.Mesh(
+      new THREE.BoxGeometry(cornerPostSize, wallHeight + cornerPostPenetration, cornerPostSize),
+      wallMaterial,
+    );
+    post.position.set(x, (wallHeight - cornerPostPenetration) / 2, z);
+    post.castShadow = true;
+    post.receiveShadow = true;
+    scene.add(post);
+  };
+
+  addCornerPost(minX, minZ);
+  addCornerPost(maxX, minZ);
+  addCornerPost(minX, maxZ);
+  addCornerPost(maxX, maxZ);
 
   // Continuous lower closure band. This seals the wall-to-floor/foundation
   // junction so low camera angles cannot see a slit along either side.
