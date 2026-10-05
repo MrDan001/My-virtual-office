@@ -41,6 +41,30 @@ const seedStaff: Staff[] = [
   { id: 6, name: "David Miller", role: "Operations", department: "Operations", status: "Working", task: "Operations queue", x: 53.49, y: 89.24, color: "#3b82f6", location: "Open Office", walking: false },
 ];
 
+function assignStaffToDesks(people: Staff[]) {
+  return people.map((person) => {
+    const position = activitySpotForStaff(person.department, "Working", person.id);
+    return {
+      ...person,
+      status: "Working" as StaffStatus,
+      task: person.department === "Finance"
+        ? "Processing payroll"
+        : person.department === "Support"
+          ? "Customer inbox"
+          : person.department === "Design"
+            ? "Design review"
+            : person.department === "Management"
+              ? "Team management"
+              : person.department === "Marketing"
+                ? "Campaign work"
+                : "Operations queue",
+      ...position,
+      location: homeRoomForDepartment(person.department),
+      walking: false,
+    };
+  });
+}
+
 const waypoints = [
   { x: 19, y: 74, room: "Support" }, { x: 32, y: 37, room: "Design" },
   { x: 53, y: 70, room: "Open Office" }, { x: 79, y: 69, room: "Finance" },
@@ -292,13 +316,13 @@ export default function Home() {
       const savedLayout = localStorage.getItem("officehub:layout");
       if (savedLayout) setLayout({ ...DEFAULT_LAYOUT, ...(JSON.parse(savedLayout) as Record<OfficeRoom, RoomLayout>) });
       const saved = localStorage.getItem("officehub:staff");
-      if (saved) setStaff(JSON.parse(saved) as Staff[]);
+      if (saved) setStaff(assignStaffToDesks(JSON.parse(saved) as Staff[]));
     } catch {}
     void fetch("/api/staff").then(async (res) => {
       if (!res.ok) return;
       const data = await res.json();
       setDbConfigured(Boolean(data.configured));
-      if (Array.isArray(data.staff) && data.staff.length > 0) setStaff(data.staff as unknown as Staff[]);
+      if (Array.isArray(data.staff) && data.staff.length > 0) setStaff(assignStaffToDesks(data.staff as unknown as Staff[]));
     }).catch(() => {}).finally(() => setHydrated(true));
   }, []);
   useEffect(() => { if (hydrated) localStorage.setItem("officehub:staff", JSON.stringify(staff)); }, [staff, hydrated]);
