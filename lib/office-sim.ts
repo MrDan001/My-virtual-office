@@ -65,16 +65,50 @@ export function homeRoomForDepartment(department: string): OfficeRoom {
   return map[department] ?? "Open Office";
 }
 
+function point(x: number, z: number, rotation = 0) {
+  return {
+    x: ((x + 11) / 22) * 100,
+    y: ((z + 9.5) / 19) * 100,
+    rotation,
+  };
+}
+
 export function deskSpotForStaff(department: string, id: number) {
-  const positions: Record<OfficeRoom, { x: number; y: number }[]> = {
-    Reception: [{ x: 38, y: 88 }],
-    "Manager Office": [{ x: 17, y: 23 }, { x: 24, y: 23 }],
-    "Meeting Room": [{ x: 43, y: 25 }, { x: 48, y: 25 }, { x: 53, y: 25 }, { x: 58, y: 25 }],
-    "Design Studio": [{ x: 18, y: 50 }, { x: 29, y: 50 }, { x: 18, y: 78 }, { x: 29, y: 78 }],
-    Finance: [{ x: 51, y: 55 }, { x: 61, y: 55 }, { x: 51, y: 83 }, { x: 61, y: 83 }],
-    Support: [{ x: 80, y: 20 }, { x: 88, y: 20 }, { x: 80, y: 38 }, { x: 88, y: 38 }],
-    "Break Room": [{ x: 80, y: 72 }, { x: 88, y: 72 }, { x: 80, y: 82 }, { x: 88, y: 82 }],
-    "Open Office": [{ x: 42, y: 45 }, { x: 51, y: 45 }, { x: 42, y: 70 }, { x: 51, y: 70 }],
+  const positions: Record<OfficeRoom, { x: number; y: number; rotation: number }[]> = {
+    Reception: [point(-1, 10.8, Math.PI)],
+    "Manager Office": [point(-12, -6.8, Math.PI)],
+    "Meeting Room": [
+      point(-2.2, -4.15, Math.PI),
+      point(-0.75, -4.15, Math.PI),
+      point(0.75, -4.15, Math.PI),
+      point(2.2, -4.15, Math.PI),
+    ],
+    "Design Studio": [
+      point(-10.75, 2.7, Math.PI),
+      point(-7.25, 2.7, Math.PI),
+      point(-10.75, 4.3, 0),
+      point(-7.25, 4.3, 0),
+    ],
+    Finance: [
+      point(-0.75, 2.7, Math.PI),
+      point(2.75, 2.7, Math.PI),
+      point(-0.75, 4.3, 0),
+      point(2.75, 4.3, 0),
+    ],
+    Support: [
+      point(8.25, -5, Math.PI),
+      point(11.75, -5, Math.PI),
+    ],
+    "Break Room": [
+      point(12, 5.5, Math.PI),
+      point(10, 7.5, -Math.PI / 2),
+      point(8, 5.5, 0),
+      point(10, 3.5, Math.PI / 2),
+    ],
+    "Open Office": [
+      point(-2.75, 11, Math.PI),
+      point(0.75, 11, Math.PI),
+    ],
   };
 
   const room = homeRoomForDepartment(department);
@@ -119,7 +153,7 @@ export function advanceActor(
   person: { x: number; y: number; location?: OfficeRoom },
   goal: OfficeRoom,
   speed = 0.65,
-  finalPoint?: { x: number; y: number },
+  finalPoint?: { x: number; y: number; rotation?: number },
 ) {
   const start = person.location && officeNodes[person.location] ? person.location : "Open Office";
   const path = findPath(start, goal);
@@ -151,21 +185,21 @@ export function activitySpotForStaff(
 
   if (status === "Meeting") {
     const seats = [
-      { x: 44, y: 25 },
-      { x: 48.5, y: 25 },
-      { x: 53, y: 25 },
-      { x: 57.5, y: 25 },
-      { x: 44, y: 29 },
-      { x: 57.5, y: 29 },
+      point(-2.2, -4.15, Math.PI),
+      point(-0.75, -4.15, Math.PI),
+      point(0.75, -4.15, Math.PI),
+      point(2.2, -4.15, Math.PI),
+      point(-2.2, -7.85, 0),
+      point(2.2, -7.85, 0),
     ];
     return seats[(Math.max(1, id) - 1) % seats.length];
   }
 
   const seats = [
-    { x: 79.5, y: 72 },
-    { x: 86.5, y: 72 },
-    { x: 79.5, y: 82 },
-    { x: 86.5, y: 82 },
+    point(12, 5.5, Math.PI),
+    point(10, 7.5, -Math.PI / 2),
+    point(8, 5.5, 0),
+    point(10, 3.5, Math.PI / 2),
   ];
   return seats[(Math.max(1, id) - 1) % seats.length];
 }
