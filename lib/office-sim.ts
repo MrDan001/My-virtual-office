@@ -161,59 +161,6 @@ export function routineForStaff(department: string, id: number, unixSeconds: num
   return { status: "Working", task: "Focused work" };
 }
 
-// Final movement tuning: callers pass the human-scale walking speed used by the 3D viewer.
-export function advanceActor(
-  person: { x: number; y: number; location?: OfficeRoom },
-  goal: OfficeRoom,
-  speed = 0.65,
-  finalPoint?: { x: number; y: number },
-) {
-  const start = person.location && officeNodes[person.location] ? person.location : "Open Office";
-
-  if (start === goal) {
-    if (!finalPoint) return { x: person.x, y: person.y, location: goal };
-    const move = moveToward(person, finalPoint, speed);
-    return { x: move.x, y: move.y, location: goal };
-  }
-
-  const route = nextRoomInPath(start, goal);
-  if (!route) {
-    const fallback = moveToward(person, finalPoint ?? officeNodes[goal], speed);
-    return { x: fallback.x, y: fallback.y, location: start };
-  }
-
-  const sourcePortal = route.portal.from;
-  const destinationPortal = route.portal.to;
-
-  // Walk inside the current room to the actual doorway first.
-  const sourceDistance = Math.hypot(person.x - sourcePortal.x, person.y - sourcePortal.y);
-  const destinationDistance = Math.hypot(person.x - destinationPortal.x, person.y - destinationPortal.y);
-
-  // Once the staff member reaches the doorway, continue through the opening
-  // toward the matching point on the other side. This prevents wall crossing
-  // while still producing continuous movement through the passage.
-  const target = sourceDistance <= 0.9 || destinationDistance < sourceDistance
-    ? destinationPortal
-    : sourcePortal;
-
-  const move = moveToward(person, target, speed);
-
-  if (move.arrived && target === destinationPortal) {
-    return {
-      x: destinationPortal.x,
-      y: destinationPortal.y,
-      location: route.room,
-    };
-  }
-
-  return {
-    x: move.x,
-    y: move.y,
-    location: start,
-  };
-}
-
-
 export function activitySpotForStaff(
   department: string,
   status: "Working" | "Meeting" | "Break",
