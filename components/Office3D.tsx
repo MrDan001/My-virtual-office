@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 const BUILDING_W = 12;
-const BUILDING_D = 15;
+const BUILDING_D = 20;
 const WALL = 0.2;
 const HALF_WALL = WALL / 2;
 const WALL_HEIGHT = 2.7;
@@ -16,7 +16,7 @@ const MAIN_DOOR_W = 2;
 const LEFT = -6;
 const RIGHT = 6;
 const FRONT = -7.5;
-const BACK = 7.5;
+const BACK = 12.5;
 const CORRIDOR_LEFT = -1;
 const CORRIDOR_RIGHT = 1;
 
@@ -44,8 +44,8 @@ const segment = (
 /*
  * AUTHORITATIVE FLOOR-PLAN GEOMETRY
  *
- * Building: X -6..+6, Z -7.5..+7.5
- * Corridor: X -1..+1, Z -7.5..+7.5
+ * Building: X -6..+6, Z -7.5..+12.5
+ * Corridor: X -1..+1, Z -7.5..+12.5
  * Wall thickness: 0.20m
  *
  * Vertical wall segments own the physical corners. Horizontal segments are
@@ -54,8 +54,9 @@ const segment = (
  * intersections so the horizontal divider owns that T-junction. Door
  * openings are gaps in the wall list, not meshes.
  *
+ * Meeting and break rooms are followed by a manager's office and a
+ * director's office at the rear of the building.
  * The renderer and validator both consume this same canonical geometry.
- * That prevents visual fixes from drifting away from the actual floor plan.
  */
 const WALL_SEGMENTS: WallSegment[] = [
   segment("W01_BACK", { x: LEFT, z: BACK }, { x: RIGHT, z: BACK }, "horizontal", WALL, WALL),
@@ -65,27 +66,31 @@ const WALL_SEGMENTS: WallSegment[] = [
   segment("W04_FRONT_L", { x: LEFT, z: FRONT }, { x: -1, z: FRONT }, "horizontal", WALL),
   segment("W05_FRONT_R", { x: 1, z: FRONT }, { x: RIGHT, z: FRONT }, "horizontal", 0, WALL),
 
-  // Left corridor boundary: doors at -5.5, -1.5, +4.0.
+  // Left corridor boundary: doors at -5.5, -1.5, +4.0, +10.0.
   segment("W06_OFFICE1_L", { x: -1, z: FRONT }, { x: -1, z: -6 }, "vertical", WALL),
   segment("W07_OFFICE1_L", { x: -1, z: -5 }, { x: -1, z: -3.5 }, "vertical", 0, HALF_WALL),
   segment("W08_OFFICE3_L", { x: -1, z: -3.5 }, { x: -1, z: -2 }, "vertical", HALF_WALL),
   segment("W09_OFFICE3_L", { x: -1, z: -1 }, { x: -1, z: 0.5 }, "vertical", 0, HALF_WALL),
   segment("W10_MEETING_L", { x: -1, z: 0.5 }, { x: -1, z: 3.5 }, "vertical", HALF_WALL),
-  segment("W11_MEETING_L", { x: -1, z: 4.5 }, { x: -1, z: BACK }, "vertical", HALF_WALL, WALL),
+  segment("W11_MEETING_L", { x: -1, z: 4.5 }, { x: -1, z: 9 }, "vertical", HALF_WALL),
+  segment("W24_MANAGER_L", { x: -1, z: 10 }, { x: -1, z: BACK }, "vertical", 0, WALL),
 
-  // Right corridor boundary: doors at -5.5, -1.5, +4.0.
+  // Right corridor boundary: doors at -5.5, -1.5, +4.0, +10.0.
   segment("W12_OFFICE2_R", { x: 1, z: FRONT }, { x: 1, z: -6 }, "vertical", WALL),
   segment("W13_OFFICE2_R", { x: 1, z: -5 }, { x: 1, z: -3.5 }, "vertical", 0, HALF_WALL),
   segment("W14_OFFICE4_R", { x: 1, z: -3.5 }, { x: 1, z: -2 }, "vertical", HALF_WALL),
   segment("W15_OFFICE4_R", { x: 1, z: -1 }, { x: 1, z: 0.5 }, "vertical", 0, HALF_WALL),
   segment("W16_BREAK_R", { x: 1, z: 0.5 }, { x: 1, z: 3.5 }, "vertical", HALF_WALL),
-  segment("W17_BREAK_R", { x: 1, z: 4.5 }, { x: 1, z: BACK }, "vertical", HALF_WALL, WALL),
+  segment("W17_BREAK_R", { x: 1, z: 4.5 }, { x: 1, z: 9 }, "vertical", HALF_WALL),
+  segment("W25_DIRECTOR_R", { x: 1, z: 10 }, { x: 1, z: BACK }, "vertical", 0, WALL),
 
   // Horizontal room dividers own their intersections.
   segment("W18_OFFICE1_3", { x: LEFT, z: -3.5 }, { x: -1, z: -3.5 }, "horizontal", WALL, WALL),
   segment("W19_OFFICE2_4", { x: 1, z: -3.5 }, { x: RIGHT, z: -3.5 }, "horizontal", WALL, WALL),
   segment("W20_OFFICE3_MEETING", { x: LEFT, z: 0.5 }, { x: -1, z: 0.5 }, "horizontal", WALL, WALL),
   segment("W21_OFFICE4_BREAK", { x: 1, z: 0.5 }, { x: RIGHT, z: 0.5 }, "horizontal", WALL, WALL),
+  segment("W22_MEETING_MANAGER", { x: LEFT, z: 7.5 }, { x: -1, z: 7.5 }, "horizontal", WALL, WALL),
+  segment("W23_BREAK_DIRECTOR", { x: 1, z: 7.5 }, { x: RIGHT, z: 7.5 }, "horizontal", WALL, WALL),
 ];
 
 const ROOM_RECTS = [
@@ -95,15 +100,19 @@ const ROOM_RECTS = [
   { id: "office-4", name: "OFFICE 4", minX: 1, maxX: 6, minZ: -3.5, maxZ: 0.5 },
   { id: "meeting", name: "MEETING ROOM", minX: -6, maxX: -1, minZ: 0.5, maxZ: 7.5 },
   { id: "break", name: "BREAK ROOM", minX: 1, maxX: 6, minZ: 0.5, maxZ: 7.5 },
+  { id: "manager", name: "MANAGER'S OFFICE", minX: -6, maxX: -1, minZ: 7.5, maxZ: 12.5 },
+  { id: "director", name: "DIRECTOR'S OFFICE", minX: 1, maxX: 6, minZ: 7.5, maxZ: 12.5 },
 ] as const;
 
 const DOOR_OPENINGS = [
   { id: "office-1-door", x: -1, z: -5.5, width: DOOR_W, side: "left" },
   { id: "office-3-door", x: -1, z: -1.5, width: DOOR_W, side: "left" },
   { id: "meeting-door", x: -1, z: 4, width: DOOR_W, side: "left" },
+  { id: "manager-door", x: -1, z: 10, width: DOOR_W, side: "left" },
   { id: "office-2-door", x: 1, z: -5.5, width: DOOR_W, side: "right" },
   { id: "office-4-door", x: 1, z: -1.5, width: DOOR_W, side: "right" },
   { id: "break-door", x: 1, z: 4, width: DOOR_W, side: "right" },
+  { id: "director-door", x: 1, z: 10, width: DOOR_W, side: "right" },
 ] as const;
 
 type WallRect = {
@@ -902,18 +911,19 @@ function buildFloorPlan(scene: THREE.Scene) {
   const corridorMaterial = new THREE.MeshStandardMaterial({ color: 0xe5e9ee, roughness: 0.9 });
   const doorMaterial = new THREE.MeshStandardMaterial({ color: 0xb6c1cc, roughness: 0.75 });
 
+  const buildingCenterZ = (FRONT + BACK) / 2;
   const floor = meshBox(BUILDING_W, 0.12, BUILDING_D, floorMaterial);
-  floor.position.set(0, 0.06, 0);
+  floor.position.set(0, 0.06, buildingCenterZ);
   floor.receiveShadow = true;
   scene.add(floor);
 
   const corridorFloor = meshBox(CORRIDOR_W, 0.025, BUILDING_D - 0.4, corridorMaterial);
-  corridorFloor.position.set(0, 0.125, 0);
+  corridorFloor.position.set(0, 0.125, buildingCenterZ);
   corridorFloor.receiveShadow = true;
   scene.add(corridorFloor);
 
   const grid = new THREE.GridHelper(BUILDING_W, BUILDING_W, 0xb9c2cb, 0xd5dbe1);
-  grid.position.y = 0.14;
+  grid.position.set(0, 0.14, buildingCenterZ);
   grid.scale.z = BUILDING_D / BUILDING_W;
   scene.add(grid);
 
@@ -945,7 +955,9 @@ function buildFloorPlan(scene: THREE.Scene) {
   addLabel(scene, "OFFICE 4 · 5 × 4 m", 3.5, -1.5);
   addLabel(scene, "MEETING ROOM · 5 × 7 m", -3.5, 4);
   addLabel(scene, "BREAK ROOM · 5 × 7 m", 3.5, 4);
-  addLabel(scene, "2 m CORRIDOR", 0, 0, 0x4a5d73);
+  addLabel(scene, "MANAGER'S OFFICE · 5 × 5 m", -3.5, 10);
+  addLabel(scene, "DIRECTOR'S OFFICE · 5 × 5 m", 3.5, 10);
+  addLabel(scene, "2 m CORRIDOR", 0, 2.5, 0x4a5d73);
   addLabel(scene, "MAIN ENTRANCE", 0, FRONT + 0.75, 0x4a5d73);
 
   scene.userData.roomRects = ROOM_RECTS;
@@ -964,8 +976,8 @@ export default function Office3D() {
     scene.background = new THREE.Color(0xdce8e5);
     scene.fog = new THREE.Fog(0xdce8e5, 35, 60);
 
-    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 100);
-    camera.position.set(18, 20, -20);
+    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 120);
+    camera.position.set(20, 23, -22);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -984,7 +996,7 @@ export default function Office3D() {
     controls.maxDistance = 32;
     controls.maxPolarAngle = Math.PI * 0.47;
     controls.minPolarAngle = 0.25;
-    controls.target.set(0, 0, 0);
+    controls.target.set(0, 0, (FRONT + BACK) / 2);
 
     scene.add(new THREE.HemisphereLight(0xf8fbff, 0x67717c, 2.2));
 
@@ -1004,7 +1016,7 @@ export default function Office3D() {
       BUILDING_D + 1.2,
       new THREE.MeshStandardMaterial({ color: 0xc6b298, roughness: 0.92 }),
     );
-    foundation.position.y = -0.3;
+    foundation.position.set(0, -0.3, (FRONT + BACK) / 2);
     foundation.receiveShadow = true;
     scene.add(foundation);
 
@@ -1065,10 +1077,10 @@ export default function Office3D() {
   }, []);
 
   return (
-    <div ref={mountRef} className="office-3d-viewer" aria-label="Interactive six-space office floor plan">
+    <div ref={mountRef} className="office-3d-viewer" aria-label="Interactive eight-space office floor plan">
       <div className="office-3d-help">
-        <strong>Buildable six-space floor plan</strong>
-        <span>12 × 15 m · 2 m corridor · 1 m room doors · 2 m main entrance · 0.20 m walls</span>
+        <strong>Buildable eight-space floor plan</strong>
+        <span>12 × 20 m · 2 m corridor · 1 m room doors · 2 m main entrance · 0.20 m walls</span>
       </div>
       <div className="office-3d-badge">FLOOR PLAN</div>
       <div className="office-geometry-status" data-valid="false">CHECKING GEOMETRY…</div>
