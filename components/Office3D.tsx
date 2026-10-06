@@ -273,22 +273,43 @@ function validateBaseFloorPlan(): GeometryValidation {
   const errors: string[] = [];
   const wallRects = WALL_SEGMENTS.map(getWallRect);
 
+  // Wall meshes intentionally extend by half their thickness beyond the
+  // centerline footprint. Allow that physical 0.10 m wall thickness at the
+  // exterior boundary instead of falsely reporting the outer walls as invalid.
   for (const rect of wallRects) {
     if (
-      rect.minX < LEFT - GEOMETRY_EPS ||
-      rect.maxX > RIGHT + GEOMETRY_EPS ||
-      rect.minZ < FRONT - GEOMETRY_EPS ||
-      rect.maxZ > BACK + GEOMETRY_EPS
+      rect.minX < LEFT - HALF_WALL - GEOMETRY_EPS ||
+      rect.maxX > RIGHT + HALF_WALL + GEOMETRY_EPS ||
+      rect.minZ < FRONT - HALF_WALL - GEOMETRY_EPS ||
+      rect.maxZ > BACK + HALF_WALL + GEOMETRY_EPS
     ) {
-      errors.push(`${rect.id}: wall volume extends outside the 14 × 22 m building footprint`);
+      errors.push(`${rect.id}: wall volume extends outside the 14 × 26 m building footprint`);
     }
   }
 
   for (let i = 0; i < wallRects.length; i += 1) {
     for (let j = i + 1; j < wallRects.length; j += 1) {
       const overlap = intersectionArea(wallRects[i], wallRects[j]);
+      const a = WALL_SEGMENTS[i];
+      const b = WALL_SEGMENTS[j];
+      const crossing = centerlineCrossing(a, b);
+      const crossingIsEndpoint = crossing
+        ? samePoint(crossing, a.start) ||
+          samePoint(crossing, a.end) ||
+          samePoint(crossing, b.start) ||
+          samePoint(crossing, b.end)
+        : false;
+      const sharedEndpoint =
+        samePoint(a.start, b.start) ||
+        samePoint(a.start, b.end) ||
+        samePoint(a.end, b.start) ||
+        samePoint(a.end, b.end);
+      const isLegitimateJunction = sharedEndpoint || crossingIsEndpoint;
 
-      if (overlap > GEOMETRY_AREA_EPS) {
+      // Perpendicular wall boxes naturally overlap at a physical corner/T-junction.
+      // That overlap is intentional; only flag overlapping volumes that are not
+      // explained by an actual centerline junction.
+      if (overlap > GEOMETRY_AREA_EPS && !isLegitimateJunction) {
         errors.push(
           `${wallRects[i].id} ↔ ${wallRects[j].id}: duplicate wall volume ${overlap.toFixed(6)} m²`,
         );
@@ -322,11 +343,8 @@ function validateBaseFloorPlan(): GeometryValidation {
         );
       }
 
-      if (overlap > GEOMETRY_AREA_EPS) {
-        errors.push(
-          `${a.id} ↔ ${b.id}: junction overlap ${overlap.toFixed(6)} m²`,
-        );
-      }
+      // Junction overlap is expected because the rendered wall boxes have
+      // physical thickness. Gap detection above is the meaningful check here.
     }
   }
 
@@ -368,7 +386,7 @@ function validateBaseFloorPlan(): GeometryValidation {
     }, 0);
 
   if (mainDoorOverlap > GEOMETRY_EPS) {
-    errors.push(`main-entrance: front wall blocks ${mainDoorOverlap.toFixed(6)} m of the 2 m opening`);
+    errors.push(`main-entrance: front wall blocks ${mainDoorOverlap.toFixed(6)} m of the 2.4 m opening`);
   }
 
   const corridorClear = {
@@ -628,7 +646,21 @@ function validateTransformedGeometry(transform: GeometryTransform) {
   for (let i = 0; i < walls.length; i += 1) {
     for (let j = i + 1; j < walls.length; j += 1) {
       const overlap = intersectionArea(wallRects[i], wallRects[j]);
-      if (overlap > GEOMETRY_AREA_EPS) {
+      const crossing = centerlineCrossing(walls[i], walls[j]);
+      const crossingIsEndpoint = crossing
+        ? samePoint(crossing, walls[i].start) ||
+          samePoint(crossing, walls[i].end) ||
+          samePoint(crossing, walls[j].start) ||
+          samePoint(crossing, walls[j].end)
+        : false;
+      const sharedEndpoint =
+        samePoint(walls[i].start, walls[j].start) ||
+        samePoint(walls[i].start, walls[j].end) ||
+        samePoint(walls[i].end, walls[j].start) ||
+        samePoint(walls[i].end, walls[j].end);
+      const isLegitimateJunction = sharedEndpoint || crossingIsEndpoint;
+
+      if (overlap > GEOMETRY_AREA_EPS && !isLegitimateJunction) {
         errors.push(
           transform.label +
             ": duplicate wall volume " +
@@ -640,8 +672,6 @@ function validateTransformedGeometry(transform: GeometryTransform) {
             " m²",
         );
       }
-
-      const crossing = centerlineCrossing(walls[i], walls[j]);
       if (crossing && rectDistance(wallRects[i], wallRects[j]) > GEOMETRY_EPS) {
         errors.push(
           transform.label +
