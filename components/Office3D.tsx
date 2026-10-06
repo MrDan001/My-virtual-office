@@ -244,7 +244,7 @@ function boundaryCoverage(
   return intervalUnionLength(intervals);
 }
 
-function validateFloorPlan(): GeometryValidation {
+function validateBaseFloorPlan(): GeometryValidation {
   const errors: string[] = [];
   const wallRects = WALL_SEGMENTS.map(getWallRect);
 
@@ -423,6 +423,323 @@ function validateFloorPlan(): GeometryValidation {
   }
 
   return result;
+}
+
+
+type GeometryTransform = {
+  id: string;
+  label: string;
+  map: (point: Point) => Point;
+};
+
+const GEOMETRY_TRANSFORMS: GeometryTransform[] = [
+  { id: "identity", label: "identity", map: (p) => ({ x: p.x, z: p.z }) },
+  { id: "rotate-90", label: "rotate 90°", map: (p) => ({ x: -p.z, z: p.x }) },
+  { id: "rotate-180", label: "rotate 180°", map: (p) => ({ x: -p.x, z: -p.z }) },
+  { id: "rotate-270", label: "rotate 270°", map: (p) => ({ x: p.z, z: -p.x }) },
+  { id: "mirror-x", label: "mirror X", map: (p) => ({ x: -p.x, z: p.z }) },
+  { id: "mirror-z", label: "mirror Z", map: (p) => ({ x: p.x, z: -p.z }) },
+  { id: "mirror-both", label: "mirror X + Z", map: (p) => ({ x: -p.x, z: -p.z }) },
+];
+
+function transformedPoint(transform: GeometryTransform, point: Point) {
+  return transform.map(point);
+}
+
+function transformedWalls(transform: GeometryTransform): WallSegment[] {
+  return WALL_SEGMENTS.map((wall) => {
+    const start = transformedPoint(transform, wall.start);
+    const end = transformedPoint(transform, wall.end);
+    return {
+      ...wall,
+      start,
+      end,
+      orientation:
+        Math.abs(end.x - start.x) >= Math.abs(end.z - start.z)
+          ? "horizontal"
+          : "vertical",
+    };
+  });
+}
+
+function transformedRooms(transform: GeometryTransform) {
+  return ROOM_RECTS.map((room) => {
+    const corners = [
+      transform.map({ x: room.minX, z: room.minZ }),
+      transform.map({ x: room.minX, z: room.maxZ }),
+      transform.map({ x: room.maxX, z: room.minZ }),
+      transform.map({ x: room.maxX, z: room.maxZ }),
+    ];
+    return {
+      ...room,
+      minX: Math.min(...corners.map((p) => p.x)),
+      maxX: Math.max(...corners.map((p) => p.x)),
+      minZ: Math.min(...corners.map((p) => p.z)),
+      maxZ: Math.max(...corners.map((p) => p.z)),
+    };
+  });
+}
+
+function transformedDoor(
+  transform: GeometryTransform,
+  door: (typeof DOOR_OPENINGS)[number],
+) {
+  const center = transform.map({ x: door.x, z: door.z });
+  const axisPoint = transform.map({ x: door.x, z: door.z + door.width / 2 });
+  return {
+    ...door,
+    ...center,
+    orientation:
+      Math.abs(axisPoint.x - center.x) >= Math.abs(axisPoint.z - center.z)
+        ? ("horizontal" as Orientation)
+        : ("vertical" as Orientation),
+  };
+}
+
+function transformedBounds(transform: GeometryTransform, minX: number, maxX: number, minZ: number, maxZ: number) {
+  const corners = [
+    transform.map({ x: minX, z: minZ }),
+    transform.map({ x: minX, z: maxZ }),
+    transform.map({ x: maxX, z: minZ }),
+    transform.map({ x: maxX, z: maxZ }),
+  ];
+  return {
+    minX: Math.min(...corners.map((p) => p.x)),
+    maxX: Math.max(...corners.map((p) => p.x)),
+    minZ: Math.min(...corners.map((p) => p.z)),
+    maxZ: Math.max(...corners.map((p) => p.z)),
+  };
+}
+
+function transformedMainEntrance(transform: GeometryTransform) {
+  const center = transform.map({ x: 0, z: FRONT });
+  const axisPoint = transform.map({ x: MAIN_DOOR_W / 2, z: FRONT });
+  return {
+    ...center,
+    orientation:
+      Math.abs(axisPoint.x - center.x) >= Math.abs(axisPoint.z - center.z)
+        ? ("horizontal" as Orientation)
+        : ("vertical" as Orientation),
+  };
+}
+
+function centerlineCrossing(a: WallSegment, b: WallSegment) {
+  if (a.orientation === b.orientation) return null;
+  const horizontal = a.orientation === "horizontal" ? a : b;
+  const vertical = a.orientation === "vertical" ? a : b;
+  const point = { x: vertical.start.x, z: horizontal.start.z };
+  const onHorizontal =
+    point.x >= Math.min(horizontal.start.x, horizontal.end.x) - GEOMETRY_EPS &&
+    point.x <= Math.max(horizontal.start.x, horizontal.end.x) + GEOMETRY_EPS;
+  const onVertical =
+    point.z >= Math.min(vertical.start.z, vertical.end.z) - GEOMETRY_EPS &&
+    point.z <= Math.max(vertical.start.z, vertical.end.z) + GEOMETRY_EPS;
+  return onHorizontal && onVertical ? point : null;
+}
+
+function validateTransformedGeometry(transform: GeometryTransform) {
+  const errors: string[] = [];
+  const walls = transformedWalls(transform);
+  const wallRects = walls.map(getWallRect);
+  const building = transformedBounds(transform, LEFT, RIGHT, FRONT, BACK);
+  const corridor = transformedBounds(transform, CORRIDOR_LEFT, CORRIDOR_RIGHT, FRONT, BACK);
+  const doors = DOOR_OPENINGS.map((door) => transformedDoor(transform, door));
+  const mainEntrance = transformedMainEntrance(transform);
+
+  const allowed = {
+    minX: building.minX - HALF_WALL - GEOMETRY_EPS,
+    maxX: building.maxX + HALF_WALL + GEOMETRY_EPS,
+    minZ: building.minZ - HALF_WALL - GEOMETRY_EPS,
+    maxZ: building.maxZ + HALF_WALL + GEOMETRY_EPS,
+  };
+
+  for (const rect of wallRects) {
+    if (
+      rect.minX < allowed.minX ||
+      rect.maxX > allowed.maxX ||
+      rect.minZ < allowed.minZ ||
+      rect.maxZ > allowed.maxZ
+    ) {
+      errors.push(transform.label + ": " + rect.id + " extends outside the transformed footprint");
+    }
+  }
+
+  for (let i = 0; i < walls.length; i += 1) {
+    for (let j = i + 1; j < walls.length; j += 1) {
+      const overlap = intersectionArea(wallRects[i], wallRects[j]);
+      if (overlap > GEOMETRY_AREA_EPS) {
+        errors.push(
+          transform.label +
+            ": duplicate wall volume " +
+            walls[i].id +
+            " ↔ " +
+            walls[j].id +
+            " = " +
+            overlap.toFixed(6) +
+            " m²",
+        );
+      }
+
+      const crossing = centerlineCrossing(walls[i], walls[j]);
+      if (crossing && rectDistance(wallRects[i], wallRects[j]) > GEOMETRY_EPS) {
+        errors.push(
+          transform.label +
+            ": corner/T-junction gap at (" +
+            crossing.x.toFixed(3) +
+            ", " +
+            crossing.z.toFixed(3) +
+            ") between " +
+            walls[i].id +
+            " and " +
+            walls[j].id,
+        );
+      }
+    }
+  }
+
+  for (const door of doors) {
+    const fixed = door.orientation === "vertical" ? door.x : door.z;
+    const min = (door.orientation === "vertical" ? door.z : door.x) - door.width / 2;
+    const max = (door.orientation === "vertical" ? door.z : door.x) + door.width / 2;
+
+    for (const wall of walls) {
+      if (wall.orientation !== door.orientation) continue;
+      const wallFixed = wall.orientation === "vertical" ? wall.start.x : wall.start.z;
+      if (Math.abs(wallFixed - fixed) > GEOMETRY_EPS) continue;
+
+      const wallMin = wall.orientation === "vertical"
+        ? Math.min(wall.start.z, wall.end.z)
+        : Math.min(wall.start.x, wall.end.x);
+      const wallMax = wall.orientation === "vertical"
+        ? Math.max(wall.start.z, wall.end.z)
+        : Math.max(wall.start.x, wall.end.x);
+
+      if (Math.max(0, Math.min(wallMax, max) - Math.max(wallMin, min)) > GEOMETRY_EPS) {
+        errors.push(transform.label + ": doorway " + door.id + " is blocked by " + wall.id);
+      }
+    }
+  }
+
+  const corridorClear = {
+    minX: corridor.minX + HALF_WALL,
+    maxX: corridor.maxX - HALF_WALL,
+    minZ: corridor.minZ + HALF_WALL,
+    maxZ: corridor.maxZ - HALF_WALL,
+  };
+  const corridorRect: WallRect = { id: "corridor", ...corridorClear };
+
+  for (const rect of wallRects) {
+    const overlap = intersectionArea(rect, corridorRect);
+    if (overlap > GEOMETRY_AREA_EPS) {
+      errors.push(
+        transform.label +
+          ": " +
+          rect.id +
+          " intrudes into the clear corridor by " +
+          overlap.toFixed(6) +
+          " m²",
+      );
+    }
+  }
+
+  const rooms = transformedRooms(transform);
+  for (const room of rooms) {
+    const sides = [
+      { orientation: "vertical" as Orientation, fixed: room.minX, min: room.minZ, max: room.maxZ },
+      { orientation: "vertical" as Orientation, fixed: room.maxX, min: room.minZ, max: room.maxZ },
+      { orientation: "horizontal" as Orientation, fixed: room.minZ, min: room.minX, max: room.maxX },
+      { orientation: "horizontal" as Orientation, fixed: room.maxZ, min: room.minX, max: room.maxX },
+    ];
+
+    for (const side of sides) {
+      const sideLength = side.max - side.min;
+      const covered = boundaryCoverage(walls, side.orientation, side.fixed, side.min, side.max);
+      const expectedDoorGap = doors
+        .filter((door) => {
+          if (door.orientation !== side.orientation) return false;
+          const fixed = door.orientation === "vertical" ? door.x : door.z;
+          const min = door.orientation === "vertical" ? door.z - door.width / 2 : door.x - door.width / 2;
+          const max = door.orientation === "vertical" ? door.z + door.width / 2 : door.x + door.width / 2;
+          return (
+            Math.abs(fixed - side.fixed) <= GEOMETRY_EPS &&
+            min >= side.min - GEOMETRY_EPS &&
+            max <= side.max + GEOMETRY_EPS
+          );
+        })
+        .reduce((total, door) => total + door.width, 0);
+
+      if (Math.abs(sideLength - covered - expectedDoorGap) > GEOMETRY_EPS) {
+        errors.push(
+          transform.label +
+            ": room boundary has an incorrect opening on " +
+            room.id +
+            " (expected " +
+            expectedDoorGap.toFixed(3) +
+            " m, found " +
+            (sideLength - covered).toFixed(3) +
+            " m)",
+        );
+      }
+    }
+  }
+
+  const entranceFixed = mainEntrance.orientation === "horizontal" ? mainEntrance.z : mainEntrance.x;
+  const entranceMin = (mainEntrance.orientation === "horizontal" ? mainEntrance.x : mainEntrance.z) - MAIN_DOOR_W / 2;
+  const entranceMax = (mainEntrance.orientation === "horizontal" ? mainEntrance.x : mainEntrance.z) + MAIN_DOOR_W / 2;
+
+  for (const wall of walls) {
+    if (wall.orientation !== mainEntrance.orientation) continue;
+    const fixed = wall.orientation === "horizontal" ? wall.start.z : wall.start.x;
+    if (Math.abs(fixed - entranceFixed) > GEOMETRY_EPS) continue;
+
+    const wallMin = wall.orientation === "horizontal"
+      ? Math.min(wall.start.x, wall.end.x)
+      : Math.min(wall.start.z, wall.end.z);
+    const wallMax = wall.orientation === "horizontal"
+      ? Math.max(wall.start.x, wall.end.x)
+      : Math.max(wall.start.z, wall.end.z);
+
+    if (Math.max(0, Math.min(wallMax, entranceMax) - Math.max(wallMin, entranceMin)) > GEOMETRY_EPS) {
+      errors.push(transform.label + ": 2 m main entrance is blocked by " + wall.id);
+    }
+  }
+
+  return errors;
+}
+
+function validateTransformedVariants() {
+  const errors: string[] = [];
+
+  for (const transform of GEOMETRY_TRANSFORMS) {
+    const transformErrors = validateTransformedGeometry(transform);
+    if (transformErrors.length === 0) {
+      console.info("[Office3D] TRANSFORM VALID — " + transform.label);
+    } else {
+      errors.push(...transformErrors);
+      console.error("[Office3D] TRANSFORM INVALID — " + transform.label, transformErrors);
+    }
+  }
+
+  if (errors.length === 0) {
+    console.info(
+      "[Office3D] ALL ROTATION/MIRROR CHECKS VALID — " +
+        GEOMETRY_TRANSFORMS.length +
+        " transforms",
+    );
+  }
+
+  return errors;
+}
+
+
+function validateFloorPlan(): GeometryValidation {
+  const base = validateBaseFloorPlan();
+  const transformErrors = validateTransformedVariants();
+  return {
+    ...base,
+    valid: base.valid && transformErrors.length === 0,
+    errors: [...base.errors, ...transformErrors],
+  };
 }
 
 function meshBox(width: number, height: number, depth: number, material: THREE.Material) {
