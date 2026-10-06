@@ -8,19 +8,19 @@ The current work starts with the architectural floor plan. The rule is to establ
 
 ## Current floor plan
 
-The current building is a **12 m × 20 m** rectangular footprint.
+The current building is a **14 m × 22 m** rectangular footprint.
 
 Coordinate system:
 
-- X axis: **-6.0 m to +6.0 m**
-- Z axis: **-7.5 m to +12.5 m**
+- X axis: **-7.0 m to +7.0 m**
+- Z axis: **-7.5 m to +14.5 m**
 - Wall thickness: **0.20 m**
 - Wall height: **2.70 m**
 - Main corridor: **2.00 m wide**
-- Standard room doors: **1.00 m wide**
+- All room doors: **1.50 m wide**, designed as professional double-door openings
 - Main entrance: **2.00 m wide**
 
-The corridor runs continuously through the full building from the main entrance at the front to the rear.
+The corridor runs continuously through the full building from the 2 m main entrance at the front to the rear. The wider rooms provide enough wall frontage for substantial, professional 1.5 m entrances.
 
 ### Room arrangement
 
@@ -28,22 +28,24 @@ From the front entrance toward the rear:
 
 | Area | X range | Z range | Size | Door |
 |---|---:|---:|---:|---|
-| Office 1 | -6 to -1 | -7.5 to -3.5 | 5 × 4 m | x=-1, z=-5.5 |
-| Office 2 | +1 to +6 | -7.5 to -3.5 | 5 × 4 m | x=+1, z=-5.5 |
-| Office 3 | -6 to -1 | -3.5 to +0.5 | 5 × 4 m | x=-1, z=-1.5 |
-| Office 4 | +1 to +6 | -3.5 to +0.5 | 5 × 4 m | x=+1, z=-1.5 |
-| Meeting Room | -6 to -1 | +0.5 to +7.5 | 5 × 7 m | x=-1, z=+4.0 |
-| Break Room | +1 to +6 | +0.5 to +7.5 | 5 × 7 m | x=+1, z=+4.0 |
-| Manager's Office | -6 to -1 | +7.5 to +12.5 | 5 × 5 m | x=-1, z=+10.0 |
-| Director's Office | +1 to +6 | +7.5 to +12.5 | 5 × 5 m | x=+1, z=+10.0 |
+| Area | X range | Z range | Size | Door |
+|---|---:|---:|---:|---|
+| Office 1 | -7 to -1 | -7.5 to -2.5 | 6 × 5 m | x=-1, z=-5.0, 1.5 m |
+| Office 2 | +1 to +7 | -7.5 to -2.5 | 6 × 5 m | x=+1, z=-5.0, 1.5 m |
+| Office 3 | -7 to -1 | -2.5 to +2.5 | 6 × 5 m | x=-1, z=0.0, 1.5 m |
+| Office 4 | +1 to +7 | -2.5 to +2.5 | 6 × 5 m | x=+1, z=0.0, 1.5 m |
+| Meeting Room | -7 to -1 | +2.5 to +9.5 | 6 × 7 m | x=-1, z=+6.0, 1.5 m |
+| Break Room | +1 to +7 | +2.5 to +9.5 | 6 × 7 m | x=+1, z=+6.0, 1.5 m |
+| Manager's Office | -7 to -1 | +9.5 to +14.5 | 6 × 5 m | x=-1, z=+12.0, 1.5 m |
+| Director's Office | +1 to +7 | +9.5 to +14.5 | 6 × 5 m | x=+1, z=+12.0, 1.5 m |
 
-The manager's office and director's office were added **after the meeting room and break room**, sharing the same rear section of the corridor.
+The manager's office and director's office were added **after the meeting room and break room**, sharing the rear section of the corridor. Office 1–4 and the two leadership offices were widened to **6 × 5 m** so their entrances can be a full **1.5 m** without making the door feel cramped or compromising the corridor.
 
 ## Wall ownership and corner rules
 
 Walls are defined as authoritative centerline segments in `components/Office3D.tsx`.
 
-Every wall is rendered with a 0.20 m physical thickness.
+Every wall is rendered with a 0.20 m physical thickness. The wider room footprints preserve a full 1.5 m wall opening for each room.
 
 Important rule: wall corners must close physically without double-thick geometry.
 
@@ -55,6 +57,10 @@ Important rule: wall corners must close physically without double-thick geometry
 - The corridor must remain clear; no wall geometry may intrude into its usable path.
 
 This was added specifically because earlier wall boxes ended at centerline endpoints and produced thin visible seams at corners.
+
+## Room entrance standard
+
+All eight rooms now use the same **1.5 m wide entrance standard**. This is intentionally larger than the original 1.0 m opening so the office entrances read as professional commercial-office doors rather than narrow interior doors. The visual renderer uses paired door leaves, handles, and a top header while the wall geometry keeps the full 1.5 m opening unobstructed.
 
 ## Main entrance
 
@@ -106,7 +112,7 @@ The renderer contains:
 2. corridor floor
 3. grid reference
 4. exterior and interior walls
-5. doorway visual hints
+5. 1.5 m double-door room entrances with visible handles and headers
 6. main entrance threshold
 7. room labels
 8. geometry validation status
