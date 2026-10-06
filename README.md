@@ -2,6 +2,8 @@
 
 OfficeHub is a clean-slate virtual workplace foundation built with Next.js and designed for Vercel.
 
+Production deploys follow the `main` branch.
+
 ## Current build
 
 - Responsive OfficeHub dashboard
