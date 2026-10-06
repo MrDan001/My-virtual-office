@@ -1891,9 +1891,6 @@ function addPremiumOfficeEnhancements(scene: THREE.Scene) {
     addOfficeWallFeature(scene, office.x, office.z, office.side, office.large);
     addOfficeGlow(scene, office.x, office.z, office.side, office.large);
 
-    const nameBadge = addLabel;
-    void nameBadge;
-    void office.id;
   }
 }
 
