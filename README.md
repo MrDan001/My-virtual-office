@@ -87,18 +87,23 @@ Repository:
 
 The `main` branch is the production source of truth.
 
-## Next build phase
+## Premium decoration layer — implemented
 
-The next visual phase is **premium office decoration**.
+The first premium visual layer is now installed.
 
-Decoration must be additive. It must not move approved room boundaries, doors, desks, chairs, the monitor/keyboard orientation, or corridor circulation.
+Each approved staff/leadership office receives:
 
-Planned premium layer:
+- a premium floor flower planter with dark ceramic/stone finish
+- warm metallic/gold accent trim
+- cream floral blooms
+- layered green foliage
+- a subtle matching decorative rug
+- staff workstations also receive a small premium desk flower arrangement
 
-- tasteful flowers and decorative planters
-- refined materials and accents
-- office-by-office decorative identity
-- premium visual polish without clutter
-- all decorations kept outside doorway and circulation clearance zones
+The decoration is intentionally additive. It does not move or resize approved rooms, doors, desks, chairs, monitor placement, keyboard placement, visitor placement or corridor circulation.
 
-After decoration, staff/worker visuals and office-management interactions can continue on top of the locked physical layout.
+### Decoration safety
+
+All decorative pieces are positioned away from room entrances and the central corridor. Future premium decoration must follow the same rule.
+
+The next product layer can now build staff/workers and office-management interactions on top of the locked physical foundation.
