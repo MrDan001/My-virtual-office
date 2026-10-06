@@ -76,7 +76,7 @@ function Dashboard({ setPage }: { setPage: (p: Page) => void }) {
   return (
     <div className="content">
       <div className="stats-grid">
-        <StatCard label="Office rooms" value="8" note="Shell ready" icon="office" tone="blue" />
+        <StatCard label="Open office" value="1" note="Shell ready" icon="office" tone="blue" />
         <StatCard label="Active tasks" value="0" note="No tasks yet" icon="tasks" tone="green" />
         <StatCard label="Meetings today" value="0" note="Not configured" icon="calendar" tone="purple" />
         <StatCard label="Office occupancy" value="0%" note="No staff installed" icon="grid" tone="orange" />
@@ -98,7 +98,7 @@ function Dashboard({ setPage }: { setPage: (p: Page) => void }) {
           </section>
           <section className="panel activity-panel">
             <div className="panel-head compact"><div><h2>System status</h2><p>Clean-slate workspace</p></div></div>
-            <div className="activity-row"><div className="quick-icon"><Icon name="spark" /></div><div><strong>Office shell active</strong><span>Rooms and circulation are available.</span><small>Now</small></div></div>
+            <div className="activity-row"><div className="quick-icon"><Icon name="spark" /></div><div><strong>Office shell active</strong><span>Open floor and perimeter are available.</span><small>Now</small></div></div>
             <div className="activity-row"><div className="quick-icon green"><Icon name="tasks" /></div><div><strong>Task system ready</strong><span>Tasks are standalone and unassigned.</span><small>Now</small></div></div>
             <div className="activity-row"><div className="quick-icon purple"><Icon name="settings" /></div><div><strong>Staff layer cleared</strong><span>Ready to rebuild from scratch.</span><small>Now</small></div></div>
           </section>
@@ -106,7 +106,7 @@ function Dashboard({ setPage }: { setPage: (p: Page) => void }) {
       </div>
 
       <div className="quick-row">
-        <button onClick={() => setPage("office")}><span className="quick-icon"><Icon name="office" /></span><div><strong>Open the office shell</strong><span>Inspect rooms and circulation spaces.</span></div><Icon name="arrow" /></button>
+        <button onClick={() => setPage("office")}><span className="quick-icon"><Icon name="office" /></span><div><strong>Open the office shell</strong><span>Inspect the open floor and perimeter.</span></div><Icon name="arrow" /></button>
         <button onClick={() => setPage("tasks")}><span className="quick-icon green"><Icon name="tasks" /></span><div><strong>Review tasks</strong><span>Create standalone work items.</span></div><Icon name="arrow" /></button>
         <button onClick={() => setPage("settings")}><span className="quick-icon purple"><Icon name="settings" /></span><div><strong>Workspace settings</strong><span>Configure the next layer safely.</span></div><Icon name="arrow" /></button>
       </div>
