@@ -1048,12 +1048,108 @@ function addReceptionFurniture(scene: THREE.Scene) {
   scene.add(signPanel);
 }
 
+function addMainEntranceDoor(scene: THREE.Scene) {
+  const glassMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xbfd8df,
+    transparent: true,
+    opacity: 0.62,
+    roughness: 0.18,
+    metalness: 0.12,
+    transmission: 0.16,
+    thickness: 0.04,
+  });
+  const frameMaterial = new THREE.MeshStandardMaterial({
+    color: 0x253540,
+    roughness: 0.28,
+    metalness: 0.82,
+  });
+  const handleMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd0a866,
+    roughness: 0.22,
+    metalness: 0.9,
+  });
+
+  const doorHeight = 2.4;
+  const leafWidth = MAIN_DOOR_W / 2 - 0.08;
+  const doorZ = FRONT + 0.06;
+
+  // Tall glass double doors with a slim architectural frame.
+  for (const side of [-1, 1]) {
+    const glassLeaf = meshBox(leafWidth, doorHeight, 0.07, glassMaterial);
+    glassLeaf.position.set(side * (MAIN_DOOR_W / 4), doorHeight / 2, doorZ);
+    glassLeaf.castShadow = true;
+    glassLeaf.receiveShadow = true;
+    glassLeaf.userData.doorId = "main-entrance";
+    glassLeaf.userData.doorType = "glass-double";
+    scene.add(glassLeaf);
+
+    const verticalFrame = meshBox(0.055, doorHeight, 0.09, frameMaterial);
+    verticalFrame.position.set(side * 0.02, doorHeight / 2, doorZ - 0.01);
+    verticalFrame.castShadow = true;
+    scene.add(verticalFrame);
+
+    const pullHandle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.025, 0.025, 0.72, 16),
+      handleMaterial,
+    );
+    pullHandle.position.set(side * 0.20, 1.28, doorZ - 0.065);
+    pullHandle.castShadow = true;
+    pullHandle.userData.doorId = "main-entrance";
+    scene.add(pullHandle);
+  }
+
+  const sideFrameWidth = MAIN_DOOR_W / 2 - 0.08;
+  for (const x of [-MAIN_DOOR_W / 2, MAIN_DOOR_W / 2]) {
+    const jamb = meshBox(0.08, doorHeight + 0.12, 0.12, frameMaterial);
+    jamb.position.set(x, (doorHeight + 0.12) / 2, doorZ);
+    jamb.castShadow = true;
+    scene.add(jamb);
+  }
+
+  const header = meshBox(MAIN_DOOR_W + 0.16, 0.10, 0.12, frameMaterial);
+  header.position.set(0, doorHeight + 0.06, doorZ);
+  header.castShadow = true;
+  scene.add(header);
+
+  const canopy = meshBox(MAIN_DOOR_W + 0.7, 0.10, 0.9, frameMaterial);
+  canopy.position.set(0, doorHeight + 0.38, FRONT + 0.15);
+  canopy.castShadow = true;
+  scene.add(canopy);
+
+  const mat = meshBox(MAIN_DOOR_W + 0.65, 0.025, 0.75, frameMaterial);
+  mat.position.set(0, 0.16, FRONT + 0.45);
+  mat.receiveShadow = true;
+  scene.add(mat);
+}
+
+function addProfessionalRoomDoorFrames(scene: THREE.Scene, frameMaterial: THREE.Material) {
+  for (const door of DOOR_OPENINGS) {
+    const corridorX = door.side === "left"
+      ? CORRIDOR_LEFT + 0.035
+      : CORRIDOR_RIGHT - 0.035;
+
+    for (const z of [door.z - door.width / 2, door.z + door.width / 2]) {
+      const post = meshBox(0.09, 2.34, 0.08, frameMaterial);
+      post.position.set(corridorX, 1.17, z);
+      post.castShadow = true;
+      post.userData.doorId = door.id;
+      scene.add(post);
+    }
+
+    const header = meshBox(0.09, 0.09, door.width + 0.12, frameMaterial);
+    header.position.set(corridorX, 2.34, door.z);
+    header.castShadow = true;
+    header.userData.doorId = door.id;
+    scene.add(header);
+  }
+}
+
 function buildFloorPlan(scene: THREE.Scene) {
   const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x3f4650, roughness: 0.78 });
   const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xf0eee9, roughness: 0.92 });
   const corridorMaterial = new THREE.MeshStandardMaterial({ color: 0xe5e9ee, roughness: 0.9 });
   const doorMaterial = new THREE.MeshStandardMaterial({ color: 0x93a6b7, roughness: 0.7, metalness: 0.15 });
-  const handleMaterial = new THREE.MeshStandardMaterial({ color: 0x38424c, roughness: 0.35, metalness: 0.75 });
+  const roomFrameMaterial = new THREE.MeshStandardMaterial({ color: 0x253540, roughness: 0.30, metalness: 0.78 });
 
   const buildingCenterZ = (FRONT + BACK) / 2;
   const floor = meshBox(BUILDING_W, 0.12, BUILDING_D, floorMaterial);
@@ -1074,6 +1170,8 @@ function buildFloorPlan(scene: THREE.Scene) {
   for (const item of WALL_SEGMENTS) addWallSegment(scene, item, wallMaterial);
   addWallJointCaps(scene, wallMaterial);
   addReceptionFurniture(scene);
+  addProfessionalRoomDoorFrames(scene, roomFrameMaterial);
+  addMainEntranceDoor(scene);
 
   for (const door of DOOR_OPENINGS) {
     const leafWidth = door.width / 2 - 0.04;
@@ -1105,7 +1203,7 @@ function buildFloorPlan(scene: THREE.Scene) {
     scene.add(header);
   }
 
-  const threshold = meshBox(MAIN_DOOR_W, 0.04, 0.55, doorMaterial);
+  const threshold = meshBox(MAIN_DOOR_W, 0.04, 0.75, doorMaterial);
   threshold.position.set(0, 0.145, FRONT + 0.27);
   threshold.receiveShadow = true;
   threshold.userData.doorId = "main-entrance";
