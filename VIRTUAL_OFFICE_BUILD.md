@@ -4,30 +4,27 @@
 
 This repository is being rebuilt as a **real, buildable virtual office management application** rather than a game-like office scene.
 
-The current work starts with the architectural floor plan. The rule is to establish correct room geometry, walls, entrances, corridors, and validation first. Furniture, staff avatars, movement systems, and other visual/business layers must not be reintroduced until the architecture is correct and explicitly approved.
+The architectural floor plan is the authoritative physical foundation. Every later layer—furniture, decoration, staff, movement and business interactions—must build on top of it without silently changing approved geometry.
 
-## Current floor plan
+## Current approved floor plan
 
-The current building is a **14 m × 22 m** rectangular footprint.
+### Building
 
-Coordinate system:
-
+- Total footprint: **14 × 26 m**
+- Core office: **14 × 22 m**
+- Reception/lobby: **4 m deep**
 - X axis: **-7.0 m to +7.0 m**
-- Z axis: **-7.5 m to +14.5 m**
-- Wall thickness: **0.20 m**
+- Z axis: **-11.5 m to +14.5 m**
+- Wall thickness: **0.30 m**
 - Wall height: **2.70 m**
 - Main corridor: **2.00 m wide**
-- All room doors: **1.50 m wide**, designed as professional double-door openings
-- Main entrance: **2.00 m wide**
+- Room doors: **1.50 m wide**
+- Main entrance: **2.40 m wide**
 
-The corridor runs continuously through the full building from the 2 m main entrance at the front to the rear. The wider rooms provide enough wall frontage for substantial, professional 1.5 m entrances.
+The corridor runs continuously through the building from the reception/main entrance toward the rear.
 
 ### Room arrangement
 
-From the front entrance toward the rear:
-
-| Area | X range | Z range | Size | Door |
-|---|---:|---:|---:|---|
 | Area | X range | Z range | Size | Door |
 |---|---:|---:|---:|---|
 | Office 1 | -7 to -1 | -7.5 to -2.5 | 6 × 5 m | x=-1, z=-5.0, 1.5 m |
@@ -39,58 +36,42 @@ From the front entrance toward the rear:
 | Manager's Office | -7 to -1 | +9.5 to +14.5 | 6 × 5 m | x=-1, z=+12.0, 1.5 m |
 | Director's Office | +1 to +7 | +9.5 to +14.5 | 6 × 5 m | x=+1, z=+12.0, 1.5 m |
 
-The manager's office and director's office were added **after the meeting room and break room**, sharing the rear section of the corridor. Office 1–4 and the two leadership offices were widened to **6 × 5 m** so their entrances can be a full **1.5 m** without making the door feel cramped or compromising the corridor.
+The manager's and director's offices sit behind the meeting and break rooms in the rear section.
 
 ## Wall ownership and corner rules
 
 Walls are defined as authoritative centerline segments in `components/Office3D.tsx`.
 
-Every wall is rendered with a 0.20 m physical thickness. The wider room footprints preserve a full 1.5 m wall opening for each room.
+Important rules:
 
-Important rule: wall corners must close physically without double-thick geometry.
+- wall geometry and validation consume the same canonical definitions
+- physical wall boxes use the approved 0.30 m thickness
+- doorway openings are gaps in wall geometry, not decorative meshes over an opening
+- wall intersections must close cleanly without blocking circulation
+- corridor boundaries remain physically clear
+- any architectural change must update the renderer and validator together
 
-- Horizontal dividers own their intersections where applicable.
-- Vertical corridor-boundary walls are trimmed by 0.10 m at horizontal T-junctions.
-- Door openings are represented as **gaps in the wall geometry**, not as solid meshes covering the opening.
-- The renderer uses the same expanded physical wall rectangles used by validation.
-- Real wall junctions receive small solid joint caps to eliminate visible sub-pixel seams between independently rendered wall boxes.
-- The corridor must remain clear; no wall geometry may intrude into its usable path.
+## Entrance standard
 
-This was added specifically because earlier wall boxes ended at centerline endpoints and produced thin visible seams at corners.
+All eight rooms use a **1.5 m professional entrance**. The visual door system uses paired leaves, handles and headers while preserving the actual wall opening.
 
-## Room entrance standard
-
-All eight rooms now use the same **1.5 m wide entrance standard**. This is intentionally larger than the original 1.0 m opening so the office entrances read as professional commercial-office doors rather than narrow interior doors. The visual renderer uses paired door leaves, handles, and a top header while the wall geometry keeps the full 1.5 m opening unobstructed.
-
-## Main entrance
-
-The front exterior wall is at **z = -7.5 m**.
-
-There is a **2.0 m opening** centered on the corridor:
-
-- X = -1.0 m to +1.0 m
-- Z = -7.5 m
-
-The opening must remain physically clear.
+The front entrance is **2.4 m wide** and centered on the main corridor.
 
 ## Geometry validation
 
-The architecture includes runtime validation in `components/Office3D.tsx`.
+Runtime validation in `components/Office3D.tsx` covers the approved architecture, including:
 
-Validation checks include:
-
-- wall volumes stay inside the building footprint
-- duplicate wall-volume overlap detection
+- building footprint containment
+- duplicate wall overlap detection
 - corner/T-junction gap detection
-- junction counting
 - room-boundary coverage
 - doorway obstruction detection
 - corridor intrusion detection
 - main entrance obstruction detection
-- expected room count and door count
-- rotation and mirror validation of the canonical layout
+- room and door counts
+- transformed-layout checks
 
-The transform validator tests:
+The transform validation covers:
 
 - identity
 - rotate 90°
@@ -100,77 +81,162 @@ The transform validator tests:
 - mirror Z
 - mirror X + Z
 
-The goal is that the floor plan remains geometrically valid even when transformed.
+## Workstation layer — approved
 
-## Rendering architecture
+The workstation layer has now been rebuilt and approved.
 
-`components/Office3D.tsx` currently owns the canonical floor-plan geometry and its Three.js renderer.
+### Four staff workstations
 
-The renderer contains:
+Staff workstations are currently installed in:
 
-1. building floor
-2. corridor floor
-3. grid reference
-4. exterior and interior walls
-5. 1.5 m double-door room entrances with visible handles and headers
-6. main entrance threshold
-7. room labels
-8. geometry validation status
+- Office 1
+- Office 2
+- Office 3
+- Office 4
 
-There are deliberately **no staff characters, desks, chairs, furniture-routing systems, or legacy 2.5D staff movement visuals** in this floor-plan renderer.
+Each workstation contains:
 
-## Current design principle
+- desk
+- monitor
+- screen face
+- monitor stand/base
+- keyboard
+- mouse
+- cable detail
+- operator chair
+- visitor chair
+- storage/pedestal elements
+- desk legs/feet
 
-Build in this order:
+### Approved seating orientation
 
-1. **Architecture**
-2. **Geometry validation**
-3. **Doors and access paths**
-4. **Furniture**
-5. **Staff/workers**
-6. **Office functionality and management interactions**
+The approved geometry is:
 
-A later feature must not silently modify the canonical architectural coordinates.
+**Exterior wall → office owner → desk/monitor → visitor → corridor/door**
 
-## Repository history relevant to the rebuild
+In practical terms:
 
-The project previously contained an older staff/furniture/movement implementation. The office visual layer was intentionally reset so the architectural system could be rebuilt cleanly.
+- the office owner sits on the exterior-wall side
+- the office owner faces inward toward the workstation
+- the monitor screen faces the office owner
+- the keyboard and mouse are on the office-owner side
+- the visitor is opposite the desk
+- the visitor is on the corridor/door side
+- the visitor's back faces the room entrance/corridor
 
-Task management was also decoupled from employee assignment:
+This orientation is now part of the project baseline and must not be reversed in future edits.
 
-- tasks no longer require `assigneeId`
-- tasks no longer require `assignee_name`
-- task API does not join employees
-- the canonical tasks table is standalone
+### Chair styles
 
-Legacy employee/business data still exists elsewhere in the application because the eventual virtual-office management product will need staff/business functionality, but it is intentionally separated from the current architectural renderer.
+Operator chairs use a modern upholstered task-chair design with:
 
-## Current production intent
+- rounded padded seat
+- rounded padded back
+- central lift
+- five-star caster base
 
-The Vercel project is **my-virtual-office**, linked to GitHub repository:
+Visitor chairs use:
+
+- matching upholstered seat/back styling
+- fixed four-leg base
+- no casters
+
+### Workstation clearance
+
+The workstation validator checks:
+
+- operator chair centering
+- visitor alignment across the desk
+- operator/visitor separation
+- corridor clearance
+- desk-to-corridor clearance
+- exterior-wall clearance for visitor seating
+
+No future decoration may violate these established clearances.
+
+## Reception/lobby
+
+The reception block contains:
+
+- reception desk
+- monitor and keyboard
+- reception chair
+- waiting bench
+- waiting table
+- decorative greenery
+- entrance branding panel
+
+The central visitor route and office corridor must remain unobstructed.
+
+## Premium decoration layer — next
+
+The next phase adds visual polish without changing approved physical geometry.
+
+Planned decoration:
+
+- premium flowers and planters
+- refined desk accents
+- tasteful wall/visual accents
+- office-specific styling
+- balanced spacing and professional scale
+
+Decoration must remain additive and must not:
+
+- move walls
+- resize doors
+- move desks or chairs
+- reverse the workstation orientation
+- block a doorway
+- narrow the corridor
+- interfere with staff routes
+
+## Repository baseline lock
+
+The approved pre-decoration state is locked at commit:
+
+`b80afa21a2bf5135c22a31295960b71554050539`
+
+Preservation branch:
+
+`baseline/locked-workstation-layout-2026-10-06`
+
+That branch is the rollback/reference point before premium decoration begins.
+
+## Production
+
+Vercel project:
+
+`my-virtual-office`
+
+GitHub repository:
 
 `MrDan001/My-virtual-office`
 
-The `main` branch is the source of truth for the current production build.
+Production source branch:
+
+`main`
 
 ## Non-negotiable rules for future developers
 
-- Do not redesign the floor plan from the screenshot alone.
-- Do not change the approved coordinates casually.
-- Do not place furniture where it blocks a corridor or doorway.
-- Do not close an intended doorway with a decorative mesh.
-- Do not reintroduce the old staff movement/furniture visual layer without an explicit requirement.
-- Any geometry change must update both rendering and validation together.
-- New rooms must be added to the authoritative room definitions, wall geometry, doorway definitions, labels, and validation.
-- Validate the full transformed layout after architectural changes.
-- Prefer full coherent updates over ad-hoc patches when changing the floor-plan system.
+1. Do not redesign the floor plan from screenshots alone.
+2. Do not casually change approved coordinates.
+3. Do not place furniture or decoration in corridors or doorway openings.
+4. Do not reverse the approved owner/visitor workstation orientation.
+5. Do not put the visitor behind the office owner.
+6. The monitor, keyboard and mouse must face the office owner.
+7. Any architectural change must update renderer and validator together.
+8. Any decoration change must preserve geometry and clearance.
+9. Keep the locked baseline branch available for rollback/reference.
+10. Prefer coherent changes over scattered patches.
 
 ## Current milestone
 
-**Milestone: architectural shell**
+**Milestone: approved physical office + approved workstation layer**
 
-The current target is a clean, validated, eight-space office shell:
+The current foundation is:
 
-**4 offices + meeting room + break room + manager's office + director's office + continuous 2 m corridor + main entrance.**
+**Reception + 4 staff offices + meeting room + break room + manager's office + director's office + continuous corridor + professional doors + four complete workstations + approved owner/visitor seating orientation.**
 
-Furniture and staff/workers are the next layers, to be added only after the geometry is visually confirmed.
+The next milestone is:
+
+**Premium office decoration and visual polish.**
