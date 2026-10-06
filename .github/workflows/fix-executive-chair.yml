@@ -144,12 +144,13 @@ jobs:
           path.write_text(updated)
           PY
 
-      - name: Commit chair repair and remove temporary trigger/workflow
+      - name: Commit chair repair and remove temporary workflow
         run: |
           rm -f .github/workflows/fix-executive-chair.yml CHAIR_FIX_TRIGGER.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add components/Office3D.tsx .github/workflows/fix-executive-chair.yml CHAIR_FIX_TRIGGER.txt
+          git add components/Office3D.tsx .github/workflows/fix-executive-chair.yml
+          git add -u CHAIR_FIX_TRIGGER.txt || true
           git diff --cached --quiet && exit 0
           git commit -m "Rebuild executive chair with proper proportions"
           git push origin main
