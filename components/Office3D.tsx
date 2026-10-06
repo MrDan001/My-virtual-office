@@ -998,35 +998,39 @@ function addProfessionalOfficeChair(
   z: number,
   direction: number,
   material: THREE.Material,
+  role: "operator" | "visitor",
 ) {
-  const seat = meshBox(0.76, 0.15, 0.76, material);
+  const isVisitor = role === "visitor";
+  const seat = meshBox(isVisitor ? 0.72 : 0.76, 0.15, isVisitor ? 0.72 : 0.76, material);
   seat.position.set(chairX, 0.53, z);
   seat.castShadow = true;
   seat.receiveShadow = true;
   seat.userData.staffFurniture = "workstation-chair";
+  seat.userData.chairRole = role;
   scene.add(seat);
 
-  const back = meshBox(0.72, 0.80, 0.14, material);
-  back.position.set(chairX + direction * 0.27, 0.94, z);
+  const back = meshBox(isVisitor ? 0.68 : 0.72, isVisitor ? 0.70 : 0.80, 0.14, material);
+  back.position.set(chairX + direction * 0.27, isVisitor ? 0.89 : 0.94, z);
   back.castShadow = true;
   back.receiveShadow = true;
   back.userData.staffFurniture = "workstation-chair-back";
+  back.userData.chairRole = role;
   scene.add(back);
 
-  // Padded armrests.
-  for (const side of [-1, 1]) {
-    const arm = meshBox(0.10, 0.10, 0.34, material);
-    arm.position.set(chairX, 0.82, z + side * 0.29);
-    arm.castShadow = true;
-    arm.userData.staffFurniture = "workstation-chair-arm";
-    scene.add(arm);
+  if (!isVisitor) {
+    for (const side of [-1, 1]) {
+      const arm = meshBox(0.10, 0.10, 0.34, material);
+      arm.position.set(chairX, 0.82, z + side * 0.29);
+      arm.castShadow = true;
+      arm.userData.staffFurniture = "workstation-chair-arm";
+      scene.add(arm);
 
-    const armSupport = meshBox(0.07, 0.24, 0.07, material);
-    armSupport.position.set(chairX, 0.68, z + side * 0.29);
-    scene.add(armSupport);
+      const armSupport = meshBox(0.07, 0.24, 0.07, material);
+      armSupport.position.set(chairX, 0.68, z + side * 0.29);
+      scene.add(armSupport);
+    }
   }
 
-  // Five-star base with a central gas-lift column and small casters.
   const hub = new THREE.Mesh(
     new THREE.CylinderGeometry(0.09, 0.09, 0.07, 12),
     material,
@@ -1045,7 +1049,7 @@ function addProfessionalOfficeChair(
 
   for (let i = 0; i < 5; i += 1) {
     const angle = (i / 5) * Math.PI * 2;
-    const spokeLength = 0.24;
+    const spokeLength = isVisitor ? 0.21 : 0.24;
     const spoke = meshBox(0.045, 0.035, spokeLength, material);
     spoke.position.set(
       chairX + Math.cos(angle) * (spokeLength / 2),
@@ -1067,6 +1071,7 @@ function addProfessionalOfficeChair(
     );
     caster.castShadow = true;
     caster.userData.staffFurniture = "workstation-chair-caster";
+    caster.userData.chairRole = role;
     scene.add(caster);
   }
 }
@@ -1203,8 +1208,29 @@ function addStaffWorkstation(
     { staffFurniture: "workstation-cable" },
   );
 
-  const chairX = x + direction * 1.05;
-  addProfessionalOfficeChair(scene, chairX, z, direction, materials.chair);
+  // Two chairs: the operator chair is centered directly in line with
+  // the monitor/keyboard; the visitor chair is offset to the side.
+  // Both remain on the room side of the corridor boundary.
+  const chairX = x + direction * 1.08;
+  const operatorZ = z;
+  const visitorZ = z + (side === "left" ? 0.92 : -0.92);
+
+  addProfessionalOfficeChair(
+    scene,
+    chairX,
+    operatorZ,
+    direction,
+    materials.chair,
+    "operator",
+  );
+  addProfessionalOfficeChair(
+    scene,
+    chairX,
+    visitorZ,
+    direction,
+    materials.chair,
+    "visitor",
+  );
 }
 
 function addStaffOfficeWorkstations(scene: THREE.Scene) {
@@ -1268,36 +1294,41 @@ function validateStaffWorkstationClearance() {
     const direction = side === "left" ? 1 : -1;
     const deskMinX = placement.x - 0.41;
     const deskMaxX = placement.x + 0.41;
-    const chairX = placement.x + direction * 1.05;
-    const chairMinX = chairX - 0.39;
-    const chairMaxX = chairX + 0.39;
+    const chairX = placement.x + direction * 1.08;
+    const chairPositions = [
+      { role: "operator", z: placement.z },
+      { role: "visitor", z: placement.z + (side === "left" ? 0.92 : -0.92) },
+    ] as const;
 
-    const intrudesCorridor =
-      deskMaxX > corridorMinX &&
-      deskMinX < corridorMaxX ||
-      chairMaxX > corridorMinX &&
-      chairMinX < corridorMaxX;
+    for (const chairPosition of chairPositions) {
+      const chairHalfWidth = chairPosition.role === "operator" ? 0.39 : 0.36;
+      const chairMinX = chairX - chairHalfWidth;
+      const chairMaxX = chairX + chairHalfWidth;
 
-    // Door openings are on the corridor boundary. A workstation may share
-    // the same Z coordinate as a doorway as long as the furniture remains
-    // safely inside the room and does not approach the doorway threshold.
-    const doorwayClearance =
-      side === "left"
-        ? corridorMinX - chairMaxX
-        : chairMinX - corridorMaxX;
+      const intrudesCorridor =
+        deskMaxX > corridorMinX &&
+        deskMinX < corridorMaxX ||
+        chairMaxX > corridorMinX &&
+        chairMinX < corridorMaxX;
 
-    if (intrudesCorridor) {
-      errors.push(`${placement.roomId}: workstation or chair intrudes into corridor clearance`);
-    }
-    if (doorwayClearance < 0.75) {
-      errors.push(`${placement.roomId}: chair has less than 0.75 m doorway clearance`);
+      const doorwayClearance =
+        side === "left"
+          ? corridorMinX - chairMaxX
+          : chairMinX - corridorMaxX;
+
+      if (intrudesCorridor) {
+        errors.push(`${placement.roomId}: ${chairPosition.role} chair intrudes into corridor clearance`);
+      }
+      if (doorwayClearance < 0.75) {
+        errors.push(`${placement.roomId}: ${chairPosition.role} chair has less than 0.75 m corridor clearance`);
+      }
     }
   }
 
   if (errors.length > 0) {
     console.error("[Office3D] STAFF WORKSTATION CLEARANCE INVALID", errors);
   } else {
-    console.info("[Office3D] STAFF WORKSTATION CLEARANCE VALID — 4 workstations");
+    console.info("[Office3D] STAFF WORKSTATION CLEARANCE VALID — 4 workstations / 8 chairs");
   }
 
   return errors;
