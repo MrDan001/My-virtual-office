@@ -1010,7 +1010,16 @@ function addProfessionalOfficeChair(
 ) {
   const isVisitor = role === "visitor";
   const width = isVisitor ? STAFF_VISITOR_CHAIR_WIDTH : STAFF_CHAIR_WIDTH;
-  const seat = meshBox(width, 0.15, width, material);
+
+  // New chair style: rounded upholstered seat/back instead of the old
+  // rectangular office-chair geometry. Staff get a modern task chair with
+  // a central five-star base; visitors get a matching upholstered guest
+  // chair with four fixed legs and no casters.
+  const seat = new THREE.Mesh(
+    new THREE.CylinderGeometry(width * 0.52, width * 0.52, 0.14, 16),
+    material,
+  );
+  seat.scale.z = 0.88;
   seat.position.set(chairX, 0.53, z);
   seat.castShadow = true;
   seat.receiveShadow = true;
@@ -1019,10 +1028,18 @@ function addProfessionalOfficeChair(
   seat.userData.facing = facing;
   scene.add(seat);
 
-  // The chair back is always behind the person, opposite the direction
-  // the person is facing. This is the key orientation rule for both seats.
-  const back = meshBox(width * 0.95, 0.78, 0.14, material);
-  back.position.set(chairX - facing * STAFF_CHAIR_BACK_OFFSET, 0.94, z);
+  const back = new THREE.Mesh(
+    new THREE.CylinderGeometry(width * 0.50, width * 0.50, 0.13, 16),
+    material,
+  );
+  back.rotation.z = Math.PI / 2;
+  back.scale.y = 1.38;
+  back.scale.z = 0.82;
+  back.position.set(
+    chairX - facing * (STAFF_CHAIR_BACK_OFFSET + 0.02),
+    0.91,
+    z,
+  );
   back.castShadow = true;
   back.receiveShadow = true;
   back.userData.staffFurniture = "workstation-chair-back";
@@ -1030,63 +1047,74 @@ function addProfessionalOfficeChair(
   back.userData.facing = facing;
   scene.add(back);
 
-  for (const side of [-1, 1]) {
-    const arm = meshBox(0.10, 0.10, 0.34, material);
-    arm.position.set(chairX, 0.82, z + side * 0.29);
-    arm.castShadow = true;
-    arm.userData.staffFurniture = "workstation-chair-arm";
-    arm.userData.chairRole = role;
-    scene.add(arm);
-
-    const armSupport = meshBox(0.07, 0.24, 0.07, material);
-    armSupport.position.set(chairX, 0.68, z + side * 0.29);
-    armSupport.userData.staffFurniture = "workstation-chair-arm-support";
-    armSupport.userData.chairRole = role;
-    scene.add(armSupport);
-  }
-
-  const hub = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.09, 0.09, 0.07, 12),
-    material,
-  );
-  hub.position.set(chairX, 0.10, z);
-  hub.castShadow = true;
-  scene.add(hub);
-
-  const lift = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.055, 0.07, 0.27, 10),
-    material,
-  );
-  lift.position.set(chairX, 0.25, z);
-  lift.castShadow = true;
-  scene.add(lift);
-
-  for (let i = 0; i < 5; i += 1) {
-    const angle = (i / 5) * Math.PI * 2;
-    const spokeLength = isVisitor ? 0.21 : 0.24;
-    const spoke = meshBox(0.045, 0.035, spokeLength, material);
-    spoke.position.set(
-      chairX + Math.cos(angle) * (spokeLength / 2),
-      0.07,
-      z + Math.sin(angle) * (spokeLength / 2),
-    );
-    spoke.rotation.y = angle;
-    spoke.castShadow = true;
-    scene.add(spoke);
-
-    const caster = new THREE.Mesh(
-      new THREE.SphereGeometry(0.055, 8, 6),
+  if (isVisitor) {
+    // Clean guest-chair frame: four angled fixed legs, no wheels.
+    for (const zSide of [-1, 1]) {
+      for (const xSide of [-1, 1]) {
+        const leg = meshBox(0.055, 0.42, 0.055, material);
+        leg.position.set(
+          chairX + xSide * width * 0.31,
+          0.29,
+          z + zSide * width * 0.30,
+        );
+        leg.rotation.z = xSide * 0.10;
+        leg.castShadow = true;
+        leg.userData.staffFurniture = "workstation-chair-leg";
+        leg.userData.chairRole = role;
+        scene.add(leg);
+      }
+    }
+  } else {
+    // Modern task-chair pedestal and five-star caster base.
+    const hub = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.10, 0.10, 0.07, 16),
       material,
     );
-    caster.position.set(
-      chairX + Math.cos(angle) * spokeLength,
-      0.055,
-      z + Math.sin(angle) * spokeLength,
+    hub.position.set(chairX, 0.10, z);
+    hub.castShadow = true;
+    hub.userData.staffFurniture = "workstation-chair-base";
+    hub.userData.chairRole = role;
+    scene.add(hub);
+
+    const lift = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.055, 0.075, 0.28, 12),
+      material,
     );
-    caster.castShadow = true;
-    caster.userData.staffFurniture = "workstation-chair-caster";
-    caster.userData.chairRole = role;
-    scene.add(caster);
+    lift.position.set(chairX, 0.25, z);
+    lift.castShadow = true;
+    lift.userData.staffFurniture = "workstation-chair-lift";
+    lift.userData.chairRole = role;
+    scene.add(lift);
+
+    for (let i = 0; i < 5; i += 1) {
+      const angle = (i / 5) * Math.PI * 2;
+      const spokeLength = 0.27;
+      const spoke = meshBox(0.045, 0.035, spokeLength, material);
+      spoke.position.set(
+        chairX + Math.cos(angle) * (spokeLength / 2),
+        0.07,
+        z + Math.sin(angle) * (spokeLength / 2),
+      );
+      spoke.rotation.y = angle;
+      spoke.castShadow = true;
+      spoke.userData.staffFurniture = "workstation-chair-spoke";
+      spoke.userData.chairRole = role;
+      scene.add(spoke);
+
+      const caster = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 8, 6),
+        material,
+      );
+      caster.position.set(
+        chairX + Math.cos(angle) * spokeLength,
+        0.055,
+        z + Math.sin(angle) * spokeLength,
+      );
+      caster.castShadow = true;
+      caster.userData.staffFurniture = "workstation-chair-caster";
+      caster.userData.chairRole = role;
+      scene.add(caster);
+    }
   }
 }
 
