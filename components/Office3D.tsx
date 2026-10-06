@@ -1308,6 +1308,7 @@ function addStaffOfficeWorkstations(scene: THREE.Scene) {
 
   addPremiumOfficeDecor(scene);
   addPremiumOfficeEnhancements(scene);
+  addExecutiveOfficeSetups(scene);
 
   scene.userData.staffWorkstations = STAFF_WORKSTATION_PLACEMENTS;
 }
@@ -1875,6 +1876,345 @@ function addOfficeGlow(
     accent.userData.officeDecor = "office-floor-inlay";
     scene.add(accent);
   }
+}
+
+
+function addExecutiveChair(
+  scene: THREE.Scene,
+  x: number,
+  z: number,
+  facing: 1 | -1,
+) {
+  const redMaterial = new THREE.MeshStandardMaterial({ color: 0xb85c53, roughness: 0.62 });
+  const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x242b31, roughness: 0.48, metalness: 0.45 });
+
+  const seat = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.48, 0.48, 0.16, 20),
+    redMaterial,
+  );
+  seat.scale.z = 0.86;
+  seat.position.set(x, 0.62, z);
+  seat.castShadow = true;
+  seat.userData.officeDecor = "executive-chair-seat";
+  scene.add(seat);
+
+  const back = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.54, 0.54, 0.16, 20),
+    redMaterial,
+  );
+  back.rotation.z = Math.PI / 2;
+  back.scale.y = 1.34;
+  back.scale.z = 0.82;
+  back.position.set(x - facing * 0.31, 1.10, z);
+  back.castShadow = true;
+  back.userData.officeDecor = "executive-chair-back";
+  scene.add(back);
+
+  const stem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.07, 0.09, 0.38, 12),
+    darkMaterial,
+  );
+  stem.position.set(x, 0.39, z);
+  stem.castShadow = true;
+  scene.add(stem);
+
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.14, 0.14, 0.08, 16),
+    darkMaterial,
+  );
+  base.position.set(x, 0.19, z);
+  base.castShadow = true;
+  scene.add(base);
+
+  for (let i = 0; i < 5; i += 1) {
+    const angle = (i / 5) * Math.PI * 2;
+    const spoke = meshBox(0.05, 0.04, 0.34, darkMaterial);
+    spoke.position.set(
+      x + Math.cos(angle) * 0.17,
+      0.10,
+      z + Math.sin(angle) * 0.17,
+    );
+    spoke.rotation.y = angle;
+    spoke.castShadow = true;
+    scene.add(spoke);
+  }
+}
+
+function addExecutivePlant(scene: THREE.Scene, x: number, z: number) {
+  const potMaterial = new THREE.MeshStandardMaterial({ color: 0x8b5a3c, roughness: 0.72 });
+  const stemMaterial = new THREE.MeshStandardMaterial({ color: 0x4c9c6b, roughness: 0.66 });
+  const leafMaterial = new THREE.MeshStandardMaterial({ color: 0x75df9f, roughness: 0.48 });
+
+  const pot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.28, 0.34, 0.46, 18),
+    potMaterial,
+  );
+  pot.position.set(x, 0.23, z);
+  pot.castShadow = true;
+  pot.receiveShadow = true;
+  pot.userData.officeDecor = "executive-plant-pot";
+  scene.add(pot);
+
+  const stemAnchors = [
+    { dx: 0, dz: 0, h: 1.08, leanX: 0.08, leanZ: 0 },
+    { dx: 0.03, dz: 0.03, h: 0.84, leanX: -0.12, leanZ: 0.05 },
+    { dx: -0.04, dz: 0.02, h: 0.78, leanX: 0.00, leanZ: -0.10 },
+  ];
+
+  stemAnchors.forEach((item, index) => {
+    const start = new THREE.Vector3(x + item.dx, 0.45, z + item.dz);
+    const end = new THREE.Vector3(
+      x + item.dx + item.leanX,
+      0.45 + item.h,
+      z + item.dz + item.leanZ,
+    );
+    addCylinderBetweenPoints(scene, start, end, 0.018, stemMaterial, {
+      officeDecor: "executive-plant-stem",
+    });
+
+    const top = end.clone();
+    const leaf = new THREE.Mesh(
+      new THREE.SphereGeometry(0.19 - index * 0.02, 12, 10),
+      leafMaterial,
+    );
+    leaf.scale.set(0.56, 0.18, 1.26);
+    leaf.position.copy(top);
+    leaf.position.y -= 0.05;
+    leaf.rotation.y = index * 0.9;
+    leaf.rotation.z = index === 1 ? -0.30 : 0.18;
+    leaf.castShadow = true;
+    leaf.userData.officeDecor = "executive-plant-leaf";
+    scene.add(leaf);
+
+    if (index === 0) {
+      const upperLeaf = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 12, 10),
+        leafMaterial,
+      );
+      upperLeaf.scale.set(0.58, 0.20, 1.30);
+      upperLeaf.position.set(top.x + 0.02, top.y + 0.03, top.z);
+      upperLeaf.rotation.y = 0.6;
+      upperLeaf.rotation.z = -0.14;
+      upperLeaf.castShadow = true;
+      upperLeaf.userData.officeDecor = "executive-plant-upper-leaf";
+      scene.add(upperLeaf);
+    }
+  });
+}
+
+function addExecutiveHuman(
+  scene: THREE.Scene,
+  x: number,
+  z: number,
+  facing: 1 | -1,
+) {
+  const suitMaterial = new THREE.MeshStandardMaterial({ color: 0x243765, roughness: 0.62 });
+  const shirtMaterial = new THREE.MeshStandardMaterial({ color: 0xf2f4f7, roughness: 0.46 });
+  const tieMaterial = new THREE.MeshStandardMaterial({ color: 0xec7356, roughness: 0.44 });
+  const skinMaterial = new THREE.MeshStandardMaterial({ color: 0xe6b08b, roughness: 0.70 });
+  const hairMaterial = new THREE.MeshStandardMaterial({ color: 0x63412f, roughness: 0.78 });
+  const beardMaterial = new THREE.MeshStandardMaterial({ color: 0x5b4032, roughness: 0.84 });
+  const trouserMaterial = new THREE.MeshStandardMaterial({ color: 0x1c2743, roughness: 0.70 });
+  const shoeMaterial = new THREE.MeshStandardMaterial({ color: 0x684936, roughness: 0.76 });
+  const deskSurface = new THREE.MeshStandardMaterial({ color: 0xd2a761, roughness: 0.54 });
+  const deskEdge = new THREE.MeshStandardMaterial({ color: 0x8e6336, roughness: 0.64 });
+  const metalMaterial = new THREE.MeshStandardMaterial({ color: 0x8a8f93, roughness: 0.32, metalness: 0.74 });
+  const monitorMaterial = new THREE.MeshStandardMaterial({ color: 0x9ea0a2, roughness: 0.38, metalness: 0.18 });
+  const monitorFaceMaterial = new THREE.MeshStandardMaterial({ color: 0x7c7f82, roughness: 0.30, metalness: 0.12 });
+
+  const deskX = x + facing * 0.86;
+  const personX = x;
+  const deskZ = z;
+
+  const deskTop = meshBox(1.12, 0.12, 2.72, deskSurface);
+  deskTop.position.set(deskX, 0.84, deskZ);
+  deskTop.castShadow = true;
+  deskTop.receiveShadow = true;
+  deskTop.userData.officeDecor = "executive-desk";
+  scene.add(deskTop);
+
+  const deskFront = meshBox(0.07, 0.42, 2.50, deskEdge);
+  deskFront.position.set(deskX - facing * 0.42, 0.60, deskZ);
+  deskFront.castShadow = true;
+  scene.add(deskFront);
+
+  for (const zOffset of [-1.05, 1.05]) {
+    const leg = meshBox(0.08, 0.72, 0.08, metalMaterial);
+    leg.position.set(deskX + 0.28, 0.46, deskZ + zOffset);
+    leg.castShadow = true;
+    scene.add(leg);
+
+    const foot = meshBox(0.34, 0.05, 0.08, metalMaterial);
+    foot.position.set(deskX + 0.11, 0.09, deskZ + zOffset);
+    foot.castShadow = true;
+    scene.add(foot);
+  }
+
+  const monitor = meshBox(0.10, 0.90, 1.58, monitorMaterial);
+  monitor.position.set(deskX + facing * 0.10, 1.42, deskZ);
+  monitor.castShadow = true;
+  monitor.userData.officeDecor = "executive-monitor";
+  scene.add(monitor);
+
+  const screen = meshBox(0.018, 0.74, 1.40, monitorFaceMaterial);
+  screen.position.set(deskX - facing * 0.055, 1.42, deskZ);
+  screen.castShadow = true;
+  scene.add(screen);
+
+  const monitorStand = meshBox(0.12, 0.34, 0.12, metalMaterial);
+  monitorStand.position.set(deskX, 0.97, deskZ);
+  scene.add(monitorStand);
+
+  const monitorBase = meshBox(0.34, 0.05, 0.23, metalMaterial);
+  monitorBase.position.set(deskX, 0.80, deskZ);
+  scene.add(monitorBase);
+
+  const keyboard = meshBox(0.26, 0.035, 0.56, monitorFaceMaterial);
+  keyboard.position.set(deskX - facing * 0.24, 0.88, deskZ);
+  keyboard.castShadow = true;
+  scene.add(keyboard);
+
+  const mug = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.10, 0.10, 0.15, 16),
+    tieMaterial,
+  );
+  mug.position.set(deskX + facing * 0.24, 0.96, deskZ - 0.84);
+  mug.castShadow = true;
+  mug.userData.officeDecor = "executive-mug";
+  scene.add(mug);
+
+  const torso = meshBox(0.62, 0.92, 0.58, suitMaterial);
+  torso.position.set(personX, 1.38, z);
+  torso.castShadow = true;
+  torso.userData.officeDecor = "executive-person-torso";
+  scene.add(torso);
+
+  const shirt = meshBox(0.66, 0.56, 0.26, shirtMaterial);
+  shirt.position.set(personX - facing * 0.01, 1.58, z - 0.01);
+  shirt.castShadow = true;
+  scene.add(shirt);
+
+  const tie = meshBox(0.05, 0.38, 0.08, tieMaterial);
+  tie.position.set(personX + facing * 0.03, 1.55, z);
+  tie.castShadow = true;
+  scene.add(tie);
+
+  const neck = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.10, 0.11, 0.16, 14),
+    skinMaterial,
+  );
+  neck.position.set(personX, 1.91, z);
+  neck.castShadow = true;
+  scene.add(neck);
+
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.25, 18, 14),
+    skinMaterial,
+  );
+  head.position.set(personX + facing * 0.05, 2.22, z);
+  head.scale.set(0.92, 1.12, 0.92);
+  head.castShadow = true;
+  head.userData.officeDecor = "executive-person-head";
+  scene.add(head);
+
+  const hair = new THREE.Mesh(
+    new THREE.SphereGeometry(0.26, 18, 12),
+    hairMaterial,
+  );
+  hair.position.set(personX + facing * 0.015, 2.31, z);
+  hair.scale.set(0.96, 0.50, 0.92);
+  hair.castShadow = true;
+  scene.add(hair);
+
+  const beard = new THREE.Mesh(
+    new THREE.SphereGeometry(0.17, 14, 10),
+    beardMaterial,
+  );
+  beard.position.set(personX + facing * 0.17, 2.15, z);
+  beard.scale.set(0.62, 0.72, 0.78);
+  beard.castShadow = true;
+  scene.add(beard);
+
+  const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0x2b211d, roughness: 0.82 });
+  for (const zSide of [-0.055, 0.055]) {
+    const eye = new THREE.Mesh(
+      new THREE.SphereGeometry(0.020, 8, 6),
+      eyeMaterial,
+    );
+    eye.position.set(personX + facing * 0.225, 2.25, z + zSide);
+    eye.castShadow = true;
+    scene.add(eye);
+  }
+
+  const armStartY = 1.66;
+  const armEndY = 1.03;
+  for (const zOffset of [-0.18, 0.18]) {
+    addCylinderBetweenPoints(
+      scene,
+      new THREE.Vector3(personX + facing * 0.24, armStartY, z + zOffset),
+      new THREE.Vector3(deskX - facing * 0.42, armEndY, z + zOffset),
+      0.10,
+      suitMaterial,
+      { officeDecor: "executive-arm" },
+    );
+
+    const hand = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 10, 8),
+      skinMaterial,
+    );
+    hand.position.set(deskX - facing * 0.46, 1.00, z + zOffset);
+    hand.castShadow = true;
+    hand.userData.officeDecor = "executive-hand";
+    scene.add(hand);
+  }
+
+  const thighX = personX - facing * 0.02;
+  addCylinderBetweenPoints(
+    scene,
+    new THREE.Vector3(thighX, 1.05, z - 0.16),
+    new THREE.Vector3(personX + facing * 0.02, 0.58, z - 0.16),
+    0.14,
+    trouserMaterial,
+    { officeDecor: "executive-leg" },
+  );
+  addCylinderBetweenPoints(
+    scene,
+    new THREE.Vector3(thighX, 1.05, z + 0.16),
+    new THREE.Vector3(personX + facing * 0.02, 0.58, z + 0.16),
+    0.14,
+    trouserMaterial,
+    { officeDecor: "executive-leg" },
+  );
+
+  const shoe1 = meshBox(0.30, 0.14, 0.20, shoeMaterial);
+  shoe1.position.set(personX + facing * 0.16, 0.17, z - 0.17);
+  shoe1.castShadow = true;
+  scene.add(shoe1);
+
+  const shoe2 = meshBox(0.30, 0.14, 0.20, shoeMaterial);
+  shoe2.position.set(personX + facing * 0.16, 0.17, z + 0.17);
+  shoe2.castShadow = true;
+  scene.add(shoe2);
+
+  addExecutiveChair(scene, personX - facing * 0.16, z, facing);
+
+  addExecutivePlant(
+    scene,
+    deskX + facing * 0.25,
+    z + (facing === 1 ? 1.12 : -1.12),
+  );
+
+  scene.userData.executiveOfficeSetups ??= [];
+  scene.userData.executiveOfficeSetups.push({
+    officeSide: facing === 1 ? "left" : "right",
+    person: { x: personX, z },
+    desk: { x: deskX, z: deskZ },
+  });
+}
+
+function addExecutiveOfficeSetups(scene: THREE.Scene) {
+  addExecutiveHuman(scene, -5.50, 12.70, 1);
+  addExecutiveHuman(scene, 5.50, 12.70, -1);
 }
 
 function addPremiumOfficeEnhancements(scene: THREE.Scene) {
