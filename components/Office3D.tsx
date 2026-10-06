@@ -1240,6 +1240,14 @@ function addStaffWorkstation(
   addProfessionalOfficeChair(scene, operatorChairX, operatorChairZ, operatorFacing, materials.chair, "operator");
   addProfessionalOfficeChair(scene, visitorChairX, visitorChairZ, visitorFacing, materials.chair, "visitor");
 
+  // Premium desk flower stays at the operator-side end of the desk,
+  // away from the monitor, keyboard and mouse.
+  addPremiumDeskFlower(
+    scene,
+    x + operatorDirection * 0.34,
+    z + (side === "left" ? -0.70 : 0.70),
+  );
+
   scene.userData.staffWorkstationCenterlines ??= [];
   scene.userData.staffWorkstationCenterlines.push({
     roomId: placement.roomId,
@@ -1298,7 +1306,237 @@ function addStaffOfficeWorkstations(scene: THREE.Scene) {
     });
   }
 
+  addPremiumOfficeDecor(scene);
+
   scene.userData.staffWorkstations = STAFF_WORKSTATION_PLACEMENTS;
+}
+
+function addPremiumDeskFlower(scene: THREE.Scene, x: number, z: number) {
+  const vaseMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd8c7a4,
+    roughness: 0.28,
+    metalness: 0.12,
+  });
+  const goldMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc9a45d,
+    roughness: 0.24,
+    metalness: 0.82,
+  });
+  const stemMaterial = new THREE.MeshStandardMaterial({
+    color: 0x3f6848,
+    roughness: 0.72,
+  });
+  const petalMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf5eee4,
+    roughness: 0.46,
+  });
+
+  const vase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.105, 0.14, 0.24, 16),
+    vaseMaterial,
+  );
+  vase.position.set(x, 0.99, z);
+  vase.castShadow = true;
+  vase.userData.officeDecor = "premium-desk-flower-vase";
+  scene.add(vase);
+
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.108, 0.012, 6, 16),
+    goldMaterial,
+  );
+  rim.position.set(x, 1.115, z);
+  rim.rotation.x = Math.PI / 2;
+  rim.castShadow = true;
+  rim.userData.officeDecor = "premium-desk-flower-rim";
+  scene.add(rim);
+
+  const flowerHeight = 0.28;
+  for (let i = 0; i < 3; i += 1) {
+    const angle = (i / 3) * Math.PI * 2 + 0.35;
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.017, 0.34, 8),
+      stemMaterial,
+    );
+    stem.position.set(
+      x + Math.cos(angle) * 0.045,
+      1.25,
+      z + Math.sin(angle) * 0.045,
+    );
+    stem.rotation.z = Math.cos(angle) * 0.12;
+    stem.rotation.x = Math.sin(angle) * 0.12;
+    stem.castShadow = true;
+    stem.userData.officeDecor = "premium-desk-flower-stem";
+    scene.add(stem);
+
+    const flower = new THREE.Mesh(
+      new THREE.SphereGeometry(0.052, 10, 8),
+      petalMaterial,
+    );
+    flower.position.set(
+      x + Math.cos(angle) * 0.07,
+      1.40 + Math.sin(i * 1.7) * 0.018,
+      z + Math.sin(angle) * 0.07,
+    );
+    flower.scale.set(1, 0.72, 1);
+    flower.castShadow = true;
+    flower.userData.officeDecor = "premium-desk-flower";
+    scene.add(flower);
+
+    const center = new THREE.Mesh(
+      new THREE.SphereGeometry(0.018, 8, 6),
+      goldMaterial,
+    );
+    center.position.copy(flower.position);
+    center.position.y += 0.004;
+    center.castShadow = true;
+    center.userData.officeDecor = "premium-desk-flower-center";
+    scene.add(center);
+
+    const leaf = new THREE.Mesh(
+      new THREE.SphereGeometry(0.055, 8, 6),
+      stemMaterial,
+    );
+    leaf.position.set(
+      x + Math.cos(angle) * 0.10,
+      1.20,
+      z + Math.sin(angle) * 0.10,
+    );
+    leaf.scale.set(0.48, 0.16, 1.35);
+    leaf.rotation.y = angle + 0.5;
+    leaf.castShadow = true;
+    leaf.userData.officeDecor = "premium-desk-flower-leaf";
+    scene.add(leaf);
+  }
+}
+
+function addPremiumFloorFlower(scene: THREE.Scene, x: number, z: number, scale = 1) {
+  const potMaterial = new THREE.MeshStandardMaterial({
+    color: 0x24323a,
+    roughness: 0.34,
+    metalness: 0.18,
+  });
+  const goldMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc9a45d,
+    roughness: 0.22,
+    metalness: 0.86,
+  });
+  const stemMaterial = new THREE.MeshStandardMaterial({
+    color: 0x3f6848,
+    roughness: 0.72,
+  });
+  const petalMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf2e9dc,
+    roughness: 0.42,
+  });
+
+  const pot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.23 * scale, 0.29 * scale, 0.36 * scale, 18),
+    potMaterial,
+  );
+  pot.position.set(x, 0.18 * scale, z);
+  pot.castShadow = true;
+  pot.receiveShadow = true;
+  pot.userData.officeDecor = "premium-floor-flower-planter";
+  scene.add(pot);
+
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.235 * scale, 0.016 * scale, 6, 20),
+    goldMaterial,
+  );
+  rim.position.set(x, 0.355 * scale, z);
+  rim.rotation.x = Math.PI / 2;
+  rim.castShadow = true;
+  rim.userData.officeDecor = "premium-floor-flower-rim";
+  scene.add(rim);
+
+  const flowerCount = 7;
+  for (let i = 0; i < flowerCount; i += 1) {
+    const angle = (i / flowerCount) * Math.PI * 2;
+    const stemHeight = (0.72 + (i % 3) * 0.08) * scale;
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.018 * scale, 0.024 * scale, stemHeight, 8),
+      stemMaterial,
+    );
+    stem.position.set(
+      x + Math.cos(angle) * 0.12 * scale,
+      0.55 * scale + stemHeight * 0.5,
+      z + Math.sin(angle) * 0.12 * scale,
+    );
+    stem.rotation.z = Math.sin(angle) * 0.14;
+    stem.rotation.x = Math.cos(angle) * 0.14;
+    stem.castShadow = true;
+    stem.userData.officeDecor = "premium-floor-flower-stem";
+    scene.add(stem);
+
+    const bloom = new THREE.Mesh(
+      new THREE.SphereGeometry(0.07 * scale, 10, 8),
+      petalMaterial,
+    );
+    bloom.position.set(
+      x + Math.cos(angle) * 0.15 * scale,
+      1.10 * scale + (i % 2) * 0.05 * scale,
+      z + Math.sin(angle) * 0.15 * scale,
+    );
+    bloom.scale.set(1.05, 0.78, 1.05);
+    bloom.castShadow = true;
+    bloom.userData.officeDecor = "premium-floor-flower-bloom";
+    scene.add(bloom);
+
+    const center = new THREE.Mesh(
+      new THREE.SphereGeometry(0.022 * scale, 8, 6),
+      goldMaterial,
+    );
+    center.position.copy(bloom.position);
+    center.castShadow = true;
+    center.userData.officeDecor = "premium-floor-flower-center";
+    scene.add(center);
+
+    const leaf = new THREE.Mesh(
+      new THREE.SphereGeometry(0.075 * scale, 8, 6),
+      stemMaterial,
+    );
+    leaf.position.set(
+      x + Math.cos(angle + 0.9) * 0.20 * scale,
+      0.78 * scale,
+      z + Math.sin(angle + 0.9) * 0.20 * scale,
+    );
+    leaf.scale.set(0.45, 0.18, 1.5);
+    leaf.rotation.y = angle + 0.7;
+    leaf.castShadow = true;
+    leaf.userData.officeDecor = "premium-floor-flower-leaf";
+    scene.add(leaf);
+  }
+}
+
+function addPremiumOfficeDecor(scene: THREE.Scene) {
+  const offices = [
+    { id: "office-1", x: -6.25, z: -6.68, scale: 0.92 },
+    { id: "office-2", x: 6.25, z: -6.68, scale: 0.92 },
+    { id: "office-3", x: -6.25, z: 1.68, scale: 0.92 },
+    { id: "office-4", x: 6.25, z: 1.68, scale: 0.92 },
+    { id: "manager", x: -6.25, z: 13.72, scale: 1.08 },
+    { id: "director", x: 6.25, z: 13.72, scale: 1.08 },
+  ];
+
+  const rugMaterial = new THREE.MeshStandardMaterial({
+    color: 0x5a4a3c,
+    roughness: 0.88,
+  });
+
+  for (const office of offices) {
+    const rug = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.25 * office.scale, 1.05 * office.scale),
+      rugMaterial,
+    );
+    rug.rotation.x = -Math.PI / 2;
+    rug.position.set(office.x, 0.012, office.z);
+    rug.receiveShadow = true;
+    rug.userData.officeDecor = "premium-flower-rug";
+    rug.userData.roomId = office.id;
+    scene.add(rug);
+
+    addPremiumFloorFlower(scene, office.x, office.z, office.scale);
+  }
 }
 
 function validateStaffWorkstationClearance() {
