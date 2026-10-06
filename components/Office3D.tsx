@@ -782,30 +782,91 @@ function meshBox(width: number, height: number, depth: number, material: THREE.M
   return new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
 }
 
+/*
+ * Render wall boxes from the exact same footprint used by the geometry
+ * validator. The old renderer used the trimmed centerline length directly,
+ * so each box stopped at the centerline endpoint and left a visible gap at
+ * every corner/T-junction. getWallRect() includes the 0.10 m half-thickness
+ * on the long axis as well, so using it here keeps rendering and validation
+ * on one geometry definition.
+ */
 function addWallSegment(scene: THREE.Scene, item: WallSegment, material: THREE.Material) {
-  const dx = item.end.x - item.start.x;
-  const dz = item.end.z - item.start.z;
-  const length = Math.hypot(dx, dz);
-  const trimStart = item.trimStart ?? 0;
-  const trimEnd = item.trimEnd ?? 0;
-  const usableLength = length - trimStart - trimEnd;
+  const rect = getWallRect(item);
+  const width = rect.maxX - rect.minX;
+  const depth = rect.maxZ - rect.minZ;
 
-  if (length <= 0 || usableLength <= 0) return;
+  if (width <= 0 || depth <= 0) return;
 
-  const ux = dx / length;
-  const uz = dz / length;
-  const cx = item.start.x + ux * (trimStart + usableLength / 2);
-  const cz = item.start.z + uz * (trimStart + usableLength / 2);
-
-  const mesh = item.orientation === "horizontal"
-    ? meshBox(usableLength, WALL_HEIGHT, WALL, material)
-    : meshBox(WALL, WALL_HEIGHT, usableLength, material);
-
-  mesh.position.set(cx, WALL_HEIGHT / 2, cz);
+  const mesh = meshBox(width, WALL_HEIGHT, depth, material);
+  mesh.position.set(
+    (rect.minX + rect.maxX) / 2,
+    WALL_HEIGHT / 2,
+    (rect.minZ + rect.maxZ) / 2,
+  );
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   mesh.userData.wallId = item.id;
   scene.add(mesh);
+}
+
+function getConnectedJointPoints() {
+  const points: Point[] = [];
+
+  const addPoint = (point: Point) => {
+    if (!points.some((existing) => samePoint(existing, point))) {
+      points.push(point);
+    }
+  };
+
+  for (let i = 0; i < WALL_SEGMENTS.length; i += 1) {
+    for (let j = i + 1; j < WALL_SEGMENTS.length; j += 1) {
+      const a = WALL_SEGMENTS[i];
+      const b = WALL_SEGMENTS[j];
+
+      const sharedEndpoints = [
+        [a.start, b.start],
+        [a.start, b.end],
+        [a.end, b.start],
+        [a.end, b.end],
+      ] as Array<[Point, Point]>;
+
+      for (const [left, right] of sharedEndpoints) {
+        if (samePoint(left, right)) addPoint(left);
+      }
+
+      const crossing = centerlineCrossing(a, b);
+      if (crossing) {
+        const isEndpoint =
+          samePoint(crossing, a.start) ||
+          samePoint(crossing, a.end) ||
+          samePoint(crossing, b.start) ||
+          samePoint(crossing, b.end);
+
+        if (isEndpoint) addPoint(crossing);
+      }
+    }
+  }
+
+  return points;
+}
+
+function addWallJointCaps(scene: THREE.Scene, material: THREE.Material) {
+  /*
+   * A small 0.24 m × 0.24 m solid at each real wall junction removes
+   * sub-pixel seams where two independently rendered wall boxes meet only
+   * along an edge/corner. These caps do not occupy corridor door openings
+   * because only connected wall junctions are included.
+   */
+  const jointSize = WALL + 0.04;
+
+  for (const point of getConnectedJointPoints()) {
+    const joint = meshBox(jointSize, WALL_HEIGHT, jointSize, material);
+    joint.position.set(point.x, WALL_HEIGHT / 2, point.z);
+    joint.castShadow = true;
+    joint.receiveShadow = true;
+    joint.userData.wallJoint = true;
+    scene.add(joint);
+  }
 }
 
 function addLabel(scene: THREE.Scene, text: string, x: number, z: number, color = 0x24334a) {
@@ -857,6 +918,7 @@ function buildFloorPlan(scene: THREE.Scene) {
   scene.add(grid);
 
   for (const item of WALL_SEGMENTS) addWallSegment(scene, item, wallMaterial);
+  addWallJointCaps(scene, wallMaterial);
 
   for (const door of DOOR_OPENINGS) {
     const leaf = meshBox(0.04, 0.035, 0.92, doorMaterial);
