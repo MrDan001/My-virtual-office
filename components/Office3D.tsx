@@ -1106,7 +1106,7 @@ function addStaffWorkstation(
   const { x, z, side } = placement;
   const operatorDirection: 1 | -1 = side === "left" ? 1 : -1;
   const operatorFacing: 1 | -1 = side === "left" ? -1 : 1;
-  const visitorFacing: 1 | -1 = -operatorFacing;
+  const visitorFacing: 1 | -1 = operatorFacing === 1 ? -1 : 1;
 
   // Rebuilt workstation layout: operator on corridor-facing side, visitor
   // directly across the desk on the opposite side.
