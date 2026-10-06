@@ -168,24 +168,30 @@ The reception block contains:
 
 The central visitor route and office corridor must remain unobstructed.
 
-## Premium decoration layer — next
+## Premium decoration layer — implemented
 
-The next phase adds visual polish without changing approved physical geometry.
+Premium decorative styling has now been added to the approved office layer.
 
-Planned decoration:
+Each staff office, Manager's Office and Director's Office receives:
 
-- premium flowers and planters
-- refined desk accents
-- tasteful wall/visual accents
-- office-specific styling
-- balanced spacing and professional scale
+- a premium floor flower planter
+- warm gold-toned accent trim
+- cream floral blooms
+- green foliage
+- a restrained floor rug
+- no doorway/corridor obstruction
 
-Decoration must remain additive and must not:
+Each staff workstation also receives a small desk flower arrangement positioned at the operator-side end of the desk, away from the monitor, keyboard and mouse.
+
+Decoration is intentionally **additive**. The approved architectural coordinates and workstation geometry remain unchanged.
+
+Decoration must never:
 
 - move walls
 - resize doors
-- move desks or chairs
+- move desks or chairs without explicit approval
 - reverse the workstation orientation
+- put the visitor behind the owner
 - block a doorway
 - narrow the corridor
 - interfere with staff routes
@@ -231,12 +237,12 @@ Production source branch:
 
 ## Current milestone
 
-**Milestone: approved physical office + approved workstation layer**
+**Milestone: approved physical office + approved workstation layer + premium decoration**
 
 The current foundation is:
 
-**Reception + 4 staff offices + meeting room + break room + manager's office + director's office + continuous corridor + professional doors + four complete workstations + approved owner/visitor seating orientation.**
+**Reception + 4 staff offices + meeting room + break room + manager's office + director's office + continuous corridor + professional doors + four complete workstations + approved owner/visitor seating orientation + premium flowers/planters and desk floral accents.**
 
 The next milestone is:
 
-**Premium office decoration and visual polish.**
+**Staff/worker visuals and office-management interactions on top of the locked physical layout.**
