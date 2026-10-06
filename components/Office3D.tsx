@@ -1307,6 +1307,7 @@ function addStaffOfficeWorkstations(scene: THREE.Scene) {
   }
 
   addPremiumOfficeDecor(scene);
+  addPremiumOfficeEnhancements(scene);
 
   scene.userData.staffWorkstations = STAFF_WORKSTATION_PLACEMENTS;
 }
@@ -1536,6 +1537,363 @@ function addPremiumOfficeDecor(scene: THREE.Scene) {
     scene.add(rug);
 
     addPremiumFloorFlower(scene, office.x, office.z, office.scale);
+  }
+}
+
+
+function addCorridorFlowerCluster(
+  scene: THREE.Scene,
+  x: number,
+  z: number,
+  scale = 1,
+  side = 1,
+) {
+  const potMaterial = new THREE.MeshStandardMaterial({
+    color: 0x25333a,
+    roughness: 0.32,
+    metalness: 0.16,
+  });
+  const rimMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc9a45d,
+    roughness: 0.22,
+    metalness: 0.86,
+  });
+  const stemMaterial = new THREE.MeshStandardMaterial({
+    color: 0x3c6b4a,
+    roughness: 0.72,
+  });
+  const roseMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd85b72,
+    roughness: 0.42,
+  });
+  const daisyMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffd36a,
+    roughness: 0.40,
+  });
+  const creamMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf6eee2,
+    roughness: 0.42,
+  });
+  const centerMaterial = new THREE.MeshStandardMaterial({
+    color: 0xe3b44f,
+    roughness: 0.25,
+    metalness: 0.6,
+  });
+
+  const pot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.13 * scale, 0.17 * scale, 0.24 * scale, 16),
+    potMaterial,
+  );
+  pot.position.set(x, 0.12 * scale + 0.14, z);
+  pot.castShadow = true;
+  pot.receiveShadow = true;
+  pot.userData.corridorDecor = "flower-pot";
+  scene.add(pot);
+
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.135 * scale, 0.012 * scale, 6, 18),
+    rimMaterial,
+  );
+  rim.position.set(x, 0.275 * scale + 0.14, z);
+  rim.rotation.x = Math.PI / 2;
+  rim.castShadow = true;
+  rim.userData.corridorDecor = "flower-pot-rim";
+  scene.add(rim);
+
+  const blooms = [
+    { x: -0.09, z: 0.02, y: 0.93, material: roseMaterial },
+    { x: 0.08, z: 0.03, y: 0.84, material: daisyMaterial },
+    { x: side * 0.01, z: 0.10, y: 1.00, material: creamMaterial },
+  ];
+
+  blooms.forEach((bloom, bloomIndex) => {
+    const localX = x + bloom.x * scale;
+    const localZ = z + bloom.z * scale;
+    const stemHeight = bloom.y * scale;
+
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012 * scale, 0.016 * scale, stemHeight, 8),
+      stemMaterial,
+    );
+    stem.position.set(localX, 0.40 * scale + stemHeight * 0.5, localZ);
+    stem.rotation.z = side * (bloomIndex - 1) * 0.10;
+    stem.castShadow = true;
+    stem.userData.corridorDecor = "flower-stem";
+    scene.add(stem);
+
+    const petalCount = bloomIndex === 0 ? 6 : 5;
+    for (let petalIndex = 0; petalIndex < petalCount; petalIndex += 1) {
+      const angle = (petalIndex / petalCount) * Math.PI * 2;
+      const petal = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06 * scale, 10, 8),
+        bloom.material,
+      );
+      petal.scale.set(0.82, 0.55, 1.16);
+      petal.position.set(
+        localX + Math.cos(angle) * 0.075 * scale,
+        bloom.y * scale + 0.18 * scale,
+        localZ + Math.sin(angle) * 0.075 * scale,
+      );
+      petal.rotation.y = angle;
+      petal.castShadow = true;
+      petal.userData.corridorDecor = bloomIndex === 0 ? "rose-bloom" : "flower-bloom";
+      scene.add(petal);
+    }
+
+    const center = new THREE.Mesh(
+      new THREE.SphereGeometry(0.027 * scale, 8, 6),
+      bloomIndex === 0 ? roseMaterial : centerMaterial,
+    );
+    center.position.set(localX, bloom.y * scale + 0.18 * scale, localZ);
+    center.castShadow = true;
+    center.userData.corridorDecor = bloomIndex === 0 ? "rose-center" : "flower-center";
+    scene.add(center);
+
+    const leaf = new THREE.Mesh(
+      new THREE.SphereGeometry(0.065 * scale, 8, 6),
+      stemMaterial,
+    );
+    leaf.scale.set(0.42, 0.18, 1.45);
+    leaf.position.set(localX + side * 0.07 * scale, 0.72 * scale, localZ + 0.02 * scale);
+    leaf.rotation.y = side * 0.7;
+    leaf.castShadow = true;
+    leaf.userData.corridorDecor = "flower-leaf";
+    scene.add(leaf);
+  });
+}
+
+function addFloorVerse(scene: THREE.Scene) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1000;
+  canvas.height = 300;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "rgba(247, 241, 229, 0.97)";
+  ctx.strokeStyle = "#c9a45d";
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.roundRect(20, 20, 960, 260, 32);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#3c4b52";
+  ctx.font = "700 38px Georgia";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("“Commit thy works unto the LORD, and thy thoughts shall be established.”", 500, 112);
+
+  ctx.fillStyle = "#8c6a35";
+  ctx.font = "700 32px Arial";
+  ctx.fillText("— Proverbs 16:3 (KJV)", 500, 190);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const plaque = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.48, 0.62),
+    new THREE.MeshStandardMaterial({
+      map: texture,
+      transparent: true,
+      roughness: 0.58,
+      metalness: 0.08,
+    }),
+  );
+  plaque.rotation.x = -Math.PI / 2;
+  plaque.position.set(0, 0.182, 9.15);
+  plaque.receiveShadow = true;
+  plaque.userData.corridorDecor = "walk-path-verse";
+  scene.add(plaque);
+}
+
+function addCorridorDecor(scene: THREE.Scene) {
+  const runnerMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc8b59a,
+    roughness: 0.86,
+  });
+  const runnerTrimMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc9a45d,
+    roughness: 0.24,
+    metalness: 0.82,
+  });
+
+  const runner = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.36, BUILDING_D - 0.85),
+    runnerMaterial,
+  );
+  runner.rotation.x = -Math.PI / 2;
+  runner.position.set(0, 0.156, (FRONT + BACK) / 2);
+  runner.receiveShadow = true;
+  runner.userData.corridorDecor = "walk-path-runner";
+  scene.add(runner);
+
+  for (const side of [-1, 1]) {
+    const trim = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.035, BUILDING_D - 0.90),
+      runnerTrimMaterial,
+    );
+    trim.rotation.x = -Math.PI / 2;
+    trim.position.set(side * 0.65, 0.160, (FRONT + BACK) / 2);
+    trim.receiveShadow = true;
+    trim.userData.corridorDecor = "walk-path-trim";
+    scene.add(trim);
+  }
+
+  const flowerStops = [
+    { z: -7.65, side: -1 },
+    { z: -6.95, side: 1 },
+    { z: -3.25, side: -1 },
+    { z: 1.80, side: 1 },
+    { z: 4.15, side: -1 },
+    { z: 7.85, side: 1 },
+    { z: 10.45, side: -1 },
+    { z: 13.35, side: 1 },
+  ];
+
+  for (const stop of flowerStops) {
+    addCorridorFlowerCluster(scene, stop.side * 0.72, stop.z, 0.88, stop.side);
+  }
+
+  addFloorVerse(scene);
+}
+
+function addOfficeWallFeature(
+  scene: THREE.Scene,
+  x: number,
+  z: number,
+  side: "left" | "right",
+  large = false,
+) {
+  const panelMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf3e8d7,
+    roughness: 0.56,
+  });
+  const frameMaterial = new THREE.MeshStandardMaterial({
+    color: 0xb98c52,
+    roughness: 0.22,
+    metalness: 0.78,
+  });
+  const darkMaterial = new THREE.MeshStandardMaterial({
+    color: 0x38484d,
+    roughness: 0.48,
+  });
+
+  const panelWidth = large ? 1.55 : 1.22;
+  const panelHeight = large ? 1.10 : 0.92;
+  const wallX = side === "left" ? LEFT + 0.11 : RIGHT - 0.11;
+  const inset = side === "left" ? 0.01 : -0.01;
+
+  const panel = meshBox(0.06, panelHeight, panelWidth, panelMaterial);
+  panel.position.set(wallX + inset, 1.58, z);
+  panel.castShadow = true;
+  panel.receiveShadow = true;
+  panel.userData.officeDecor = "accent-wall-panel";
+  scene.add(panel);
+
+  for (const zOffset of [-panelWidth / 2, panelWidth / 2]) {
+    const trim = meshBox(0.075, panelHeight + 0.08, 0.035, frameMaterial);
+    trim.position.set(wallX + inset * 1.5, 1.58, z + zOffset);
+    trim.castShadow = true;
+    trim.userData.officeDecor = "accent-wall-frame";
+    scene.add(trim);
+  }
+
+  for (const yOffset of [1.13, 2.03]) {
+    const trim = meshBox(0.075, 0.035, panelWidth + 0.07, frameMaterial);
+    trim.position.set(wallX + inset * 1.5, yOffset, z);
+    trim.castShadow = true;
+    trim.userData.officeDecor = "accent-wall-frame";
+    scene.add(trim);
+  }
+
+  for (const stripe of [-0.28, 0, 0.28]) {
+    const art = new THREE.Mesh(
+      new THREE.BoxGeometry(0.028, panelHeight * 0.56, 0.05),
+      darkMaterial,
+    );
+    art.position.set(
+      wallX + (side === "left" ? 0.045 : -0.045),
+      1.58,
+      z + stripe * (panelWidth / 1.22),
+    );
+    art.castShadow = true;
+    art.userData.officeDecor = "accent-wall-art";
+    scene.add(art);
+  }
+}
+
+function addOfficeGlow(
+  scene: THREE.Scene,
+  x: number,
+  z: number,
+  side: "left" | "right",
+  large = false,
+) {
+  const glow = new THREE.PointLight(0xffd9ad, large ? 1.45 : 1.1, large ? 6.2 : 5.0, 2);
+  glow.position.set(x, large ? 2.35 : 2.22, z);
+  glow.castShadow = false;
+  glow.userData.officeDecor = "office-ambient-glow";
+  scene.add(glow);
+
+  const shadeMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd5b46e,
+    roughness: 0.22,
+    metalness: 0.82,
+    emissive: new THREE.Color(0x3b2e1b),
+    emissiveIntensity: 0.7,
+  });
+  const shade = new THREE.Mesh(
+    new THREE.ConeGeometry(0.13, 0.12, 16, 1, true),
+    shadeMaterial,
+  );
+  shade.position.set(x, glow.position.y + 0.18, z);
+  shade.castShadow = true;
+  shade.userData.officeDecor = "office-light-shade";
+  scene.add(shade);
+
+  const bulb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.045, 10, 8),
+    new THREE.MeshStandardMaterial({
+      color: 0xfff1d1,
+      emissive: new THREE.Color(0xffc86a),
+      emissiveIntensity: 1.15,
+      roughness: 0.30,
+    }),
+  );
+  bulb.position.set(x, glow.position.y + 0.115, z);
+  bulb.userData.officeDecor = "office-light-bulb";
+  scene.add(bulb);
+
+  if (side === "left" || side === "right") {
+    const accent = new THREE.Mesh(
+      new THREE.TorusGeometry(0.11, 0.012, 6, 16),
+      shadeMaterial,
+    );
+    accent.rotation.x = Math.PI / 2;
+    accent.position.set(x, 0.18, z);
+    accent.userData.officeDecor = "office-floor-inlay";
+    scene.add(accent);
+  }
+}
+
+function addPremiumOfficeEnhancements(scene: THREE.Scene) {
+  const offices = [
+    { id: "office-1", x: -6.25, z: -5.0, side: "left" as const, large: false },
+    { id: "office-2", x: 6.25, z: -5.0, side: "right" as const, large: false },
+    { id: "office-3", x: -6.25, z: 0.0, side: "left" as const, large: false },
+    { id: "office-4", x: 6.25, z: 0.0, side: "right" as const, large: false },
+    { id: "manager", x: -6.25, z: 12.0, side: "left" as const, large: true },
+    { id: "director", x: 6.25, z: 12.0, side: "right" as const, large: true },
+  ];
+
+  for (const office of offices) {
+    addOfficeWallFeature(scene, office.x, office.z, office.side, office.large);
+    addOfficeGlow(scene, office.x, office.z, office.side, office.large);
+
+    const nameBadge = addLabel;
+    void nameBadge;
+    void office.id;
   }
 }
 
@@ -1840,6 +2198,7 @@ function buildFloorPlan(scene: THREE.Scene) {
   addWallJointCaps(scene, wallMaterial);
   addReceptionFurniture(scene);
   addStaffOfficeWorkstations(scene);
+  addCorridorDecor(scene);
   addProfessionalRoomDoorFrames(scene, roomFrameMaterial);
   addMainEntranceDoor(scene);
 
