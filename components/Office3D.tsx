@@ -951,6 +951,164 @@ function addLabel(scene: THREE.Scene, text: string, x: number, z: number, color 
   scene.add(sprite);
 }
 
+type WorkstationPlacement = {
+  roomId: "office-1" | "office-2" | "office-3" | "office-4";
+  x: number;
+  z: number;
+  side: "left" | "right";
+};
+
+const STAFF_WORKSTATION_PLACEMENTS: WorkstationPlacement[] = [
+  { roomId: "office-1", x: -5.65, z: -5, side: "left" },
+  { roomId: "office-2", x: 5.65, z: -5, side: "right" },
+  { roomId: "office-3", x: -5.65, z: 0, side: "left" },
+  { roomId: "office-4", x: 5.65, z: 0, side: "right" },
+];
+
+function addStaffWorkstation(
+  scene: THREE.Scene,
+  placement: WorkstationPlacement,
+  materials: {
+    desk: THREE.Material;
+    trim: THREE.Material;
+    chair: THREE.Material;
+    screen: THREE.Material;
+  },
+) {
+  const { x, z, side } = placement;
+  const direction = side === "left" ? 1 : -1;
+
+  // Compact professional workstation: desk stays against the outer wall,
+  // while the chair sits inward. This leaves the 1.5 m doorway and the
+  // entire 2 m central corridor completely untouched.
+  const desk = meshBox(0.82, 0.78, 2.15, materials.desk);
+  desk.position.set(x, 0.39, z);
+  desk.castShadow = true;
+  desk.receiveShadow = true;
+  desk.userData.staffFurniture = "workstation-desk";
+  desk.userData.roomId = placement.roomId;
+  scene.add(desk);
+
+  const deskTop = meshBox(0.88, 0.08, 2.22, materials.trim);
+  deskTop.position.set(x, 0.80, z);
+  deskTop.castShadow = true;
+  deskTop.receiveShadow = true;
+  deskTop.userData.staffFurniture = "workstation-desk-top";
+  scene.add(deskTop);
+
+  // Monitor sits toward the outer wall; keyboard sits on the chair-facing
+  // side of the desktop so the workstation reads correctly from the room.
+  const monitor = meshBox(0.72, 0.42, 0.055, materials.screen);
+  monitor.position.set(x - direction * 0.18, 1.12, z);
+  monitor.castShadow = true;
+  monitor.userData.staffFurniture = "workstation-monitor";
+  monitor.userData.roomId = placement.roomId;
+  scene.add(monitor);
+
+  const monitorStand = meshBox(0.10, 0.27, 0.10, materials.trim);
+  monitorStand.position.set(x - direction * 0.18, 0.92, z);
+  scene.add(monitorStand);
+
+  const keyboard = meshBox(0.46, 0.035, 0.23, materials.screen);
+  keyboard.position.set(x + direction * 0.17, 0.87, z);
+  keyboard.castShadow = true;
+  keyboard.userData.staffFurniture = "workstation-keyboard";
+  keyboard.userData.roomId = placement.roomId;
+  scene.add(keyboard);
+
+  // Chair is fully inside the room, aligned with the workstation, with
+  // approximately 1.0 m of open space between chair and corridor boundary.
+  const chairX = x + direction * 1.05;
+  const chairSeat = meshBox(0.78, 0.14, 0.78, materials.chair);
+  chairSeat.position.set(chairX, 0.47, z);
+  chairSeat.castShadow = true;
+  chairSeat.receiveShadow = true;
+  chairSeat.userData.staffFurniture = "workstation-chair";
+  chairSeat.userData.roomId = placement.roomId;
+  scene.add(chairSeat);
+
+  const chairBack = meshBox(0.78, 0.72, 0.14, materials.chair);
+  chairBack.position.set(chairX + direction * 0.32, 0.86, z);
+  chairBack.castShadow = true;
+  chairBack.receiveShadow = true;
+  chairBack.userData.staffFurniture = "workstation-chair-back";
+  scene.add(chairBack);
+}
+
+function addStaffOfficeWorkstations(scene: THREE.Scene) {
+  const deskMaterial = new THREE.MeshStandardMaterial({
+    color: 0x6c4f3d,
+    roughness: 0.62,
+  });
+  const trimMaterial = new THREE.MeshStandardMaterial({
+    color: 0xb38b5d,
+    roughness: 0.48,
+    metalness: 0.1,
+  });
+  const chairMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2f3b46,
+    roughness: 0.7,
+  });
+  const screenMaterial = new THREE.MeshStandardMaterial({
+    color: 0x182531,
+    roughness: 0.35,
+    metalness: 0.2,
+  });
+
+  for (const placement of STAFF_WORKSTATION_PLACEMENTS) {
+    addStaffWorkstation(scene, placement, {
+      desk: deskMaterial,
+      trim: trimMaterial,
+      chair: chairMaterial,
+      screen: screenMaterial,
+    });
+  }
+
+  scene.userData.staffWorkstations = STAFF_WORKSTATION_PLACEMENTS;
+}
+
+function validateStaffWorkstationClearance() {
+  const errors: string[] = [];
+  const corridorMinX = CORRIDOR_LEFT + HALF_WALL;
+  const corridorMaxX = CORRIDOR_RIGHT - HALF_WALL;
+
+  for (const placement of STAFF_WORKSTATION_PLACEMENTS) {
+    const side = placement.side;
+    const direction = side === "left" ? 1 : -1;
+    const deskMinX = placement.x - 0.41;
+    const deskMaxX = placement.x + 0.41;
+    const chairX = placement.x + direction * 1.05;
+    const chairMinX = chairX - 0.39;
+    const chairMaxX = chairX + 0.39;
+
+    const intrudesCorridor =
+      deskMaxX > corridorMinX &&
+      deskMinX < corridorMaxX ||
+      chairMaxX > corridorMinX &&
+      chairMinX < corridorMaxX;
+
+    const door = DOOR_OPENINGS.find((item) => item.id === `${placement.roomId}-door`);
+    const chairClearOfDoor =
+      !door ||
+      Math.abs(placement.z - door.z) > door.width / 2 + 0.5;
+
+    if (intrudesCorridor) {
+      errors.push(`${placement.roomId}: workstation or chair intrudes into corridor clearance`);
+    }
+    if (!chairClearOfDoor) {
+      errors.push(`${placement.roomId}: chair is too close to doorway clearance`);
+    }
+  }
+
+  if (errors.length > 0) {
+    console.error("[Office3D] STAFF WORKSTATION CLEARANCE INVALID", errors);
+  } else {
+    console.info("[Office3D] STAFF WORKSTATION CLEARANCE VALID — 4 workstations");
+  }
+
+  return errors;
+}
+
 function addReceptionFurniture(scene: THREE.Scene) {
   const deskMaterial = new THREE.MeshStandardMaterial({
     color: 0x6c4f3d,
@@ -1201,6 +1359,7 @@ function buildFloorPlan(scene: THREE.Scene) {
   for (const item of WALL_SEGMENTS) addWallSegment(scene, item, wallMaterial);
   addWallJointCaps(scene, wallMaterial);
   addReceptionFurniture(scene);
+  addStaffOfficeWorkstations(scene);
   addProfessionalRoomDoorFrames(scene, roomFrameMaterial);
   addMainEntranceDoor(scene);
 
@@ -1324,6 +1483,9 @@ export default function Office3D() {
     foundation.position.set(0, -0.3, (FRONT + BACK) / 2);
     foundation.receiveShadow = true;
     scene.add(foundation);
+
+    const workstationClearanceErrors = validateStaffWorkstationClearance();
+    scene.userData.workstationClearanceErrors = workstationClearanceErrors;
 
     const geometryValidation = buildFloorPlan(scene);
     scene.userData.geometryValidation = geometryValidation;
