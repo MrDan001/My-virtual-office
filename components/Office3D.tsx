@@ -1899,79 +1899,111 @@ function addExecutiveChair(
   facing: 1 | -1,
 ) {
   const upholstery = new THREE.MeshStandardMaterial({
-    color: 0xb45b52,
-    roughness: 0.58,
+    color: 0x8f4039,
+    roughness: 0.56,
+  });
+  const upholsteryDark = new THREE.MeshStandardMaterial({
+    color: 0x6f302c,
+    roughness: 0.60,
   });
   const baseMaterial = new THREE.MeshStandardMaterial({
-    color: 0x4f555b,
-    roughness: 0.34,
-    metalness: 0.68,
+    color: 0x343a40,
+    roughness: 0.30,
+    metalness: 0.72,
   });
 
-  const seat = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.40, 0.08, 4, 16),
-    upholstery,
-  );
-  seat.scale.set(1.0, 0.48, 0.90);
-  seat.rotation.z = Math.PI / 2;
-  seat.position.set(x, 0.67, z);
+  // Proper executive chair proportions: wide padded seat, upright back,
+  // visible armrests, gas lift and five-star caster base.
+  const seat = meshBox(0.92, 0.16, 1.02, upholstery);
+  seat.position.set(x, 0.68, z);
   seat.castShadow = true;
+  seat.receiveShadow = true;
   seat.userData.officeDecor = "executive-chair-seat";
   scene.add(seat);
 
-  const back = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.43, 0.36, 6, 18),
+  const seatCushion = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.34, 0.26, 4, 12),
     upholstery,
   );
-  back.scale.set(0.76, 1.00, 0.62);
-  back.rotation.z = Math.PI / 2;
-  back.position.set(x - facing * 0.33, 1.17, z);
+  seatCushion.scale.set(1.20, 0.34, 1.34);
+  seatCushion.position.set(x, 0.78, z);
+  seatCushion.castShadow = true;
+  seatCushion.userData.officeDecor = "executive-chair-cushion";
+  scene.add(seatCushion);
+
+  const back = meshBox(0.92, 0.92, 0.18, upholsteryDark);
+  back.position.set(x - facing * 0.38, 1.22, z);
   back.castShadow = true;
+  back.receiveShadow = true;
   back.userData.officeDecor = "executive-chair-back";
   scene.add(back);
 
+  const backPad = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.34, 0.28, 5, 14),
+    upholstery,
+  );
+  backPad.scale.set(1.18, 1.34, 0.28);
+  backPad.position.set(x - facing * 0.49, 1.25, z);
+  backPad.castShadow = true;
+  backPad.userData.officeDecor = "executive-chair-back-pad";
+  scene.add(backPad);
+
+  for (const zSide of [-1, 1]) {
+    const armTop = meshBox(0.16, 0.12, 0.34, upholsteryDark);
+    armTop.position.set(x - facing * 0.02, 1.04, z + zSide * 0.45);
+    armTop.castShadow = true;
+    armTop.userData.officeDecor = "executive-chair-arm";
+    scene.add(armTop);
+
+    const armSupport = meshBox(0.09, 0.34, 0.09, baseMaterial);
+    armSupport.position.set(x - facing * 0.02, 0.88, z + zSide * 0.45);
+    armSupport.castShadow = true;
+    armSupport.userData.officeDecor = "executive-chair-arm-support";
+    scene.add(armSupport);
+  }
+
   const column = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.07, 0.09, 0.34, 16),
+    new THREE.CylinderGeometry(0.075, 0.095, 0.34, 16),
     baseMaterial,
   );
-  column.position.set(x, 0.40, z);
+  column.position.set(x, 0.43, z);
   column.castShadow = true;
   scene.add(column);
 
   const hub = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.15, 0.15, 0.07, 16),
+    new THREE.CylinderGeometry(0.14, 0.16, 0.08, 16),
     baseMaterial,
   );
-  hub.position.set(x, 0.20, z);
+  hub.position.set(x, 0.23, z);
   hub.castShadow = true;
   scene.add(hub);
 
   for (let i = 0; i < 5; i += 1) {
     const angle = (i / 5) * Math.PI * 2;
-    const spoke = meshBox(0.045, 0.035, 0.38, baseMaterial);
+    const spokeLength = 0.38;
+    const spoke = meshBox(0.045, 0.035, spokeLength, baseMaterial);
     spoke.position.set(
-      x + Math.cos(angle) * 0.19,
-      0.095,
-      z + Math.sin(angle) * 0.19,
+      x + Math.cos(angle) * (spokeLength / 2),
+      0.12,
+      z + Math.sin(angle) * (spokeLength / 2),
     );
     spoke.rotation.y = angle;
     spoke.castShadow = true;
     scene.add(spoke);
 
     const caster = new THREE.Mesh(
-      new THREE.SphereGeometry(0.045, 10, 8),
+      new THREE.SphereGeometry(0.048, 10, 8),
       baseMaterial,
     );
     caster.position.set(
-      x + Math.cos(angle) * 0.38,
-      0.065,
-      z + Math.sin(angle) * 0.38,
+      x + Math.cos(angle) * spokeLength,
+      0.075,
+      z + Math.sin(angle) * spokeLength,
     );
     caster.castShadow = true;
     scene.add(caster);
   }
 }
-
 function addExecutivePlant(scene: THREE.Scene, x: number, z: number) {
   const potMaterial = new THREE.MeshStandardMaterial({
     color: 0x875638,
