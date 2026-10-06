@@ -23,7 +23,14 @@ const BACK = 14.5;
 const ROOM_FRONT = FRONT + RECEPTION_D;
 const CORRIDOR_LEFT = -1;
 const CORRIDOR_RIGHT = 1;
-const CHAIR_CENTER_SPACING = 0.90;
+const STAFF_DESK_X = 4.90;
+const STAFF_DESK_DEPTH = 1.10;
+const STAFF_DESK_LENGTH = 2.24;
+const STAFF_CHAIR_OFFSET = 1.23;
+const STAFF_CHAIR_WIDTH = 0.76;
+const STAFF_VISITOR_CHAIR_WIDTH = 0.72;
+const STAFF_CHAIR_BACK_OFFSET = 0.27;
+const STAFF_MIN_WALL_CLEARANCE = 0.25;
 
 type Point = { x: number; z: number };
 type Orientation = "horizontal" | "vertical";
@@ -960,10 +967,10 @@ type WorkstationPlacement = {
 };
 
 const STAFF_WORKSTATION_PLACEMENTS: WorkstationPlacement[] = [
-  { roomId: "office-1", x: -5.65, z: -5, side: "left" },
-  { roomId: "office-2", x: 5.65, z: -5, side: "right" },
-  { roomId: "office-3", x: -5.65, z: 0, side: "left" },
-  { roomId: "office-4", x: 5.65, z: 0, side: "right" },
+  { roomId: "office-1", x: -STAFF_DESK_X, z: -5, side: "left" },
+  { roomId: "office-2", x: STAFF_DESK_X, z: -5, side: "right" },
+  { roomId: "office-3", x: -STAFF_DESK_X, z: 0, side: "left" },
+  { roomId: "office-4", x: STAFF_DESK_X, z: 0, side: "right" },
 ];
 
 function addCylinderBetweenPoints(
@@ -997,39 +1004,45 @@ function addProfessionalOfficeChair(
   scene: THREE.Scene,
   chairX: number,
   z: number,
-  direction: number,
+  facing: 1 | -1,
   material: THREE.Material,
   role: "operator" | "visitor",
 ) {
   const isVisitor = role === "visitor";
-  const seat = meshBox(isVisitor ? 0.72 : 0.76, 0.15, isVisitor ? 0.72 : 0.76, material);
+  const width = isVisitor ? STAFF_VISITOR_CHAIR_WIDTH : STAFF_CHAIR_WIDTH;
+  const seat = meshBox(width, 0.15, width, material);
   seat.position.set(chairX, 0.53, z);
   seat.castShadow = true;
   seat.receiveShadow = true;
   seat.userData.staffFurniture = "workstation-chair";
   seat.userData.chairRole = role;
+  seat.userData.facing = facing;
   scene.add(seat);
 
-  const back = meshBox(isVisitor ? 0.68 : 0.72, isVisitor ? 0.70 : 0.80, 0.14, material);
-  back.position.set(chairX + direction * 0.27, isVisitor ? 0.89 : 0.94, z);
+  // The chair back is always behind the person, opposite the direction
+  // the person is facing. This is the key orientation rule for both seats.
+  const back = meshBox(width * 0.95, 0.78, 0.14, material);
+  back.position.set(chairX - facing * STAFF_CHAIR_BACK_OFFSET, 0.94, z);
   back.castShadow = true;
   back.receiveShadow = true;
   back.userData.staffFurniture = "workstation-chair-back";
   back.userData.chairRole = role;
+  back.userData.facing = facing;
   scene.add(back);
 
-  if (!isVisitor) {
-    for (const side of [-1, 1]) {
-      const arm = meshBox(0.10, 0.10, 0.34, material);
-      arm.position.set(chairX, 0.82, z + side * 0.29);
-      arm.castShadow = true;
-      arm.userData.staffFurniture = "workstation-chair-arm";
-      scene.add(arm);
+  for (const side of [-1, 1]) {
+    const arm = meshBox(0.10, 0.10, 0.34, material);
+    arm.position.set(chairX, 0.82, z + side * 0.29);
+    arm.castShadow = true;
+    arm.userData.staffFurniture = "workstation-chair-arm";
+    arm.userData.chairRole = role;
+    scene.add(arm);
 
-      const armSupport = meshBox(0.07, 0.24, 0.07, material);
-      armSupport.position.set(chairX, 0.68, z + side * 0.29);
-      scene.add(armSupport);
-    }
+    const armSupport = meshBox(0.07, 0.24, 0.07, material);
+    armSupport.position.set(chairX, 0.68, z + side * 0.29);
+    armSupport.userData.staffFurniture = "workstation-chair-arm-support";
+    armSupport.userData.chairRole = role;
+    scene.add(armSupport);
   }
 
   const hub = new THREE.Mesh(
@@ -1091,11 +1104,13 @@ function addStaffWorkstation(
   },
 ) {
   const { x, z, side } = placement;
-  const direction = side === "left" ? 1 : -1;
+  const operatorDirection: 1 | -1 = side === "left" ? 1 : -1;
+  const operatorFacing: 1 | -1 = side === "left" ? -1 : 1;
+  const visitorFacing: 1 | -1 = -operatorFacing;
 
-  // Keep the existing workstation center/footprint. The upgrade is purely
-  // furniture detail so door and walking clearances stay unchanged.
-  const deskTop = meshBox(0.94, 0.12, 2.24, materials.deskSurface);
+  // Rebuilt workstation layout: operator on corridor-facing side, visitor
+  // directly across the desk on the opposite side.
+  const deskTop = meshBox(STAFF_DESK_DEPTH, 0.12, STAFF_DESK_LENGTH, materials.deskSurface);
   deskTop.position.set(x, 0.80, z);
   deskTop.castShadow = true;
   deskTop.receiveShadow = true;
@@ -1103,59 +1118,53 @@ function addStaffWorkstation(
   deskTop.userData.roomId = placement.roomId;
   scene.add(deskTop);
 
-  // Dark architectural modesty panel below the desk surface.
-  const modesty = meshBox(0.07, 0.52, 1.52, materials.deskBody);
-  modesty.position.set(x - direction * 0.25, 0.51, z);
+  const modesty = meshBox(0.07, 0.52, STAFF_DESK_LENGTH * 0.68, materials.deskBody);
+  modesty.position.set(x - operatorDirection * 0.25, 0.51, z);
   modesty.castShadow = true;
   modesty.userData.staffFurniture = "workstation-modesty-panel";
+  modesty.userData.roomId = placement.roomId;
   scene.add(modesty);
 
-  // Two sturdy desk leg frames.
   for (const zOffset of [-0.78, 0.78]) {
     const leg = meshBox(0.07, 0.68, 0.07, materials.metal);
     leg.position.set(x, 0.43, z + zOffset);
     leg.castShadow = true;
+    leg.userData.staffFurniture = "workstation-desk-leg";
     scene.add(leg);
 
     const foot = meshBox(0.30, 0.045, 0.07, materials.metal);
-    foot.position.set(x + direction * 0.06, 0.085, z + zOffset);
+    foot.position.set(x - operatorDirection * 0.06, 0.085, z + zOffset);
     foot.castShadow = true;
+    foot.userData.staffFurniture = "workstation-desk-foot";
     scene.add(foot);
   }
 
-  // Two compact under-desk drawer pedestals. They remain under the existing
-  // desk footprint and do not project toward the corridor.
   for (const zOffset of [-0.62, 0.62]) {
     const pedestal = meshBox(0.34, 0.62, 0.52, materials.deskBody);
-    pedestal.position.set(x - direction * 0.13, 0.38, z + zOffset);
+    pedestal.position.set(x - operatorDirection * 0.13, 0.38, z + zOffset);
     pedestal.castShadow = true;
     pedestal.receiveShadow = true;
     pedestal.userData.staffFurniture = "workstation-storage";
     pedestal.userData.roomId = placement.roomId;
     scene.add(pedestal);
-
-    const drawerLine = meshBox(0.012, 0.012, 0.38, materials.metal);
-    drawerLine.position.set(
-      x - direction * 0.305,
-      0.48,
-      z + zOffset,
-    );
-    drawerLine.castShadow = true;
-    scene.add(drawerLine);
   }
 
-  // Monitor is deliberately oriented toward the chair, not toward the side wall.
+  // Monitor and keyboard face the operator; the visitor has no reason to
+  // sit behind the operator or look at the back of the monitor.
   const monitorBody = meshBox(0.055, 0.43, 0.82, materials.screen);
-  monitorBody.position.set(x + direction * 0.02, 1.12, z);
+  monitorBody.position.set(x + operatorDirection * 0.02, 1.12, z);
   monitorBody.castShadow = true;
   monitorBody.userData.staffFurniture = "workstation-monitor";
   monitorBody.userData.roomId = placement.roomId;
+  monitorBody.userData.facing = operatorFacing;
   scene.add(monitorBody);
 
   const screenFace = meshBox(0.012, 0.32, 0.66, materials.screenFace);
-  screenFace.position.set(x + direction * 0.055, 1.13, z);
+  screenFace.position.set(x + operatorDirection * 0.055, 1.13, z);
   screenFace.castShadow = true;
   screenFace.userData.staffFurniture = "workstation-screen";
+  screenFace.userData.roomId = placement.roomId;
+  screenFace.userData.facing = operatorFacing;
   scene.add(screenFace);
 
   const monitorStand = meshBox(0.10, 0.27, 0.10, materials.metal);
@@ -1164,16 +1173,16 @@ function addStaffWorkstation(
   scene.add(monitorStand);
 
   const monitorBase = meshBox(0.26, 0.045, 0.20, materials.metal);
-  monitorBase.position.set(x + direction * 0.01, 0.78, z);
+  monitorBase.position.set(x + operatorDirection * 0.01, 0.78, z);
   monitorBase.castShadow = true;
   scene.add(monitorBase);
 
-  // Keyboard and mouse are on the chair-facing side of the desktop.
   const keyboard = meshBox(0.24, 0.035, 0.48, materials.screen);
-  keyboard.position.set(x + direction * 0.25, 0.87, z);
+  keyboard.position.set(x + operatorDirection * 0.25, 0.87, z);
   keyboard.castShadow = true;
   keyboard.userData.staffFurniture = "workstation-keyboard";
   keyboard.userData.roomId = placement.roomId;
+  keyboard.userData.facing = operatorFacing;
   scene.add(keyboard);
 
   const mouse = new THREE.Mesh(
@@ -1181,78 +1190,38 @@ function addStaffWorkstation(
     materials.screen,
   );
   mouse.scale.set(0.8, 0.38, 1.15);
-  mouse.position.set(x + direction * 0.28, 0.89, z + 0.37);
+  mouse.position.set(x + operatorDirection * 0.28, 0.89, z + (side === "left" ? 0.37 : -0.37));
   mouse.castShadow = true;
   mouse.userData.staffFurniture = "workstation-mouse";
   mouse.userData.roomId = placement.roomId;
   scene.add(mouse);
 
-  // Thin cable details run from the monitor to the desktop cable pass-through
-  // and then toward the rear of the workstation.
-  const cableAStart = new THREE.Vector3(x + direction * 0.01, 1.02, z);
-  const cableAEnd = new THREE.Vector3(x + direction * 0.12, 0.87, z + 0.08);
-  const cableBEnd = new THREE.Vector3(x - direction * 0.22, 0.53, z + 0.08);
-  addCylinderBetweenPoints(
-    scene,
-    cableAStart,
-    cableAEnd,
-    0.014,
-    materials.cable,
-    { staffFurniture: "workstation-cable" },
-  );
-  addCylinderBetweenPoints(
-    scene,
-    cableAEnd,
-    cableBEnd,
-    0.012,
-    materials.cable,
-    { staffFurniture: "workstation-cable" },
-  );
+  const cableAStart = new THREE.Vector3(x + operatorDirection * 0.01, 1.02, z);
+  const cableAEnd = new THREE.Vector3(x + operatorDirection * 0.12, 0.87, z + 0.08);
+  const cableBEnd = new THREE.Vector3(x - operatorDirection * 0.22, 0.53, z + 0.08);
+  addCylinderBetweenPoints(scene, cableAStart, cableAEnd, 0.014, materials.cable, { staffFurniture: "workstation-cable", roomId: placement.roomId });
+  addCylinderBetweenPoints(scene, cableAEnd, cableBEnd, 0.012, materials.cable, { staffFurniture: "workstation-cable", roomId: placement.roomId });
 
-  // The operator chair uses the exact same Z centerline as the
-  // monitor and keyboard. Its X position is directly behind the
-  // keyboard, so a staff member sitting there faces the screen squarely.
-  const operatorChairX = x + direction * 1.04;
+  const operatorChairX = x + operatorDirection * STAFF_CHAIR_OFFSET;
   const operatorChairZ = z;
+  const visitorChairX = x - operatorDirection * STAFF_CHAIR_OFFSET;
+  const visitorChairZ = z;
 
-  // The second chair sits beside the workstation, offset along the
-  // desk length rather than occupying the operator's sitting position.
-  // It remains inside the office and away from the doorway.
-  // Keep the visitor chair at one consistent center-to-center spacing
-  // from the operator chair in every staff office.
-  const visitorChairX = x + direction * 1.04;
-  const visitorChairZ =
-    z + (side === "left" ? CHAIR_CENTER_SPACING : -CHAIR_CENTER_SPACING);
+  // Operator = one side of desk, facing monitor.
+  // Visitor = the other side, facing the operator.
+  addProfessionalOfficeChair(scene, operatorChairX, operatorChairZ, operatorFacing, materials.chair, "operator");
+  addProfessionalOfficeChair(scene, visitorChairX, visitorChairZ, visitorFacing, materials.chair, "visitor");
 
-  addProfessionalOfficeChair(
-    scene,
-    operatorChairX,
-    operatorChairZ,
-    direction,
-    materials.chair,
-    "operator",
-  );
-  addProfessionalOfficeChair(
-    scene,
-    visitorChairX,
-    visitorChairZ,
-    direction,
-    materials.chair,
-    "visitor",
-  );
-
-  // Store the workstation centerlines for the runtime clearance/debug
-  // layer so future staff placement can use the same sitting position.
   scene.userData.staffWorkstationCenterlines ??= [];
   scene.userData.staffWorkstationCenterlines.push({
     roomId: placement.roomId,
-    keyboard: { x: x + direction * 0.25, z },
-    monitor: { x: x + direction * 0.02, z },
-    operatorChair: { x: operatorChairX, z: operatorChairZ },
-    visitorChair: { x: visitorChairX, z: visitorChairZ },
+    desk: { x, z },
+    keyboard: { x: x + operatorDirection * 0.25, z },
+    monitor: { x: x + operatorDirection * 0.02, z },
+    operatorChair: { x: operatorChairX, z: operatorChairZ, facing: operatorFacing },
+    visitorChair: { x: visitorChairX, z: visitorChairZ, facing: visitorFacing },
   });
 }
-
 function addStaffOfficeWorkstations(scene: THREE.Scene) {
   const deskSurfaceMaterial = new THREE.MeshStandardMaterial({
     color: 0x9a6b3d,
@@ -1308,66 +1277,52 @@ function validateStaffWorkstationClearance() {
   const errors: string[] = [];
   const corridorMinX = CORRIDOR_LEFT + HALF_WALL;
   const corridorMaxX = CORRIDOR_RIGHT - HALF_WALL;
+  const exteriorLeftClear = LEFT + HALF_WALL;
+  const exteriorRightClear = RIGHT - HALF_WALL;
 
   for (const placement of STAFF_WORKSTATION_PLACEMENTS) {
     const side = placement.side;
-    const direction = side === "left" ? 1 : -1;
-    const deskMinX = placement.x - 0.41;
-    const deskMaxX = placement.x + 0.41;
-    const operatorChairX = placement.x + direction * 1.04;
-    const visitorChairX = placement.x + direction * 1.04;
-    const chairPositions = [
-      { role: "operator", x: operatorChairX, z: placement.z, halfWidth: 0.39 },
-      {
-        role: "visitor",
-        x: visitorChairX,
-        z:
-          placement.z +
-          (side === "left" ? CHAIR_CENTER_SPACING : -CHAIR_CENTER_SPACING),
-        halfWidth: 0.36,
-      },
-    ] as const;
+    const operatorDirection = side === "left" ? 1 : -1;
+    const operatorFacing: 1 | -1 = side === "left" ? -1 : 1;
+    const deskHalfDepth = STAFF_DESK_DEPTH / 2;
+    const deskMinX = placement.x - deskHalfDepth;
+    const deskMaxX = placement.x + deskHalfDepth;
+    const operatorChairX = placement.x + operatorDirection * STAFF_CHAIR_OFFSET;
+    const visitorChairX = placement.x - operatorDirection * STAFF_CHAIR_OFFSET;
+    const operatorChairZ = placement.z;
+    const visitorChairZ = placement.z;
+    const operatorChairMinX = operatorChairX - STAFF_CHAIR_WIDTH / 2;
+    const operatorChairMaxX = operatorChairX + STAFF_CHAIR_WIDTH / 2;
+    const visitorChairMinX = visitorChairX - STAFF_VISITOR_CHAIR_WIDTH / 2;
+    const visitorChairMaxX = visitorChairX + STAFF_VISITOR_CHAIR_WIDTH / 2;
 
-    const primaryAligned =
-      Math.abs((placement.z) - placement.z) < 0.001;
+    const deskToOperatorGap = side === "left" ? operatorChairMinX - deskMaxX : deskMinX - operatorChairMaxX;
+    const deskToVisitorGap = side === "left" ? deskMinX - visitorChairMaxX : visitorChairMinX - deskMaxX;
+    const corridorClearance = side === "left" ? corridorMinX - operatorChairMaxX : operatorChairMinX - corridorMaxX;
+    const visitorWallClearance = side === "left" ? visitorChairMinX - exteriorLeftClear : exteriorRightClear - visitorChairMaxX;
+    const deskCorridorClearance = side === "left" ? corridorMinX - deskMaxX : deskMinX - corridorMaxX;
+    const operatorCentered = Math.abs(operatorChairZ - placement.z) < GEOMETRY_EPS;
+    const visitorAcrossDesk = Math.abs(visitorChairZ - operatorChairZ) < GEOMETRY_EPS &&
+      ((side === "left" && visitorChairX < placement.x && operatorChairX > placement.x) ||
+        (side === "right" && visitorChairX > placement.x && operatorChairX < placement.x));
 
-    if (!primaryAligned) {
-      errors.push(`${placement.roomId}: primary chair is not centered on workstation keyboard/monitor`);
-    }
-
-    for (const chairPosition of chairPositions) {
-      const chairMinX = chairPosition.x - chairPosition.halfWidth;
-      const chairMaxX = chairPosition.x + chairPosition.halfWidth;
-
-      const intrudesCorridor =
-        deskMaxX > corridorMinX &&
-        deskMinX < corridorMaxX ||
-        chairMaxX > corridorMinX &&
-        chairMinX < corridorMaxX;
-
-      const doorwayClearance =
-        side === "left"
-          ? corridorMinX - chairMaxX
-          : chairMinX - corridorMaxX;
-
-      if (intrudesCorridor) {
-        errors.push(`${placement.roomId}: ${chairPosition.role} chair intrudes into corridor clearance`);
-      }
-      if (doorwayClearance < 0.75) {
-        errors.push(`${placement.roomId}: ${chairPosition.role} chair has less than 0.75 m corridor clearance`);
-      }
-    }
+    if (!operatorCentered) errors.push(placement.roomId + ": operator chair is not centered on keyboard/monitor");
+    if (!visitorAcrossDesk) errors.push(placement.roomId + ": visitor chair is not directly across the desk from the operator");
+    if (operatorFacing !== (side === "left" ? -1 : 1)) errors.push(placement.roomId + ": operator facing direction is inconsistent");
+    if (deskToOperatorGap < 0.12) errors.push(placement.roomId + ": operator chair is too close to the desk (" + deskToOperatorGap.toFixed(2) + " m)");
+    if (deskToVisitorGap < 0.12) errors.push(placement.roomId + ": visitor chair is too close to the desk (" + deskToVisitorGap.toFixed(2) + " m)");
+    if (corridorClearance < 0.75) errors.push(placement.roomId + ": operator chair leaves less than 0.75 m corridor clearance");
+    if (deskCorridorClearance < 0.75) errors.push(placement.roomId + ": desk leaves less than 0.75 m corridor clearance");
+    if (visitorWallClearance < STAFF_MIN_WALL_CLEARANCE) errors.push(placement.roomId + ": visitor chair is too close to the exterior wall (" + visitorWallClearance.toFixed(2) + " m)");
   }
 
   if (errors.length > 0) {
     console.error("[Office3D] STAFF WORKSTATION CLEARANCE INVALID", errors);
   } else {
-    console.info("[Office3D] STAFF WORKSTATION CLEARANCE VALID — 4 workstations / 8 chairs");
+    console.info("[Office3D] STAFF WORKSTATION GEOMETRY VALID — 4 desks, 4 operator chairs, 4 visitor chairs");
   }
-
   return errors;
 }
-
 function addReceptionFurniture(scene: THREE.Scene) {
   const deskMaterial = new THREE.MeshStandardMaterial({
     color: 0x6c4f3d,
