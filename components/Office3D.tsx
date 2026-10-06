@@ -442,6 +442,42 @@ const GEOMETRY_TRANSFORMS: GeometryTransform[] = [
   { id: "mirror-both", label: "mirror X + Z", map: (p) => ({ x: -p.x, z: -p.z }) },
 ];
 
+function boundaryCoverageForWalls(
+  walls: WallSegment[],
+  orientation: Orientation,
+  fixed: number,
+  min: number,
+  max: number,
+) {
+  const intervals: Array<[number, number]> = [];
+
+  for (const item of walls) {
+    if (item.orientation !== orientation) continue;
+
+    const matchesBoundary = orientation === "horizontal"
+      ? Math.abs(item.start.z - fixed) <= GEOMETRY_EPS && Math.abs(item.end.z - fixed) <= GEOMETRY_EPS
+      : Math.abs(item.start.x - fixed) <= GEOMETRY_EPS && Math.abs(item.end.x - fixed) <= GEOMETRY_EPS;
+
+    if (!matchesBoundary) continue;
+
+    const itemMin = orientation === "horizontal"
+      ? Math.min(item.start.x, item.end.x)
+      : Math.min(item.start.z, item.end.z);
+    const itemMax = orientation === "horizontal"
+      ? Math.max(item.start.x, item.end.x)
+      : Math.max(item.start.z, item.end.z);
+
+    const overlapMin = Math.max(min, itemMin);
+    const overlapMax = Math.min(max, itemMax);
+
+    if (overlapMax - overlapMin > GEOMETRY_EPS) {
+      intervals.push([overlapMin, overlapMax]);
+    }
+  }
+
+  return intervalUnionLength(intervals);
+}
+
 function transformedPoint(transform: GeometryTransform, point: Point) {
   return transform.map(point);
 }
@@ -653,7 +689,7 @@ function validateTransformedGeometry(transform: GeometryTransform) {
 
     for (const side of sides) {
       const sideLength = side.max - side.min;
-      const covered = boundaryCoverage(walls, side.orientation, side.fixed, side.min, side.max);
+      const covered = boundaryCoverageForWalls(walls, side.orientation, side.fixed, side.min, side.max);
       const expectedDoorGap = doors
         .filter((door) => {
           if (door.orientation !== side.orientation) return false;
