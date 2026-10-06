@@ -73,7 +73,7 @@ const WALL_SEGMENTS: WallSegment[] = [
   segment("W09_OFFICE3_L", { x: -1, z: -1 }, { x: -1, z: 0.5 }, "vertical", 0, HALF_WALL),
   segment("W10_MEETING_L", { x: -1, z: 0.5 }, { x: -1, z: 3.5 }, "vertical", HALF_WALL),
   segment("W11A_MEETING_L", { x: -1, z: 4.5 }, { x: -1, z: 7.5 }, "vertical", HALF_WALL, HALF_WALL),
-  segment("W11B_MEETING_L", { x: -1, z: 7.5 }, { x: -1, z: 9 }, "vertical", HALF_WALL, 0),
+  segment("W11B_MEETING_L", { x: -1, z: 7.5 }, { x: -1, z: 9.5 }, "vertical", HALF_WALL, 0),
   segment("W24_MANAGER_L", { x: -1, z: 10.5 }, { x: -1, z: BACK }, "vertical", 0, WALL),
 
   // Right corridor boundary: doors at -5.5, -1.5, +4.0, +10.0.
@@ -83,7 +83,7 @@ const WALL_SEGMENTS: WallSegment[] = [
   segment("W15_OFFICE4_R", { x: 1, z: -1 }, { x: 1, z: 0.5 }, "vertical", 0, HALF_WALL),
   segment("W16_BREAK_R", { x: 1, z: 0.5 }, { x: 1, z: 3.5 }, "vertical", HALF_WALL),
   segment("W17A_BREAK_R", { x: 1, z: 4.5 }, { x: 1, z: 7.5 }, "vertical", HALF_WALL, HALF_WALL),
-  segment("W17B_BREAK_R", { x: 1, z: 7.5 }, { x: 1, z: 9 }, "vertical", HALF_WALL, 0),
+  segment("W17B_BREAK_R", { x: 1, z: 7.5 }, { x: 1, z: 9.5 }, "vertical", HALF_WALL, 0),
   segment("W25_DIRECTOR_R", { x: 1, z: 10.5 }, { x: 1, z: BACK }, "vertical", 0, WALL),
 
   // Horizontal room dividers own their intersections.
