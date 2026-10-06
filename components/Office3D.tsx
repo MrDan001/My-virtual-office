@@ -2071,9 +2071,9 @@ function addExecutiveDesk(scene: THREE.Scene, x: number, z: number, facing: 1 | 
   scene.add(monitor);
 
   const screen = new THREE.Mesh(
+    new THREE.BoxGeometry(0.018, 0.82, 1.48),
     new THREE.MeshStandardMaterial({ color: 0x767a7e, roughness: 0.26, metalness: 0.10 }),
   );
-  screen.geometry = new THREE.BoxGeometry(0.018, 0.82, 1.48);
   screen.position.set(x + facing * 0.037, 1.47, z);
   scene.add(screen);
 
