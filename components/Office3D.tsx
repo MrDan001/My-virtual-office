@@ -8,7 +8,7 @@ const BUILDING_W = 14;
 const BUILDING_D = 26;
 const CORE_BUILDING_D = 22;
 const RECEPTION_D = 4;
-const WALL = 0.2;
+const WALL = 0.3;
 const HALF_WALL = WALL / 2;
 const WALL_HEIGHT = 2.7;
 const CORRIDOR_W = 2;
@@ -52,7 +52,7 @@ const segment = (
  * Core office shell: X -7..+7, Z -7.5..+14.5
  * Reception block: X -7..+7, Z -11.5..-7.5
  * Corridor: X -1..+1, Z -11.5..+14.5
- * Wall thickness: 0.20m
+ * Wall thickness: 0.30m
  *
  * Vertical wall segments own the physical corners. Horizontal segments are
  * trimmed by the full 0.20m wall thickness where they meet a vertical wall.
@@ -841,7 +841,7 @@ function meshBox(width: number, height: number, depth: number, material: THREE.M
  * Render wall boxes from the exact same footprint used by the geometry
  * validator. The old renderer used the trimmed centerline length directly,
  * so each box stopped at the centerline endpoint and left a visible gap at
- * every corner/T-junction. getWallRect() includes the 0.10 m half-thickness
+ * every corner/T-junction. getWallRect() includes the 0.15 m half-thickness
  * on the long axis as well, so using it here keeps rendering and validation
  * on one geometry definition.
  */
@@ -907,7 +907,7 @@ function getConnectedJointPoints() {
 
 function addWallJointCaps(scene: THREE.Scene, material: THREE.Material) {
   /*
-   * A small 0.24 m × 0.24 m solid at each real wall junction removes
+   * A small 0.34 m × 0.34 m solid at each real wall junction removes
    * sub-pixel seams where two independently rendered wall boxes meet only
    * along an edge/corner. These caps do not occupy corridor door openings
    * because only connected wall junctions are included.
@@ -965,102 +965,293 @@ const STAFF_WORKSTATION_PLACEMENTS: WorkstationPlacement[] = [
   { roomId: "office-4", x: 5.65, z: 0, side: "right" },
 ];
 
+function addCylinderBetweenPoints(
+  scene: THREE.Scene,
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+  radius: number,
+  material: THREE.Material,
+  userData?: Record<string, unknown>,
+) {
+  const direction = new THREE.Vector3().subVectors(end, start);
+  const length = direction.length();
+  if (length <= 0.001) return;
+
+  const cylinder = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius, radius, length, 8),
+    material,
+  );
+  cylinder.position.copy(start).add(end).multiplyScalar(0.5);
+  cylinder.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0),
+    direction.normalize(),
+  );
+  cylinder.castShadow = true;
+  cylinder.receiveShadow = true;
+  if (userData) Object.assign(cylinder.userData, userData);
+  scene.add(cylinder);
+}
+
+function addProfessionalOfficeChair(
+  scene: THREE.Scene,
+  chairX: number,
+  z: number,
+  direction: number,
+  material: THREE.Material,
+) {
+  const seat = meshBox(0.76, 0.15, 0.76, material);
+  seat.position.set(chairX, 0.53, z);
+  seat.castShadow = true;
+  seat.receiveShadow = true;
+  seat.userData.staffFurniture = "workstation-chair";
+  scene.add(seat);
+
+  const back = meshBox(0.72, 0.80, 0.14, material);
+  back.position.set(chairX + direction * 0.27, 0.94, z);
+  back.castShadow = true;
+  back.receiveShadow = true;
+  back.userData.staffFurniture = "workstation-chair-back";
+  scene.add(back);
+
+  // Padded armrests.
+  for (const side of [-1, 1]) {
+    const arm = meshBox(0.10, 0.10, 0.34, material);
+    arm.position.set(chairX, 0.82, z + side * 0.29);
+    arm.castShadow = true;
+    arm.userData.staffFurniture = "workstation-chair-arm";
+    scene.add(arm);
+
+    const armSupport = meshBox(0.07, 0.24, 0.07, material);
+    armSupport.position.set(chairX, 0.68, z + side * 0.29);
+    scene.add(armSupport);
+  }
+
+  // Five-star base with a central gas-lift column and small casters.
+  const hub = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.09, 0.09, 0.07, 12),
+    material,
+  );
+  hub.position.set(chairX, 0.10, z);
+  hub.castShadow = true;
+  scene.add(hub);
+
+  const lift = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.055, 0.07, 0.27, 10),
+    material,
+  );
+  lift.position.set(chairX, 0.25, z);
+  lift.castShadow = true;
+  scene.add(lift);
+
+  for (let i = 0; i < 5; i += 1) {
+    const angle = (i / 5) * Math.PI * 2;
+    const spokeLength = 0.24;
+    const spoke = meshBox(0.045, 0.035, spokeLength, material);
+    spoke.position.set(
+      chairX + Math.cos(angle) * (spokeLength / 2),
+      0.07,
+      z + Math.sin(angle) * (spokeLength / 2),
+    );
+    spoke.rotation.y = angle;
+    spoke.castShadow = true;
+    scene.add(spoke);
+
+    const caster = new THREE.Mesh(
+      new THREE.SphereGeometry(0.055, 8, 6),
+      material,
+    );
+    caster.position.set(
+      chairX + Math.cos(angle) * spokeLength,
+      0.055,
+      z + Math.sin(angle) * spokeLength,
+    );
+    caster.castShadow = true;
+    caster.userData.staffFurniture = "workstation-chair-caster";
+    scene.add(caster);
+  }
+}
+
 function addStaffWorkstation(
   scene: THREE.Scene,
   placement: WorkstationPlacement,
   materials: {
-    desk: THREE.Material;
-    trim: THREE.Material;
+    deskSurface: THREE.Material;
+    deskBody: THREE.Material;
+    metal: THREE.Material;
     chair: THREE.Material;
     screen: THREE.Material;
+    screenFace: THREE.Material;
+    cable: THREE.Material;
   },
 ) {
   const { x, z, side } = placement;
   const direction = side === "left" ? 1 : -1;
 
-  // Compact professional workstation: desk stays against the outer wall,
-  // while the chair sits inward. This leaves the 1.5 m doorway and the
-  // entire 2 m central corridor completely untouched.
-  const desk = meshBox(0.82, 0.78, 2.15, materials.desk);
-  desk.position.set(x, 0.39, z);
-  desk.castShadow = true;
-  desk.receiveShadow = true;
-  desk.userData.staffFurniture = "workstation-desk";
-  desk.userData.roomId = placement.roomId;
-  scene.add(desk);
-
-  const deskTop = meshBox(0.88, 0.08, 2.22, materials.trim);
+  // Keep the existing workstation center/footprint. The upgrade is purely
+  // furniture detail so door and walking clearances stay unchanged.
+  const deskTop = meshBox(0.94, 0.12, 2.24, materials.deskSurface);
   deskTop.position.set(x, 0.80, z);
   deskTop.castShadow = true;
   deskTop.receiveShadow = true;
   deskTop.userData.staffFurniture = "workstation-desk-top";
+  deskTop.userData.roomId = placement.roomId;
   scene.add(deskTop);
 
-  // Monitor sits toward the outer wall; keyboard sits on the chair-facing
-  // side of the desktop so the workstation reads correctly from the room.
-  const monitor = meshBox(0.72, 0.42, 0.055, materials.screen);
-  monitor.position.set(x - direction * 0.18, 1.12, z);
-  monitor.castShadow = true;
-  monitor.userData.staffFurniture = "workstation-monitor";
-  monitor.userData.roomId = placement.roomId;
-  scene.add(monitor);
+  // Dark architectural modesty panel below the desk surface.
+  const modesty = meshBox(0.07, 0.52, 1.52, materials.deskBody);
+  modesty.position.set(x - direction * 0.25, 0.51, z);
+  modesty.castShadow = true;
+  modesty.userData.staffFurniture = "workstation-modesty-panel";
+  scene.add(modesty);
 
-  const monitorStand = meshBox(0.10, 0.27, 0.10, materials.trim);
-  monitorStand.position.set(x - direction * 0.18, 0.92, z);
+  // Two sturdy desk leg frames.
+  for (const zOffset of [-0.78, 0.78]) {
+    const leg = meshBox(0.07, 0.68, 0.07, materials.metal);
+    leg.position.set(x, 0.43, z + zOffset);
+    leg.castShadow = true;
+    scene.add(leg);
+
+    const foot = meshBox(0.30, 0.045, 0.07, materials.metal);
+    foot.position.set(x + direction * 0.06, 0.085, z + zOffset);
+    foot.castShadow = true;
+    scene.add(foot);
+  }
+
+  // Two compact under-desk drawer pedestals. They remain under the existing
+  // desk footprint and do not project toward the corridor.
+  for (const zOffset of [-0.62, 0.62]) {
+    const pedestal = meshBox(0.34, 0.62, 0.52, materials.deskBody);
+    pedestal.position.set(x - direction * 0.13, 0.38, z + zOffset);
+    pedestal.castShadow = true;
+    pedestal.receiveShadow = true;
+    pedestal.userData.staffFurniture = "workstation-storage";
+    pedestal.userData.roomId = placement.roomId;
+    scene.add(pedestal);
+
+    const drawerLine = meshBox(0.012, 0.012, 0.38, materials.metal);
+    drawerLine.position.set(
+      x - direction * 0.305,
+      0.48,
+      z + zOffset,
+    );
+    drawerLine.castShadow = true;
+    scene.add(drawerLine);
+  }
+
+  // Monitor is deliberately oriented toward the chair, not toward the side wall.
+  const monitorBody = meshBox(0.055, 0.43, 0.82, materials.screen);
+  monitorBody.position.set(x + direction * 0.02, 1.12, z);
+  monitorBody.castShadow = true;
+  monitorBody.userData.staffFurniture = "workstation-monitor";
+  monitorBody.userData.roomId = placement.roomId;
+  scene.add(monitorBody);
+
+  const screenFace = meshBox(0.012, 0.32, 0.66, materials.screenFace);
+  screenFace.position.set(x + direction * 0.055, 1.13, z);
+  screenFace.castShadow = true;
+  screenFace.userData.staffFurniture = "workstation-screen";
+  scene.add(screenFace);
+
+  const monitorStand = meshBox(0.10, 0.27, 0.10, materials.metal);
+  monitorStand.position.set(x, 0.91, z);
+  monitorStand.castShadow = true;
   scene.add(monitorStand);
 
-  const keyboard = meshBox(0.46, 0.035, 0.23, materials.screen);
-  keyboard.position.set(x + direction * 0.17, 0.87, z);
+  const monitorBase = meshBox(0.26, 0.045, 0.20, materials.metal);
+  monitorBase.position.set(x + direction * 0.01, 0.78, z);
+  monitorBase.castShadow = true;
+  scene.add(monitorBase);
+
+  // Keyboard and mouse are on the chair-facing side of the desktop.
+  const keyboard = meshBox(0.24, 0.035, 0.48, materials.screen);
+  keyboard.position.set(x + direction * 0.25, 0.87, z);
   keyboard.castShadow = true;
   keyboard.userData.staffFurniture = "workstation-keyboard";
   keyboard.userData.roomId = placement.roomId;
   scene.add(keyboard);
 
-  // Chair is fully inside the room, aligned with the workstation, with
-  // approximately 1.0 m of open space between chair and corridor boundary.
-  const chairX = x + direction * 1.05;
-  const chairSeat = meshBox(0.78, 0.14, 0.78, materials.chair);
-  chairSeat.position.set(chairX, 0.47, z);
-  chairSeat.castShadow = true;
-  chairSeat.receiveShadow = true;
-  chairSeat.userData.staffFurniture = "workstation-chair";
-  chairSeat.userData.roomId = placement.roomId;
-  scene.add(chairSeat);
+  const mouse = new THREE.Mesh(
+    new THREE.SphereGeometry(0.075, 12, 8),
+    materials.screen,
+  );
+  mouse.scale.set(0.8, 0.38, 1.15);
+  mouse.position.set(x + direction * 0.28, 0.89, z + 0.37);
+  mouse.castShadow = true;
+  mouse.userData.staffFurniture = "workstation-mouse";
+  mouse.userData.roomId = placement.roomId;
+  scene.add(mouse);
 
-  const chairBack = meshBox(0.78, 0.72, 0.14, materials.chair);
-  chairBack.position.set(chairX + direction * 0.32, 0.86, z);
-  chairBack.castShadow = true;
-  chairBack.receiveShadow = true;
-  chairBack.userData.staffFurniture = "workstation-chair-back";
-  scene.add(chairBack);
+  // Thin cable details run from the monitor to the desktop cable pass-through
+  // and then toward the rear of the workstation.
+  const cableAStart = new THREE.Vector3(x + direction * 0.01, 1.02, z);
+  const cableAEnd = new THREE.Vector3(x + direction * 0.12, 0.87, z + 0.08);
+  const cableBEnd = new THREE.Vector3(x - direction * 0.22, 0.53, z + 0.08);
+  addCylinderBetweenPoints(
+    scene,
+    cableAStart,
+    cableAEnd,
+    0.014,
+    materials.cable,
+    { staffFurniture: "workstation-cable" },
+  );
+  addCylinderBetweenPoints(
+    scene,
+    cableAEnd,
+    cableBEnd,
+    0.012,
+    materials.cable,
+    { staffFurniture: "workstation-cable" },
+  );
+
+  const chairX = x + direction * 1.05;
+  addProfessionalOfficeChair(scene, chairX, z, direction, materials.chair);
 }
 
 function addStaffOfficeWorkstations(scene: THREE.Scene) {
-  const deskMaterial = new THREE.MeshStandardMaterial({
-    color: 0x6c4f3d,
-    roughness: 0.62,
+  const deskSurfaceMaterial = new THREE.MeshStandardMaterial({
+    color: 0x9a6b3d,
+    roughness: 0.52,
   });
-  const trimMaterial = new THREE.MeshStandardMaterial({
-    color: 0xb38b5d,
-    roughness: 0.48,
-    metalness: 0.1,
+  const deskBodyMaterial = new THREE.MeshStandardMaterial({
+    color: 0x4a3327,
+    roughness: 0.58,
+  });
+  const metalMaterial = new THREE.MeshStandardMaterial({
+    color: 0x28323a,
+    roughness: 0.28,
+    metalness: 0.78,
   });
   const chairMaterial = new THREE.MeshStandardMaterial({
-    color: 0x2f3b46,
-    roughness: 0.7,
+    color: 0x202830,
+    roughness: 0.66,
+    metalness: 0.14,
   });
   const screenMaterial = new THREE.MeshStandardMaterial({
-    color: 0x182531,
-    roughness: 0.35,
+    color: 0x121a22,
+    roughness: 0.26,
     metalness: 0.2,
+  });
+  const screenFaceMaterial = new THREE.MeshStandardMaterial({
+    color: 0x5e7787,
+    roughness: 0.24,
+    metalness: 0.12,
+    emissive: new THREE.Color(0x162831),
+    emissiveIntensity: 0.28,
+  });
+  const cableMaterial = new THREE.MeshStandardMaterial({
+    color: 0x171b20,
+    roughness: 0.76,
   });
 
   for (const placement of STAFF_WORKSTATION_PLACEMENTS) {
     addStaffWorkstation(scene, placement, {
-      desk: deskMaterial,
-      trim: trimMaterial,
+      deskSurface: deskSurfaceMaterial,
+      deskBody: deskBodyMaterial,
+      metal: metalMaterial,
       chair: chairMaterial,
       screen: screenMaterial,
+      screenFace: screenFaceMaterial,
+      cable: cableMaterial,
     });
   }
 
@@ -1550,7 +1741,7 @@ export default function Office3D() {
     <div ref={mountRef} className="office-3d-viewer" aria-label="Interactive eight-space office floor plan">
       <div className="office-3d-help">
         <strong>Eight-space office + entrance reception</strong>
-        <span>14 × 26 m total · 14 × 22 m core office · 4 m reception block · 2 m corridor · 1.5 m professional room doors · 2.4 m main entrance · 0.20 m walls</span>
+        <span>14 × 26 m total · 14 × 22 m core office · 4 m reception block · 2 m corridor · 1.5 m professional room doors · 2.4 m main entrance · 0.30 m walls</span>
       </div>
       <div className="office-3d-badge">FLOOR PLAN</div>
       <div className="office-geometry-status" data-valid="false">CHECKING GEOMETRY…</div>
