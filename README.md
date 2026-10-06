@@ -8,6 +8,8 @@ Production deploys follow the `main` branch.
 
 - Responsive OfficeHub dashboard
 - Interactive architectural 3D office shell
+- 14 × 22 m core office with four staff offices, Manager's Office, Director's Office, Meeting Room and Break Room
+- 4 m entrance reception block with professional main entrance, reception desk, monitor/keyboard, waiting lounge and clear central visitor passage
 - Rooms, walls, door openings and circulation spaces
 - Standalone task system with no employee assignment coupling
 - SQLite-compatible Turso/libSQL data layer
@@ -26,6 +28,12 @@ TURSO_AUTH_TOKEN=...
 ```
 
 When configured, the API creates the standalone task schema and performs a one-time cleanup migration for the removed legacy staff/event tables.
+
+
+
+### Entrance reception block
+
+The entrance now includes a dedicated 4 m deep reception/lobby zone in front of the original 14 × 22 m office shell. The core eight functional spaces remain unchanged. The reception area is intentionally kept separate from the staff-room geometry, with a centered visitor path aligned to the corridor, a 2.4 m exterior main entrance, an off-corridor reception desk, and waiting seating placed away from room entrances.
 
 ## Vercel
 
