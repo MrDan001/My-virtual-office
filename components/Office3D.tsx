@@ -4,174 +4,239 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-function box(width: number, height: number, depth: number, material: THREE.Material) {
-  return new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
-}
+const W = 12;
+const D = 15;
+const WALL = 0.2;
+const H = 2.7;
+const CORRIDOR = 2;
+const LEFT = -W / 2;
+const RIGHT = W / 2;
+const BACK = -D / 2;
+const FRONT = D / 2;
 
-function addWall(
-  scene: THREE.Scene,
+function meshBox(
   width: number,
   height: number,
   depth: number,
-  x: number,
-  z: number,
   material: THREE.Material,
 ) {
-  const wall = box(width, height, depth, material);
-  wall.position.set(x, height / 2, z);
+  return new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
+}
+
+function wallX(
+  scene: THREE.Scene,
+  x: number,
+  z: number,
+  width: number,
+  material: THREE.Material,
+) {
+  const wall = meshBox(width, H, WALL, material);
+  wall.position.set(x, H / 2, z);
   wall.castShadow = true;
   wall.receiveShadow = true;
   scene.add(wall);
 }
 
-function buildOpenShell(scene: THREE.Scene) {
-  const minX = -14.34;
-  const maxX = 14.34;
-  const minZ = -9.84;
-  const maxZ = 12.84;
-  const centerZ = (minZ + maxZ) / 2;
-  const wallHeight = 2.5;
-  const wallThickness = 0.38;
-  const frontEntranceWidth = 4.2;
+function wallZ(
+  scene: THREE.Scene,
+  x: number,
+  z: number,
+  depth: number,
+  material: THREE.Material,
+) {
+  const wall = meshBox(WALL, H, depth, material);
+  wall.position.set(x, H / 2, z);
+  wall.castShadow = true;
+  wall.receiveShadow = true;
+  scene.add(wall);
+}
 
+function wallXWithDoor(
+  scene: THREE.Scene,
+  x: number,
+  z: number,
+  width: number,
+  doorCenter: number,
+  doorWidth: number,
+  material: THREE.Material,
+) {
+  const start = x - width / 2;
+  const end = x + width / 2;
+  const doorStart = doorCenter - doorWidth / 2;
+  const doorEnd = doorCenter + doorWidth / 2;
+
+  if (doorStart > start) {
+    wallX(scene, (start + doorStart) / 2, z, doorStart - start, material);
+  }
+  if (doorEnd < end) {
+    wallX(scene, (doorEnd + end) / 2, z, end - doorEnd, material);
+  }
+}
+
+function wallZWithDoor(
+  scene: THREE.Scene,
+  x: number,
+  z: number,
+  depth: number,
+  doorCenter: number,
+  doorWidth: number,
+  material: THREE.Material,
+) {
+  const start = z - depth / 2;
+  const end = z + depth / 2;
+  const doorStart = doorCenter - doorWidth / 2;
+  const doorEnd = doorCenter + doorWidth / 2;
+
+  if (doorStart > start) {
+    wallZ(scene, x, (start + doorStart) / 2, doorStart - start, material);
+  }
+  if (doorEnd < end) {
+    wallZ(scene, x, (doorEnd + end) / 2, end - doorEnd, material);
+  }
+}
+
+function addDoorLeaf(
+  scene: THREE.Scene,
+  x: number,
+  z: number,
+  rotation: number,
+  material: THREE.Material,
+) {
+  const leaf = meshBox(0.04, 0.035, 0.92, material);
+  leaf.position.set(x, 0.025, z);
+  leaf.rotation.y = rotation;
+  leaf.receiveShadow = true;
+  scene.add(leaf);
+}
+
+function label(
+  scene: THREE.Scene,
+  text: string,
+  x: number,
+  z: number,
+  color = 0x24334a,
+) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#ffffff";
+  ctx.globalAlpha = 0.9;
+  ctx.roundRect(12, 20, 488, 88, 18);
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = `#${color.toString(16).padStart(6, "0")}`;
+  ctx.font = "700 30px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, 256, 64);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: false,
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.position.set(x, 0.06, z);
+  sprite.scale.set(2.3, 0.58, 1);
+  scene.add(sprite);
+}
+
+function buildFloorPlan(scene: THREE.Scene) {
   const wallMaterial = new THREE.MeshStandardMaterial({
-    color: 0xd1c2af,
-    roughness: 0.86,
+    color: 0x3f4650,
+    roughness: 0.78,
   });
 
-  // Back wall.
-  addWall(
-    scene,
-    maxX - minX + wallThickness * 2 + 0.22,
-    wallHeight,
-    wallThickness,
-    0,
-    minZ,
-    wallMaterial,
-  );
+  const floorMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf0eee9,
+    roughness: 0.92,
+  });
 
-  // Left and right exterior walls.
-  addWall(
-    scene,
-    wallThickness,
-    wallHeight,
-    maxZ - minZ + wallThickness * 2 + 0.22,
-    minX,
-    centerZ,
-    wallMaterial,
-  );
-  addWall(
-    scene,
-    wallThickness,
-    wallHeight,
-    maxZ - minZ + wallThickness * 2 + 0.22,
-    maxX,
-    centerZ,
-    wallMaterial,
-  );
-
-  // Front wall with a deliberately wide central opening.
-  const frontHalf = (maxX - minX) / 2;
-  const openingHalf = frontEntranceWidth / 2;
-  addWall(
-    scene,
-    Math.max(0.1, frontHalf - openingHalf),
-    wallHeight,
-    wallThickness,
-    minX + (frontHalf - openingHalf) / 2,
-    maxZ,
-    wallMaterial,
-  );
-  addWall(
-    scene,
-    Math.max(0.1, frontHalf - openingHalf),
-    wallHeight,
-    wallThickness,
-    maxX - (frontHalf - openingHalf) / 2,
-    maxZ,
-    wallMaterial,
-  );
-
-  const skirtMaterial = new THREE.MeshStandardMaterial({
-    color: 0xb59b7d,
+  const corridorMaterial = new THREE.MeshStandardMaterial({
+    color: 0xe5e9ee,
     roughness: 0.9,
   });
-  const skirtHeight = 0.46;
-  const skirtThickness = 0.52;
 
-  addWall(
-    scene,
-    maxX - minX + skirtThickness * 2,
-    skirtHeight,
-    skirtThickness,
-    0,
-    minZ,
-    skirtMaterial,
-  );
-  addWall(
-    scene,
-    skirtThickness,
-    skirtHeight,
-    maxZ - minZ + skirtThickness * 2,
-    minX,
-    centerZ,
-    skirtMaterial,
-  );
-  addWall(
-    scene,
-    skirtThickness,
-    skirtHeight,
-    maxZ - minZ + skirtThickness * 2,
-    maxX,
-    centerZ,
-    skirtMaterial,
-  );
+  const doorMaterial = new THREE.MeshStandardMaterial({
+    color: 0xb6c1cc,
+    roughness: 0.75,
+  });
 
-  // Keep the front threshold open as well.
-  addWall(
-    scene,
-    Math.max(0.1, frontHalf - openingHalf),
-    skirtHeight,
-    skirtThickness,
-    minX + (frontHalf - openingHalf) / 2,
-    maxZ,
-    skirtMaterial,
-  );
-  addWall(
-    scene,
-    Math.max(0.1, frontHalf - openingHalf),
-    skirtHeight,
-    skirtThickness,
-    maxX - (frontHalf - openingHalf) / 2,
-    maxZ,
-    skirtMaterial,
-  );
-
-  const floor = box(
-    maxX - minX,
-    0.1,
-    maxZ - minZ,
-    new THREE.MeshStandardMaterial({
-      color: 0xe7e1d6,
-      roughness: 0.9,
-    }),
-  );
-  floor.position.set(0, 0.05, centerZ);
+  const floor = meshBox(W, 0.12, D, floorMaterial);
+  floor.position.set(0, 0.06, 0);
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const entrancePad = box(
-    frontEntranceWidth,
-    0.08,
-    1.7,
-    new THREE.MeshStandardMaterial({
-      color: 0xcab99e,
-      roughness: 0.84,
-    }),
-  );
-  entrancePad.position.set(0, 0.08, maxZ + 0.72);
-  entrancePad.receiveShadow = true;
-  scene.add(entrancePad);
+  // Main one-metre planning grid.
+  const grid = new THREE.GridHelper(W, W, 0xb9c2cb, 0xd5dbe1);
+  grid.position.y = 0.125;
+  grid.scale.z = D / W;
+  scene.add(grid);
+
+  // Outer walls: 12m x 15m, with a centered 2m entrance.
+  wallX(scene, 0, BACK, W, wallMaterial);
+  wallZ(scene, LEFT, 0, D, wallMaterial);
+  wallZ(scene, RIGHT, 0, D, wallMaterial);
+  wallXWithDoor(scene, 0, FRONT, W, 0, 2.0, wallMaterial);
+
+  // Central 2m corridor. Side-room partitions leave real 1m doors.
+  const corridorLeft = -CORRIDOR / 2;
+  const corridorRight = CORRIDOR / 2;
+
+  // Left/right corridor walls with doors into every room.
+  const doorCenters = [-4.85, -1.35, 2.35];
+  for (const z of doorCenters) {
+    wallZWithDoor(scene, corridorLeft, z, 3.5, z, 1.0, wallMaterial);
+    wallZWithDoor(scene, corridorRight, z, 3.5, z, 1.0, wallMaterial);
+  }
+
+  // Bottom rooms are 4m deep; their corridor doors open into the lower section.
+  wallZWithDoor(scene, corridorLeft, 5.35, 4.0, 5.35, 1.0, wallMaterial);
+  wallZWithDoor(scene, corridorRight, 5.35, 4.0, 5.35, 1.0, wallMaterial);
+
+  // Horizontal room separators. Each side uses a continuous 4.9m room bay.
+  const sideWidth = (W - CORRIDOR - WALL * 2) / 2;
+  const sideCenter = CORRIDOR / 2 + sideWidth / 2;
+
+  wallX(scene, -sideCenter, -3.1, sideWidth, wallMaterial);
+  wallX(scene, sideCenter, -3.1, sideWidth, wallMaterial);
+
+  wallX(scene, -sideCenter, 0.4, sideWidth, wallMaterial);
+  wallX(scene, sideCenter, 0.4, sideWidth, wallMaterial);
+
+  // Meeting and break room fronts. These are left/right of the corridor.
+  wallX(scene, -sideCenter, 4.25, sideWidth, wallMaterial);
+  wallX(scene, sideCenter, 4.25, sideWidth, wallMaterial);
+
+  // Door leaf hints at the corridor openings.
+  for (const z of doorCenters) {
+    addDoorLeaf(scene, corridorLeft + 0.45, z, Math.PI / 2, doorMaterial);
+    addDoorLeaf(scene, corridorRight - 0.45, z, -Math.PI / 2, doorMaterial);
+  }
+  addDoorLeaf(scene, -0.45, 5.35, Math.PI / 2, doorMaterial);
+  addDoorLeaf(scene, 0.45, 5.35, -Math.PI / 2, doorMaterial);
+
+  // Main entrance threshold.
+  const threshold = meshBox(2.0, 0.05, 0.7, doorMaterial);
+  threshold.position.set(0, 0.09, FRONT + 0.35);
+  threshold.receiveShadow = true;
+  scene.add(threshold);
+
+  label(scene, "OFFICE 1 · 4.8 × 3.5 m", -3.55, -5.25);
+  label(scene, "OFFICE 2 · 4.8 × 3.5 m", 3.55, -5.25);
+  label(scene, "OFFICE 3 · 4.8 × 3.5 m", -3.55, -1.75);
+  label(scene, "OFFICE 4 · 4.8 × 3.5 m", 3.55, -1.75);
+  label(scene, "MEETING ROOM · 4.8 × 4.0 m", -3.55, 5.8);
+  label(scene, "BREAK ROOM · 4.8 × 4.0 m", 3.55, 5.8);
+  label(scene, "MAIN CORRIDOR · 2.0 m", 0, 0, 0x4a5d73);
+  label(scene, "MAIN ENTRANCE", 0, FRONT + 0.9, 0x4a5d73);
 }
 
 export default function Office3D() {
@@ -183,10 +248,10 @@ export default function Office3D() {
     const mount = mountRef.current;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xdce8e5);
-    scene.fog = new THREE.Fog(0xdce8e5, 36, 64);
+    scene.fog = new THREE.Fog(0xdce8e5, 35, 60);
 
     const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 100);
-    camera.position.set(20, 19, 24);
+    camera.position.set(18, 20, 20);
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -198,44 +263,44 @@ export default function Office3D() {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.08;
+    renderer.toneMappingExposure = 1.05;
     mount.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.07;
-    controls.minDistance = 11;
-    controls.maxDistance = 36;
+    controls.minDistance = 10;
+    controls.maxDistance = 32;
     controls.maxPolarAngle = Math.PI * 0.47;
-    controls.minPolarAngle = 0.28;
-    controls.target.set(0, 0.2, 1.2);
+    controls.minPolarAngle = 0.25;
+    controls.target.set(0, 0, 0);
 
-    scene.add(new THREE.HemisphereLight(0xf7fbff, 0x687269, 2.15));
+    scene.add(new THREE.HemisphereLight(0xf8fbff, 0x67717c, 2.2));
 
     const sun = new THREE.DirectionalLight(0xfff3d2, 3.0);
     sun.position.set(-8, 18, 12);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.camera.left = -24;
-    sun.shadow.camera.right = 24;
-    sun.shadow.camera.top = 24;
-    sun.shadow.camera.bottom = -24;
+    sun.shadow.camera.left = -18;
+    sun.shadow.camera.right = 18;
+    sun.shadow.camera.top = 20;
+    sun.shadow.camera.bottom = -20;
     scene.add(sun);
 
-    const foundation = box(
-      32,
-      0.7,
-      30,
+    const foundation = meshBox(
+      W + 1.2,
+      0.55,
+      D + 1.2,
       new THREE.MeshStandardMaterial({
-        color: 0xbca489,
+        color: 0xc6b298,
         roughness: 0.92,
       }),
     );
-    foundation.position.y = -0.375;
+    foundation.position.y = -0.3;
     foundation.receiveShadow = true;
     scene.add(foundation);
 
-    buildOpenShell(scene);
+    buildFloorPlan(scene);
 
     let raf = 0;
     const loop = () => {
@@ -247,7 +312,7 @@ export default function Office3D() {
 
     const resize = () => {
       const width = mount.clientWidth;
-      const height = Math.max(420, mount.clientHeight);
+      const height = Math.max(520, mount.clientHeight);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height);
@@ -262,11 +327,14 @@ export default function Office3D() {
       controls.dispose();
 
       scene.traverse((object) => {
-        if (object instanceof THREE.Mesh) {
+        if (object instanceof THREE.Mesh || object instanceof THREE.Sprite) {
           object.geometry.dispose();
           const material = object.material;
           if (Array.isArray(material)) material.forEach((item) => item.dispose());
-          else material.dispose();
+          else {
+            material.map?.dispose();
+            material.dispose();
+          }
         }
       });
 
@@ -282,13 +350,13 @@ export default function Office3D() {
     <div
       ref={mountRef}
       className="office-3d-viewer"
-      aria-label="Interactive open-plan 3D office shell"
+      aria-label="Interactive 12 by 15 metre office floor plan"
     >
       <div className="office-3d-help">
-        <strong>Open office shell</strong>
-        <span>Drag to rotate · Pinch/scroll to zoom</span>
+        <strong>Buildable floor plan</strong>
+        <span>12 × 15 m · 2 m corridor · 1 m doors · empty rooms</span>
       </div>
-      <div className="office-3d-badge">OPEN SPACE</div>
+      <div className="office-3d-badge">FLOOR PLAN</div>
     </div>
   );
 }
