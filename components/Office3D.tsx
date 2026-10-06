@@ -4,19 +4,19 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-const BUILDING_W = 12;
-const BUILDING_D = 20;
+const BUILDING_W = 14;
+const BUILDING_D = 22;
 const WALL = 0.2;
 const HALF_WALL = WALL / 2;
 const WALL_HEIGHT = 2.7;
 const CORRIDOR_W = 2;
-const DOOR_W = 1;
+const DOOR_W = 1.5;
 const MAIN_DOOR_W = 2;
 
-const LEFT = -6;
-const RIGHT = 6;
+const LEFT = -7;
+const RIGHT = 7;
 const FRONT = -7.5;
-const BACK = 12.5;
+const BACK = 14.5;
 const CORRIDOR_LEFT = -1;
 const CORRIDOR_RIGHT = 1;
 
@@ -44,8 +44,8 @@ const segment = (
 /*
  * AUTHORITATIVE FLOOR-PLAN GEOMETRY
  *
- * Building: X -6..+6, Z -7.5..+12.5
- * Corridor: X -1..+1, Z -7.5..+12.5
+ * Building: X -7..+7, Z -7.5..+14.5
+ * Corridor: X -1..+1, Z -7.5..+14.5
  * Wall thickness: 0.20m
  *
  * Vertical wall segments own the physical corners. Horizontal segments are
@@ -66,55 +66,56 @@ const WALL_SEGMENTS: WallSegment[] = [
   segment("W04_FRONT_L", { x: LEFT, z: FRONT }, { x: -1, z: FRONT }, "horizontal", WALL),
   segment("W05_FRONT_R", { x: 1, z: FRONT }, { x: RIGHT, z: FRONT }, "horizontal", 0, WALL),
 
-  // Left corridor boundary: doors at -5.5, -1.5, +4.0, +10.0.
-  segment("W06_OFFICE1_L", { x: -1, z: FRONT }, { x: -1, z: -6 }, "vertical", WALL),
-  segment("W07_OFFICE1_L", { x: -1, z: -5 }, { x: -1, z: -3.5 }, "vertical", 0, HALF_WALL),
-  segment("W08_OFFICE3_L", { x: -1, z: -3.5 }, { x: -1, z: -2 }, "vertical", HALF_WALL),
-  segment("W09_OFFICE3_L", { x: -1, z: -1 }, { x: -1, z: 0.5 }, "vertical", 0, HALF_WALL),
-  segment("W10_MEETING_L", { x: -1, z: 0.5 }, { x: -1, z: 3.5 }, "vertical", HALF_WALL),
-  segment("W11A_MEETING_L", { x: -1, z: 4.5 }, { x: -1, z: 7.5 }, "vertical", HALF_WALL, HALF_WALL),
-  segment("W11B_MEETING_L", { x: -1, z: 7.5 }, { x: -1, z: 9.5 }, "vertical", HALF_WALL, 0),
-  segment("W24_MANAGER_L", { x: -1, z: 10.5 }, { x: -1, z: BACK }, "vertical", 0, WALL),
+  // Left corridor boundary: every room has a 1.5 m professional double-door opening.
+  // Door centers are z=-5, 0, 6 and 12.
+  segment("W06_OFFICE1_L", { x: -1, z: FRONT }, { x: -1, z: -5.75 }, "vertical", WALL),
+  segment("W07_OFFICE1_L", { x: -1, z: -4.25 }, { x: -1, z: -2.5 }, "vertical", 0, HALF_WALL),
+  segment("W08_OFFICE3_L", { x: -1, z: -2.5 }, { x: -1, z: -0.75 }, "vertical", HALF_WALL),
+  segment("W09_OFFICE3_L", { x: -1, z: 0.75 }, { x: -1, z: 2.5 }, "vertical", 0, HALF_WALL),
+  segment("W10_MEETING_L", { x: -1, z: 2.5 }, { x: -1, z: 5.25 }, "vertical", HALF_WALL),
+  segment("W11_MEETING_L", { x: -1, z: 6.75 }, { x: -1, z: 9.5 }, "vertical", 0, HALF_WALL),
+  segment("W24_MANAGER_L", { x: -1, z: 9.5 }, { x: -1, z: 11.25 }, "vertical", HALF_WALL),
+  segment("W26_MANAGER_L", { x: -1, z: 12.75 }, { x: -1, z: BACK }, "vertical", 0, WALL),
 
-  // Right corridor boundary: doors at -5.5, -1.5, +4.0, +10.0.
-  segment("W12_OFFICE2_R", { x: 1, z: FRONT }, { x: 1, z: -6 }, "vertical", WALL),
-  segment("W13_OFFICE2_R", { x: 1, z: -5 }, { x: 1, z: -3.5 }, "vertical", 0, HALF_WALL),
-  segment("W14_OFFICE4_R", { x: 1, z: -3.5 }, { x: 1, z: -2 }, "vertical", HALF_WALL),
-  segment("W15_OFFICE4_R", { x: 1, z: -1 }, { x: 1, z: 0.5 }, "vertical", 0, HALF_WALL),
-  segment("W16_BREAK_R", { x: 1, z: 0.5 }, { x: 1, z: 3.5 }, "vertical", HALF_WALL),
-  segment("W17A_BREAK_R", { x: 1, z: 4.5 }, { x: 1, z: 7.5 }, "vertical", HALF_WALL, HALF_WALL),
-  segment("W17B_BREAK_R", { x: 1, z: 7.5 }, { x: 1, z: 9.5 }, "vertical", HALF_WALL, 0),
-  segment("W25_DIRECTOR_R", { x: 1, z: 10.5 }, { x: 1, z: BACK }, "vertical", 0, WALL),
+  // Right corridor boundary: matching 1.5 m door openings.
+  segment("W12_OFFICE2_R", { x: 1, z: FRONT }, { x: 1, z: -5.75 }, "vertical", WALL),
+  segment("W13_OFFICE2_R", { x: 1, z: -4.25 }, { x: 1, z: -2.5 }, "vertical", 0, HALF_WALL),
+  segment("W14_OFFICE4_R", { x: 1, z: -2.5 }, { x: 1, z: -0.75 }, "vertical", HALF_WALL),
+  segment("W15_OFFICE4_R", { x: 1, z: 0.75 }, { x: 1, z: 2.5 }, "vertical", 0, HALF_WALL),
+  segment("W16_BREAK_R", { x: 1, z: 2.5 }, { x: 1, z: 5.25 }, "vertical", HALF_WALL),
+  segment("W17_BREAK_R", { x: 1, z: 6.75 }, { x: 1, z: 9.5 }, "vertical", 0, HALF_WALL),
+  segment("W25_DIRECTOR_R", { x: 1, z: 9.5 }, { x: 1, z: 11.25 }, "vertical", HALF_WALL),
+  segment("W27_DIRECTOR_R", { x: 1, z: 12.75 }, { x: 1, z: BACK }, "vertical", 0, WALL),
 
   // Horizontal room dividers own their intersections.
-  segment("W18_OFFICE1_3", { x: LEFT, z: -3.5 }, { x: -1, z: -3.5 }, "horizontal", WALL, WALL),
-  segment("W19_OFFICE2_4", { x: 1, z: -3.5 }, { x: RIGHT, z: -3.5 }, "horizontal", WALL, WALL),
-  segment("W20_OFFICE3_MEETING", { x: LEFT, z: 0.5 }, { x: -1, z: 0.5 }, "horizontal", WALL, WALL),
-  segment("W21_OFFICE4_BREAK", { x: 1, z: 0.5 }, { x: RIGHT, z: 0.5 }, "horizontal", WALL, WALL),
-  segment("W22_MEETING_MANAGER", { x: LEFT, z: 7.5 }, { x: -1, z: 7.5 }, "horizontal", WALL, WALL),
-  segment("W23_BREAK_DIRECTOR", { x: 1, z: 7.5 }, { x: RIGHT, z: 7.5 }, "horizontal", WALL, WALL),
+  segment("W18_OFFICE1_3", { x: LEFT, z: -2.5 }, { x: -1, z: -2.5 }, "horizontal", WALL, WALL),
+  segment("W19_OFFICE2_4", { x: 1, z: -2.5 }, { x: RIGHT, z: -2.5 }, "horizontal", WALL, WALL),
+  segment("W20_OFFICE3_MEETING", { x: LEFT, z: 2.5 }, { x: -1, z: 2.5 }, "horizontal", WALL, WALL),
+  segment("W21_OFFICE4_BREAK", { x: 1, z: 2.5 }, { x: RIGHT, z: 2.5 }, "horizontal", WALL, WALL),
+  segment("W22_MEETING_MANAGER", { x: LEFT, z: 9.5 }, { x: -1, z: 9.5 }, "horizontal", WALL, WALL),
+  segment("W23_BREAK_DIRECTOR", { x: 1, z: 9.5 }, { x: RIGHT, z: 9.5 }, "horizontal", WALL, WALL),
 ];
 
 const ROOM_RECTS = [
-  { id: "office-1", name: "OFFICE 1", minX: -6, maxX: -1, minZ: -7.5, maxZ: -3.5 },
-  { id: "office-2", name: "OFFICE 2", minX: 1, maxX: 6, minZ: -7.5, maxZ: -3.5 },
-  { id: "office-3", name: "OFFICE 3", minX: -6, maxX: -1, minZ: -3.5, maxZ: 0.5 },
-  { id: "office-4", name: "OFFICE 4", minX: 1, maxX: 6, minZ: -3.5, maxZ: 0.5 },
-  { id: "meeting", name: "MEETING ROOM", minX: -6, maxX: -1, minZ: 0.5, maxZ: 7.5 },
-  { id: "break", name: "BREAK ROOM", minX: 1, maxX: 6, minZ: 0.5, maxZ: 7.5 },
-  { id: "manager", name: "MANAGER'S OFFICE", minX: -6, maxX: -1, minZ: 7.5, maxZ: 12.5 },
-  { id: "director", name: "DIRECTOR'S OFFICE", minX: 1, maxX: 6, minZ: 7.5, maxZ: 12.5 },
+  { id: "office-1", name: "OFFICE 1", minX: -7, maxX: -1, minZ: -7.5, maxZ: -2.5 },
+  { id: "office-2", name: "OFFICE 2", minX: 1, maxX: 7, minZ: -7.5, maxZ: -2.5 },
+  { id: "office-3", name: "OFFICE 3", minX: -7, maxX: -1, minZ: -2.5, maxZ: 2.5 },
+  { id: "office-4", name: "OFFICE 4", minX: 1, maxX: 7, minZ: -2.5, maxZ: 2.5 },
+  { id: "meeting", name: "MEETING ROOM", minX: -7, maxX: -1, minZ: 2.5, maxZ: 9.5 },
+  { id: "break", name: "BREAK ROOM", minX: 1, maxX: 7, minZ: 2.5, maxZ: 9.5 },
+  { id: "manager", name: "MANAGER'S OFFICE", minX: -7, maxX: -1, minZ: 9.5, maxZ: 14.5 },
+  { id: "director", name: "DIRECTOR'S OFFICE", minX: 1, maxX: 7, minZ: 9.5, maxZ: 14.5 },
 ] as const;
 
 const DOOR_OPENINGS = [
-  { id: "office-1-door", x: -1, z: -5.5, width: DOOR_W, side: "left" },
-  { id: "office-3-door", x: -1, z: -1.5, width: DOOR_W, side: "left" },
-  { id: "meeting-door", x: -1, z: 4, width: DOOR_W, side: "left" },
-  { id: "manager-door", x: -1, z: 10, width: DOOR_W, side: "left" },
-  { id: "office-2-door", x: 1, z: -5.5, width: DOOR_W, side: "right" },
-  { id: "office-4-door", x: 1, z: -1.5, width: DOOR_W, side: "right" },
-  { id: "break-door", x: 1, z: 4, width: DOOR_W, side: "right" },
-  { id: "director-door", x: 1, z: 10, width: DOOR_W, side: "right" },
+  { id: "office-1-door", x: -1, z: -5, width: DOOR_W, side: "left" },
+  { id: "office-3-door", x: -1, z: 0, width: DOOR_W, side: "left" },
+  { id: "meeting-door", x: -1, z: 6, width: DOOR_W, side: "left" },
+  { id: "manager-door", x: -1, z: 12, width: DOOR_W, side: "left" },
+  { id: "office-2-door", x: 1, z: -5, width: DOOR_W, side: "right" },
+  { id: "office-4-door", x: 1, z: 0, width: DOOR_W, side: "right" },
+  { id: "break-door", x: 1, z: 6, width: DOOR_W, side: "right" },
+  { id: "director-door", x: 1, z: 12, width: DOOR_W, side: "right" },
 ] as const;
 
 type WallRect = {
@@ -266,7 +267,7 @@ function validateBaseFloorPlan(): GeometryValidation {
       rect.minZ < FRONT - GEOMETRY_EPS ||
       rect.maxZ > BACK + GEOMETRY_EPS
     ) {
-      errors.push(`${rect.id}: wall volume extends outside the 12 × 15 m building footprint`);
+      errors.push(`${rect.id}: wall volume extends outside the 14 × 22 m building footprint`);
     }
   }
 
@@ -334,7 +335,7 @@ function validateBaseFloorPlan(): GeometryValidation {
 
       if (overlap > GEOMETRY_EPS) {
         errors.push(
-          `${door.id}: ${item.id} intrudes ${overlap.toFixed(6)} m into the 1 m doorway`,
+          `${door.id}: ${item.id} intrudes ${overlap.toFixed(6)} m into the 1.5 m doorway`,
         );
       }
     }
@@ -911,7 +912,8 @@ function buildFloorPlan(scene: THREE.Scene) {
   const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x3f4650, roughness: 0.78 });
   const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xf0eee9, roughness: 0.92 });
   const corridorMaterial = new THREE.MeshStandardMaterial({ color: 0xe5e9ee, roughness: 0.9 });
-  const doorMaterial = new THREE.MeshStandardMaterial({ color: 0xb6c1cc, roughness: 0.75 });
+  const doorMaterial = new THREE.MeshStandardMaterial({ color: 0x93a6b7, roughness: 0.7, metalness: 0.15 });
+  const handleMaterial = new THREE.MeshStandardMaterial({ color: 0x38424c, roughness: 0.35, metalness: 0.75 });
 
   const buildingCenterZ = (FRONT + BACK) / 2;
   const floor = meshBox(BUILDING_W, 0.12, BUILDING_D, floorMaterial);
@@ -933,16 +935,33 @@ function buildFloorPlan(scene: THREE.Scene) {
   addWallJointCaps(scene, wallMaterial);
 
   for (const door of DOOR_OPENINGS) {
-    const leaf = meshBox(0.04, 0.035, 0.92, doorMaterial);
-    leaf.position.set(
-      door.side === "left" ? CORRIDOR_LEFT - 0.46 : CORRIDOR_RIGHT + 0.46,
-      0.145,
-      door.z,
-    );
-    leaf.rotation.y = door.side === "left" ? Math.PI / 2 : -Math.PI / 2;
-    leaf.receiveShadow = true;
-    leaf.userData.doorId = door.id;
-    scene.add(leaf);
+    const leafWidth = door.width / 2 - 0.04;
+    const corridorX = door.side === "left"
+      ? CORRIDOR_LEFT + 0.035
+      : CORRIDOR_RIGHT - 0.035;
+
+    for (const direction of [-1, 1]) {
+      const leaf = meshBox(0.06, 2.25, leafWidth, doorMaterial);
+      leaf.position.set(corridorX, 1.125, door.z + direction * (door.width / 4));
+      leaf.castShadow = true;
+      leaf.receiveShadow = true;
+      leaf.userData.doorId = door.id;
+
+      const handle = meshBox(0.025, 0.32, 0.035, handleMaterial);
+      handle.position.set(
+        corridorX + (door.side === "left" ? 0.035 : -0.035),
+        1.13,
+        door.z + direction * 0.06,
+      );
+
+      scene.add(leaf);
+      scene.add(handle);
+    }
+
+    const header = meshBox(0.08, 0.08, door.width + 0.04, handleMaterial);
+    header.position.set(corridorX, 2.28, door.z);
+    header.userData.doorId = door.id;
+    scene.add(header);
   }
 
   const threshold = meshBox(MAIN_DOOR_W, 0.04, 0.55, doorMaterial);
@@ -951,14 +970,14 @@ function buildFloorPlan(scene: THREE.Scene) {
   threshold.userData.doorId = "main-entrance";
   scene.add(threshold);
 
-  addLabel(scene, "OFFICE 1 · 5 × 4 m", -3.5, -5.5);
-  addLabel(scene, "OFFICE 2 · 5 × 4 m", 3.5, -5.5);
-  addLabel(scene, "OFFICE 3 · 5 × 4 m", -3.5, -1.5);
-  addLabel(scene, "OFFICE 4 · 5 × 4 m", 3.5, -1.5);
-  addLabel(scene, "MEETING ROOM · 5 × 7 m", -3.5, 4);
-  addLabel(scene, "BREAK ROOM · 5 × 7 m", 3.5, 4);
-  addLabel(scene, "MANAGER'S OFFICE · 5 × 5 m", -3.5, 10);
-  addLabel(scene, "DIRECTOR'S OFFICE · 5 × 5 m", 3.5, 10);
+  addLabel(scene, "OFFICE 1 · 6 × 5 m", -4, -5);
+  addLabel(scene, "OFFICE 2 · 6 × 5 m", 4, -5);
+  addLabel(scene, "OFFICE 3 · 6 × 5 m", -4, 0);
+  addLabel(scene, "OFFICE 4 · 6 × 5 m", 4, 0);
+  addLabel(scene, "MEETING ROOM · 6 × 7 m", -4, 6);
+  addLabel(scene, "BREAK ROOM · 6 × 7 m", 4, 6);
+  addLabel(scene, "MANAGER'S OFFICE · 6 × 5 m", -4, 12);
+  addLabel(scene, "DIRECTOR'S OFFICE · 6 × 5 m", 4, 12);
   addLabel(scene, "2 m CORRIDOR", 0, 2.5, 0x4a5d73);
   addLabel(scene, "MAIN ENTRANCE", 0, FRONT + 0.75, 0x4a5d73);
 
@@ -978,8 +997,8 @@ export default function Office3D() {
     scene.background = new THREE.Color(0xdce8e5);
     scene.fog = new THREE.Fog(0xdce8e5, 35, 60);
 
-    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 120);
-    camera.position.set(20, 23, -22);
+    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 140);
+    camera.position.set(23, 26, -25);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -995,7 +1014,7 @@ export default function Office3D() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.07;
     controls.minDistance = 10;
-    controls.maxDistance = 32;
+    controls.maxDistance = 38;
     controls.maxPolarAngle = Math.PI * 0.47;
     controls.minPolarAngle = 0.25;
     controls.target.set(0, 0, (FRONT + BACK) / 2);
@@ -1082,7 +1101,7 @@ export default function Office3D() {
     <div ref={mountRef} className="office-3d-viewer" aria-label="Interactive eight-space office floor plan">
       <div className="office-3d-help">
         <strong>Buildable eight-space floor plan</strong>
-        <span>12 × 20 m · 2 m corridor · 1 m room doors · 2 m main entrance · 0.20 m walls</span>
+        <span>14 × 22 m · 2 m corridor · 1.5 m professional room doors · 2 m main entrance · 0.20 m walls</span>
       </div>
       <div className="office-3d-badge">FLOOR PLAN</div>
       <div className="office-geometry-status" data-valid="false">CHECKING GEOMETRY…</div>
