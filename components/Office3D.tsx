@@ -14,7 +14,7 @@ const WALL_HEIGHT = 2.7;
 const CORRIDOR_W = 2;
 const DOOR_W = 1.5;
 const MAIN_DOOR_W = 2.4;
-const RECEPTION_PASSAGE_W = 2.4;
+const RECEPTION_PASSAGE_W = CORRIDOR_W;
 
 const LEFT = -7;
 const RIGHT = 7;
