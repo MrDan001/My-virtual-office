@@ -8,7 +8,6 @@ Production deploys follow the `main` branch.
 
 - Responsive OfficeHub dashboard
 - Interactive architectural 3D office shell
-- Front-of-house reception lobby with reception desk and waiting area
 - Rooms, walls, door openings and circulation spaces
 - Standalone task system with no employee assignment coupling
 - SQLite-compatible Turso/libSQL data layer
