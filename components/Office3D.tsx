@@ -23,6 +23,7 @@ const BACK = 14.5;
 const ROOM_FRONT = FRONT + RECEPTION_D;
 const CORRIDOR_LEFT = -1;
 const CORRIDOR_RIGHT = 1;
+const CHAIR_CENTER_SPACING = 0.90;
 
 type Point = { x: number; z: number };
 type Orientation = "horizontal" | "vertical";
@@ -1220,7 +1221,6 @@ function addStaffWorkstation(
   // Keep the visitor chair at one consistent center-to-center spacing
   // from the operator chair in every staff office.
   const visitorChairX = x + direction * 1.04;
-  const CHAIR_CENTER_SPACING = 0.90;
   const visitorChairZ =
     z + (side === "left" ? CHAIR_CENTER_SPACING : -CHAIR_CENTER_SPACING);
 
