@@ -1132,12 +1132,12 @@ function addStaffWorkstation(
   },
 ) {
   const { x, z, side } = placement;
-  const operatorDirection: 1 | -1 = side === "left" ? 1 : -1;
-  const operatorFacing: 1 | -1 = side === "left" ? -1 : 1;
+  // The office owner sits against the exterior wall, away from the door.
+  // The visitor sits on the corridor/door side, therefore backing the door.
+  // Keep the monitor and keyboard facing the owner.
+  const operatorDirection: 1 | -1 = side === "left" ? -1 : 1;
+  const operatorFacing: 1 | -1 = side === "left" ? 1 : -1;
   const visitorFacing: 1 | -1 = operatorFacing === 1 ? -1 : 1;
-
-  // Rebuilt workstation layout: operator on corridor-facing side, visitor
-  // directly across the desk on the opposite side.
   const deskTop = meshBox(STAFF_DESK_DEPTH, 0.12, STAFF_DESK_LENGTH, materials.deskSurface);
   deskTop.position.set(x, 0.80, z);
   deskTop.castShadow = true;
