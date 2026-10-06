@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Office3D from "../components/Office3D";
-import type { OfficeRoom } from "../lib/office-sim";
 
 type Page = "dashboard" | "office" | "tasks" | "schedule" | "reports" | "settings";
 
@@ -32,8 +31,8 @@ function StatCard({ label, value, note, icon, tone }: { label: string; value: st
   );
 }
 
-function OfficeScene({ onRoomSelect, selectedRoom }: { onRoomSelect?: (room: OfficeRoom) => void; selectedRoom?: OfficeRoom | null }) {
-  return <Office3D onRoomSelect={onRoomSelect} selectedRoom={selectedRoom} />;
+function OfficeScene() {
+  return <Office3D />;
 }
 
 function Sidebar({ page, setPage, theme, setTheme }: { page: Page; setPage: (p: Page) => void; theme: "light" | "dark"; setTheme: (t: "light" | "dark") => void }) {
@@ -74,8 +73,6 @@ function Topbar({ page }: { page: Page }) {
 }
 
 function Dashboard({ setPage }: { setPage: (p: Page) => void }) {
-  const [selectedRoom, setSelectedRoom] = useState<OfficeRoom | null>(null);
-
   return (
     <div className="content">
       <div className="stats-grid">
@@ -88,10 +85,10 @@ function Dashboard({ setPage }: { setPage: (p: Page) => void }) {
       <div className="dashboard-grid">
         <section className="panel office-panel">
           <div className="panel-head">
-            <div><h2>Office View</h2><p>Clean architectural shell — no legacy staff, desks or furniture.</p></div>
+            <div><h2>Office View</h2><p>Open architectural shell — no internal demarcations, staff, desks or furniture.</p></div>
             <div className="scene-controls"><span className="live-tag"><i />Live</span><button onClick={() => setPage("office")} className="view-link">Open full view <Icon name="arrow" /></button></div>
           </div>
-          <OfficeScene onRoomSelect={setSelectedRoom} selectedRoom={selectedRoom} />
+          <OfficeScene />
         </section>
 
         <aside className="side-stack">
@@ -198,11 +195,9 @@ function TasksPage() {
 }
 
 function OfficePage() {
-  const [selectedRoom, setSelectedRoom] = useState<OfficeRoom | null>(null);
   return <div className="content"><section className="panel office-page">
-    <div className="section-toolbar"><div><h2>Live office shell</h2><p>Rooms, walls and circulation only. Furniture and staff will be rebuilt separately.</p></div></div>
-    <OfficeScene onRoomSelect={setSelectedRoom} selectedRoom={selectedRoom} />
-    {selectedRoom && <div className="room-inspector"><div><strong>{selectedRoom}</strong><span>Blank space — no legacy furniture or staff.</span></div><button className="secondary" onClick={() => setSelectedRoom(null)}>Close</button></div>}
+    <div className="section-toolbar"><div><h2>Live office shell</h2><p>One open space. Internal room demarcations, furniture and staff will be rebuilt separately.</p></div></div>
+    <OfficeScene />
   </section></div>;
 }
 
