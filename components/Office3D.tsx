@@ -19,8 +19,8 @@ const RECEPTION_PASSAGE_W = 2.4;
 const LEFT = -7;
 const RIGHT = 7;
 const FRONT = -11.5;
-const ROOM_FRONT = -7.5;
 const BACK = 14.5;
+const ROOM_FRONT = FRONT + RECEPTION_D;
 const CORRIDOR_LEFT = -1;
 const CORRIDOR_RIGHT = 1;
 
