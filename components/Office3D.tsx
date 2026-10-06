@@ -5,18 +5,22 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 const BUILDING_W = 14;
-const BUILDING_D = 22;
+const BUILDING_D = 26;
+const CORE_BUILDING_D = 22;
+const RECEPTION_D = 4;
 const WALL = 0.2;
 const HALF_WALL = WALL / 2;
 const WALL_HEIGHT = 2.7;
 const CORRIDOR_W = 2;
 const DOOR_W = 1.5;
-const MAIN_DOOR_W = 2;
+const MAIN_DOOR_W = 2.4;
+const RECEPTION_PASSAGE_W = CORRIDOR_W;
 
 const LEFT = -7;
 const RIGHT = 7;
-const FRONT = -7.5;
+const FRONT = -11.5;
 const BACK = 14.5;
+const ROOM_FRONT = FRONT + RECEPTION_D;
 const CORRIDOR_LEFT = -1;
 const CORRIDOR_RIGHT = 1;
 
@@ -44,8 +48,10 @@ const segment = (
 /*
  * AUTHORITATIVE FLOOR-PLAN GEOMETRY
  *
- * Building: X -7..+7, Z -7.5..+14.5
- * Corridor: X -1..+1, Z -7.5..+14.5
+ * Building: X -7..+7, Z -11.5..+14.5
+ * Core office shell: X -7..+7, Z -7.5..+14.5
+ * Reception block: X -7..+7, Z -11.5..-7.5
+ * Corridor: X -1..+1, Z -11.5..+14.5
  * Wall thickness: 0.20m
  *
  * Vertical wall segments own the physical corners. Horizontal segments are
@@ -63,12 +69,19 @@ const WALL_SEGMENTS: WallSegment[] = [
   segment("W02_LEFT", { x: LEFT, z: FRONT }, { x: LEFT, z: BACK }, "vertical", WALL, WALL),
   segment("W03_RIGHT", { x: RIGHT, z: FRONT }, { x: RIGHT, z: BACK }, "vertical", WALL, WALL),
 
-  segment("W04_FRONT_L", { x: LEFT, z: FRONT }, { x: -1, z: FRONT }, "horizontal", WALL),
-  segment("W05_FRONT_R", { x: 1, z: FRONT }, { x: RIGHT, z: FRONT }, "horizontal", 0, WALL),
+  // Exterior front wall of the new reception/lobby block. The 2.4 m main entrance
+  // is centered on the building and remains completely unobstructed.
+  segment("W04_FRONT_L", { x: LEFT, z: FRONT }, { x: -MAIN_DOOR_W / 2, z: FRONT }, "horizontal", WALL),
+  segment("W05_FRONT_R", { x: MAIN_DOOR_W / 2, z: FRONT }, { x: RIGHT, z: FRONT }, "horizontal", 0, WALL),
+
+  // Back edge of reception: the original office-room fronts remain intact,
+  // with a central 2.4 m visitor passage aligned to the corridor.
+  segment("W28_RECEPTION_BACK_L", { x: LEFT, z: ROOM_FRONT }, { x: -RECEPTION_PASSAGE_W / 2, z: ROOM_FRONT }, "horizontal", WALL, WALL),
+  segment("W29_RECEPTION_BACK_R", { x: RECEPTION_PASSAGE_W / 2, z: ROOM_FRONT }, { x: RIGHT, z: ROOM_FRONT }, "horizontal", WALL, WALL),
 
   // Left corridor boundary: every room has a 1.5 m professional double-door opening.
   // Door centers are z=-5, 0, 6 and 12.
-  segment("W06_OFFICE1_L", { x: -1, z: FRONT }, { x: -1, z: -5.75 }, "vertical", WALL),
+  segment("W06_OFFICE1_L", { x: -1, z: ROOM_FRONT }, { x: -1, z: -5.75 }, "vertical", WALL),
   segment("W07_OFFICE1_L", { x: -1, z: -4.25 }, { x: -1, z: -2.5 }, "vertical", 0, HALF_WALL),
   segment("W08_OFFICE3_L", { x: -1, z: -2.5 }, { x: -1, z: -0.75 }, "vertical", HALF_WALL),
   segment("W09_OFFICE3_L", { x: -1, z: 0.75 }, { x: -1, z: 2.5 }, "vertical", 0, HALF_WALL),
@@ -78,7 +91,7 @@ const WALL_SEGMENTS: WallSegment[] = [
   segment("W26_MANAGER_L", { x: -1, z: 12.75 }, { x: -1, z: BACK }, "vertical", 0, WALL),
 
   // Right corridor boundary: matching 1.5 m door openings.
-  segment("W12_OFFICE2_R", { x: 1, z: FRONT }, { x: 1, z: -5.75 }, "vertical", WALL),
+  segment("W12_OFFICE2_R", { x: 1, z: ROOM_FRONT }, { x: 1, z: -5.75 }, "vertical", WALL),
   segment("W13_OFFICE2_R", { x: 1, z: -4.25 }, { x: 1, z: -2.5 }, "vertical", 0, HALF_WALL),
   segment("W14_OFFICE4_R", { x: 1, z: -2.5 }, { x: 1, z: -0.75 }, "vertical", HALF_WALL),
   segment("W15_OFFICE4_R", { x: 1, z: 0.75 }, { x: 1, z: 2.5 }, "vertical", 0, HALF_WALL),
@@ -908,6 +921,133 @@ function addLabel(scene: THREE.Scene, text: string, x: number, z: number, color 
   scene.add(sprite);
 }
 
+function addReceptionFurniture(scene: THREE.Scene) {
+  const deskMaterial = new THREE.MeshStandardMaterial({
+    color: 0x6c4f3d,
+    roughness: 0.62,
+  });
+  const trimMaterial = new THREE.MeshStandardMaterial({
+    color: 0xb38b5d,
+    roughness: 0.48,
+    metalness: 0.1,
+  });
+  const chairMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2f3b46,
+    roughness: 0.7,
+  });
+  const screenMaterial = new THREE.MeshStandardMaterial({
+    color: 0x182531,
+    roughness: 0.35,
+    metalness: 0.2,
+  });
+  const waitingMaterial = new THREE.MeshStandardMaterial({
+    color: 0x566d79,
+    roughness: 0.78,
+  });
+  const softMaterial = new THREE.MeshStandardMaterial({
+    color: 0xa6b8bf,
+    roughness: 0.88,
+  });
+  const planterMaterial = new THREE.MeshStandardMaterial({
+    color: 0x56605b,
+    roughness: 0.88,
+  });
+  const greeneryMaterial = new THREE.MeshStandardMaterial({
+    color: 0x3e6a52,
+    roughness: 0.8,
+  });
+
+  // Reception desk — fully on the left side of the lobby so the central 2.4 m
+  // visitor route and the 2 m office corridor stay unobstructed.
+  const desk = meshBox(3.7, 1.05, 1.0, deskMaterial);
+  desk.position.set(-4.1, 0.525, -9.05);
+  desk.castShadow = true;
+  desk.receiveShadow = true;
+  desk.userData.receptionFurniture = "reception-desk";
+  scene.add(desk);
+
+  const deskTrim = meshBox(3.75, 0.08, 1.06, trimMaterial);
+  deskTrim.position.set(-4.1, 1.03, -9.05);
+  scene.add(deskTrim);
+
+  const monitor = meshBox(0.95, 0.55, 0.06, screenMaterial);
+  monitor.position.set(-4.1, 1.42, -9.05);
+  monitor.castShadow = true;
+  monitor.userData.receptionFurniture = "reception-monitor";
+  scene.add(monitor);
+
+  const monitorStand = meshBox(0.1, 0.32, 0.1, trimMaterial);
+  monitorStand.position.set(-4.1, 1.17, -9.05);
+  scene.add(monitorStand);
+
+  const keyboard = meshBox(0.75, 0.035, 0.28, screenMaterial);
+  keyboard.position.set(-4.1, 1.10, -8.73);
+  keyboard.userData.receptionFurniture = "reception-keyboard";
+  scene.add(keyboard);
+
+  const receptionChairSeat = meshBox(0.78, 0.14, 0.78, chairMaterial);
+  receptionChairSeat.position.set(-4.1, 0.53, -9.82);
+  receptionChairSeat.castShadow = true;
+  receptionChairSeat.userData.receptionFurniture = "reception-chair";
+  scene.add(receptionChairSeat);
+
+  const receptionChairBack = meshBox(0.78, 0.75, 0.14, chairMaterial);
+  receptionChairBack.position.set(-4.1, 0.93, -10.16);
+  receptionChairBack.castShadow = true;
+  scene.add(receptionChairBack);
+
+  // Waiting lounge sits fully to the right of the corridor.
+  const waitingBench = meshBox(3.0, 0.52, 0.9, waitingMaterial);
+  waitingBench.position.set(4.25, 0.43, -9.35);
+  waitingBench.castShadow = true;
+  waitingBench.receiveShadow = true;
+  waitingBench.userData.receptionFurniture = "waiting-bench";
+  scene.add(waitingBench);
+
+  const waitingBack = meshBox(3.0, 0.95, 0.16, softMaterial);
+  waitingBack.position.set(4.25, 0.98, -9.70);
+  waitingBack.castShadow = true;
+  scene.add(waitingBack);
+
+  const waitingTable = meshBox(1.2, 0.1, 0.72, trimMaterial);
+  waitingTable.position.set(4.25, 0.53, -10.35);
+  waitingTable.castShadow = true;
+  scene.add(waitingTable);
+
+  const waitingTableBase = meshBox(0.18, 0.48, 0.18, chairMaterial);
+  waitingTableBase.position.set(4.25, 0.27, -10.35);
+  scene.add(waitingTableBase);
+
+  // Greenery adds finish without occupying the corridor or any office doorway clearance.
+  const planter = meshBox(0.62, 0.42, 0.62, planterMaterial);
+  planter.position.set(6.15, 0.21, -8.25);
+  planter.castShadow = true;
+  scene.add(planter);
+
+  const plantStem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.045, 0.06, 0.72, 10),
+    greeneryMaterial,
+  );
+  plantStem.position.set(6.15, 0.78, -8.25);
+  plantStem.castShadow = true;
+  scene.add(plantStem);
+
+  const plantCrown = new THREE.Mesh(
+    new THREE.SphereGeometry(0.34, 16, 12),
+    greeneryMaterial,
+  );
+  plantCrown.position.set(6.15, 1.20, -8.25);
+  plantCrown.scale.set(1, 0.8, 1);
+  plantCrown.castShadow = true;
+  scene.add(plantCrown);
+
+  // Entrance branding panel.
+  const signPanel = meshBox(2.8, 0.75, 0.08, screenMaterial);
+  signPanel.position.set(4.0, 1.95, -11.20);
+  signPanel.userData.receptionFurniture = "reception-sign";
+  scene.add(signPanel);
+}
+
 function buildFloorPlan(scene: THREE.Scene) {
   const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x3f4650, roughness: 0.78 });
   const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xf0eee9, roughness: 0.92 });
@@ -933,6 +1073,7 @@ function buildFloorPlan(scene: THREE.Scene) {
 
   for (const item of WALL_SEGMENTS) addWallSegment(scene, item, wallMaterial);
   addWallJointCaps(scene, wallMaterial);
+  addReceptionFurniture(scene);
 
   for (const door of DOOR_OPENINGS) {
     const leafWidth = door.width / 2 - 0.04;
@@ -970,6 +1111,8 @@ function buildFloorPlan(scene: THREE.Scene) {
   threshold.userData.doorId = "main-entrance";
   scene.add(threshold);
 
+  addLabel(scene, "RECEPTION · 14 × 4 m", 0, -9.8, 0x4a5d73);
+  addLabel(scene, "WAITING LOUNGE", 4.2, -10.55, 0x4a5d73);
   addLabel(scene, "OFFICE 1 · 6 × 5 m", -4, -5);
   addLabel(scene, "OFFICE 2 · 6 × 5 m", 4, -5);
   addLabel(scene, "OFFICE 3 · 6 × 5 m", -4, 0);
@@ -979,10 +1122,22 @@ function buildFloorPlan(scene: THREE.Scene) {
   addLabel(scene, "MANAGER'S OFFICE · 6 × 5 m", -4, 12);
   addLabel(scene, "DIRECTOR'S OFFICE · 6 × 5 m", 4, 12);
   addLabel(scene, "2 m CORRIDOR", 0, 2.5, 0x4a5d73);
-  addLabel(scene, "MAIN ENTRANCE", 0, FRONT + 0.75, 0x4a5d73);
+  addLabel(scene, "MAIN ENTRANCE · 2.4 m", 0, FRONT + 0.82, 0x4a5d73);
 
   scene.userData.roomRects = ROOM_RECTS;
   scene.userData.corridor = { minX: -1, maxX: 1, minZ: FRONT, maxZ: BACK };
+  scene.userData.reception = {
+    minX: LEFT,
+    maxX: RIGHT,
+    minZ: FRONT,
+    maxZ: ROOM_FRONT,
+    clearCentralPassage: {
+      minX: -RECEPTION_PASSAGE_W / 2,
+      maxX: RECEPTION_PASSAGE_W / 2,
+      minZ: FRONT + 0.5,
+      maxZ: ROOM_FRONT - 0.5,
+    },
+  };
   scene.userData.wallThickness = WALL;
   return validateFloorPlan();
 }
@@ -997,8 +1152,8 @@ export default function Office3D() {
     scene.background = new THREE.Color(0xdce8e5);
     scene.fog = new THREE.Fog(0xdce8e5, 35, 60);
 
-    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 140);
-    camera.position.set(23, 26, -25);
+    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 150);
+    camera.position.set(24, 28, -29);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1014,10 +1169,10 @@ export default function Office3D() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.07;
     controls.minDistance = 10;
-    controls.maxDistance = 38;
+    controls.maxDistance = 42;
     controls.maxPolarAngle = Math.PI * 0.47;
     controls.minPolarAngle = 0.25;
-    controls.target.set(0, 0, (FRONT + BACK) / 2);
+    controls.target.set(0, 0, (FRONT + BACK) / 2 + 0.7);
 
     scene.add(new THREE.HemisphereLight(0xf8fbff, 0x67717c, 2.2));
 
@@ -1100,8 +1255,8 @@ export default function Office3D() {
   return (
     <div ref={mountRef} className="office-3d-viewer" aria-label="Interactive eight-space office floor plan">
       <div className="office-3d-help">
-        <strong>Buildable eight-space floor plan</strong>
-        <span>14 × 22 m · 2 m corridor · 1.5 m professional room doors · 2 m main entrance · 0.20 m walls</span>
+        <strong>Eight-space office + entrance reception</strong>
+        <span>14 × 26 m total · 14 × 22 m core office · 4 m reception block · 2 m corridor · 1.5 m professional room doors · 2.4 m main entrance · 0.20 m walls</span>
       </div>
       <div className="office-3d-badge">FLOOR PLAN</div>
       <div className="office-geometry-status" data-valid="false">CHECKING GEOMETRY…</div>
