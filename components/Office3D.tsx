@@ -1150,6 +1150,7 @@ function buildFloorPlan(scene: THREE.Scene) {
   const corridorMaterial = new THREE.MeshStandardMaterial({ color: 0xe5e9ee, roughness: 0.9 });
   const doorMaterial = new THREE.MeshStandardMaterial({ color: 0x93a6b7, roughness: 0.7, metalness: 0.15 });
   const roomFrameMaterial = new THREE.MeshStandardMaterial({ color: 0x253540, roughness: 0.30, metalness: 0.78 });
+  const handleMaterial = new THREE.MeshStandardMaterial({ color: 0xd0a866, roughness: 0.22, metalness: 0.9 });
 
   const buildingCenterZ = (FRONT + BACK) / 2;
   const floor = meshBox(BUILDING_W, 0.12, BUILDING_D, floorMaterial);
