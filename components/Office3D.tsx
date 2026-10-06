@@ -2262,8 +2262,28 @@ function addExecutiveHuman(
 }
 
 function addExecutiveOfficeSetups(scene: THREE.Scene) {
-  addExecutiveHuman(scene, -5.45, 12.30, 1);
-  addExecutiveHuman(scene, 5.45, 12.30, -1);
+  const setups = [
+    { office: "manager", x: -4.58, z: 12.30, facing: 1 as 1 | -1 },
+    { office: "director", x: 4.58, z: 12.30, facing: -1 as 1 | -1 },
+  ];
+
+  for (const setup of setups) {
+    addExecutiveChair(scene, setup.x - setup.facing * 0.26, setup.z, setup.facing);
+    addExecutiveDesk(scene, setup.x + setup.facing * 0.92, setup.z, setup.facing);
+    addExecutivePlant(
+      scene,
+      setup.x + setup.facing * 0.92 + setup.facing * 0.10,
+      setup.z + (setup.facing === 1 ? 1.05 : -1.05),
+    );
+
+    scene.userData.executiveOfficeSetups ??= [];
+    scene.userData.executiveOfficeSetups.push({
+      office: setup.office,
+      style: "executive-workstation-empty",
+      person: null,
+      desk: { x: setup.x + setup.facing * 0.92, z: setup.z },
+    });
+  }
 }
 
 function addPremiumOfficeEnhancements(scene: THREE.Scene) {
