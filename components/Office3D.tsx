@@ -1208,29 +1208,45 @@ function addStaffWorkstation(
     { staffFurniture: "workstation-cable" },
   );
 
-  // Two chairs: the operator chair is centered directly in line with
-  // the monitor/keyboard; the visitor chair is offset to the side.
-  // Both remain on the room side of the corridor boundary.
-  const chairX = x + direction * 1.08;
-  const operatorZ = z;
-  const visitorZ = z + (side === "left" ? 0.92 : -0.92);
+  // The operator chair uses the exact same Z centerline as the
+  // monitor and keyboard. Its X position is directly behind the
+  // keyboard, so a staff member sitting there faces the screen squarely.
+  const operatorChairX = x + direction * 1.04;
+  const operatorChairZ = z;
+
+  // The second chair sits beside the workstation, offset along the
+  // desk length rather than occupying the operator's sitting position.
+  // It remains inside the office and away from the doorway.
+  const visitorChairX = x + direction * 1.04;
+  const visitorChairZ = z + (side === "left" ? 0.88 : -0.88);
 
   addProfessionalOfficeChair(
     scene,
-    chairX,
-    operatorZ,
+    operatorChairX,
+    operatorChairZ,
     direction,
     materials.chair,
     "operator",
   );
   addProfessionalOfficeChair(
     scene,
-    chairX,
-    visitorZ,
+    visitorChairX,
+    visitorChairZ,
     direction,
     materials.chair,
     "visitor",
   );
+
+  // Store the workstation centerlines for the runtime clearance/debug
+  // layer so future staff placement can use the same sitting position.
+  scene.userData.staffWorkstationCenterlines ??= [];
+  scene.userData.staffWorkstationCenterlines.push({
+    roomId: placement.roomId,
+    keyboard: { x: x + direction * 0.25, z },
+    monitor: { x: x + direction * 0.02, z },
+    operatorChair: { x: operatorChairX, z: operatorChairZ },
+    visitorChair: { x: visitorChairX, z: visitorChairZ },
+  });
 }
 
 function addStaffOfficeWorkstations(scene: THREE.Scene) {
@@ -1294,16 +1310,28 @@ function validateStaffWorkstationClearance() {
     const direction = side === "left" ? 1 : -1;
     const deskMinX = placement.x - 0.41;
     const deskMaxX = placement.x + 0.41;
-    const chairX = placement.x + direction * 1.08;
+    const operatorChairX = placement.x + direction * 1.04;
+    const visitorChairX = placement.x + direction * 1.04;
     const chairPositions = [
-      { role: "operator", z: placement.z },
-      { role: "visitor", z: placement.z + (side === "left" ? 0.92 : -0.92) },
+      { role: "operator", x: operatorChairX, z: placement.z, halfWidth: 0.39 },
+      {
+        role: "visitor",
+        x: visitorChairX,
+        z: placement.z + (side === "left" ? 0.88 : -0.88),
+        halfWidth: 0.36,
+      },
     ] as const;
 
+    const primaryAligned =
+      Math.abs((placement.z) - placement.z) < 0.001;
+
+    if (!primaryAligned) {
+      errors.push(`${placement.roomId}: primary chair is not centered on workstation keyboard/monitor`);
+    }
+
     for (const chairPosition of chairPositions) {
-      const chairHalfWidth = chairPosition.role === "operator" ? 0.39 : 0.36;
-      const chairMinX = chairX - chairHalfWidth;
-      const chairMaxX = chairX + chairHalfWidth;
+      const chairMinX = chairPosition.x - chairPosition.halfWidth;
+      const chairMaxX = chairPosition.x + chairPosition.halfWidth;
 
       const intrudesCorridor =
         deskMaxX > corridorMinX &&
