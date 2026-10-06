@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 const BUILDING_W = 14;
-const BUILDING_D = 22;
+const BUILDING_D = 26;
 const WALL = 0.2;
 const HALF_WALL = WALL / 2;
 const WALL_HEIGHT = 2.7;
@@ -15,7 +15,7 @@ const MAIN_DOOR_W = 2;
 
 const LEFT = -7;
 const RIGHT = 7;
-const FRONT = -7.5;
+const FRONT = -11.5;
 const BACK = 14.5;
 const CORRIDOR_LEFT = -1;
 const CORRIDOR_RIGHT = 1;
@@ -44,7 +44,8 @@ const segment = (
 /*
  * AUTHORITATIVE FLOOR-PLAN GEOMETRY
  *
- * Building: X -7..+7, Z -7.5..+14.5
+ * Building: X -7..+7, Z -11.5..+14.5 (26 × 14 m)
+ * Reception/lobby: X -7..+7, Z -11.5..-7.5
  * Corridor: X -1..+1, Z -7.5..+14.5
  * Wall thickness: 0.20m
  *
@@ -54,8 +55,9 @@ const segment = (
  * intersections so the horizontal divider owns that T-junction. Door
  * openings are gaps in the wall list, not meshes.
  *
- * Meeting and break rooms are followed by a manager's office and a
- * director's office at the rear of the building.
+ * A full-width front reception/lobby sits before the original eight-room
+ * office wing. Meeting and break rooms are followed by a manager's office
+ * and a director's office at the rear of the building.
  * The renderer and validator both consume this same canonical geometry.
  */
 const WALL_SEGMENTS: WallSegment[] = [
@@ -267,7 +269,7 @@ function validateBaseFloorPlan(): GeometryValidation {
       rect.minZ < FRONT - GEOMETRY_EPS ||
       rect.maxZ > BACK + GEOMETRY_EPS
     ) {
-      errors.push(`${rect.id}: wall volume extends outside the 14 × 22 m building footprint`);
+      errors.push(`${rect.id}: wall volume extends outside the 14 × 26 m building footprint`);
     }
   }
 
@@ -417,9 +419,11 @@ function validateBaseFloorPlan(): GeometryValidation {
     );
   }
 
+  const receptionErrors = validateReceptionArea();
+
   const result: GeometryValidation = {
-    valid: errors.length === 0,
-    errors,
+    valid: errors.length === 0 && receptionErrors.length === 0,
+    errors: [...errors, ...receptionErrors],
     wallCount: WALL_SEGMENTS.length,
     junctionCount,
     doorCount: DOOR_OPENINGS.length,
@@ -794,6 +798,159 @@ function meshBox(width: number, height: number, depth: number, material: THREE.M
   return new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
 }
 
+type FurnitureRect = WallRect;
+
+const RECEPTION_DEPTH = 4;
+const RECEPTION_MIN_Z = FRONT;
+const RECEPTION_MAX_Z = -7.5;
+
+function getReceptionFurnitureRects(): FurnitureRect[] {
+  const deskZ = FRONT + 2.25;
+
+  return [
+    { id: "reception-desk", minX: -5.75, maxX: -2.15, minZ: deskZ - 0.5, maxZ: deskZ + 0.5 },
+    { id: "reception-chair", minX: -4.75, maxX: -3.45, minZ: deskZ + 0.62, maxZ: deskZ + 1.45 },
+    { id: "waiting-bench", minX: 2.1, maxX: 5.65, minZ: FRONT + 1.2, maxZ: FRONT + 2.45 },
+    { id: "waiting-chair-a", minX: 2.2, maxX: 3.35, minZ: FRONT + 2.75, maxZ: FRONT + 4.0 },
+    { id: "waiting-chair-b", minX: 4.0, maxX: 5.15, minZ: FRONT + 2.75, maxZ: FRONT + 4.0 },
+  ];
+}
+
+function validateReceptionArea() {
+  const errors: string[] = [];
+  const clearCorridor: WallRect = {
+    id: "reception-central-clear-path",
+    minX: CORRIDOR_LEFT + HALF_WALL,
+    maxX: CORRIDOR_RIGHT - HALF_WALL,
+    minZ: RECEPTION_MIN_Z + HALF_WALL,
+    maxZ: RECEPTION_MAX_Z - HALF_WALL,
+  };
+
+  const entranceClear: WallRect = {
+    id: "reception-main-entrance-clear",
+    minX: -MAIN_DOOR_W / 2 + HALF_WALL,
+    maxX: MAIN_DOOR_W / 2 - HALF_WALL,
+    minZ: FRONT + HALF_WALL,
+    maxZ: FRONT + 1.0,
+  };
+
+  for (const furniture of getReceptionFurnitureRects()) {
+    if (intersectionArea(furniture, clearCorridor) > GEOMETRY_AREA_EPS) {
+      errors.push(furniture.id + ": reception furniture blocks the central 1.80 m circulation path");
+    }
+
+    if (intersectionArea(furniture, entranceClear) > GEOMETRY_AREA_EPS) {
+      errors.push(furniture.id + ": reception furniture blocks the 2 m main entrance clearance");
+    }
+  }
+
+  if (errors.length === 0) {
+    console.info("[Office3D] RECEPTION CLEARANCE VALID — front desk and waiting furniture stay outside the entrance/corridor clear paths.");
+  } else {
+    console.error("[Office3D] RECEPTION CLEARANCE INVALID", errors);
+  }
+
+  return errors;
+}
+
+function addReceptionChair(
+  scene: THREE.Scene,
+  x: number,
+  z: number,
+  seatMaterial: THREE.Material,
+  backMaterial: THREE.Material,
+  rotationY = 0,
+) {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+  group.rotation.y = rotationY;
+
+  const seat = meshBox(1.05, 0.16, 0.92, seatMaterial);
+  seat.position.set(0, 0.55, 0);
+  seat.castShadow = true;
+  seat.receiveShadow = true;
+
+  const back = meshBox(1.05, 1.0, 0.16, backMaterial);
+  back.position.set(0, 1.02, 0.34);
+  back.castShadow = true;
+  back.receiveShadow = true;
+
+  const leftLeg = meshBox(0.1, 0.55, 0.1, backMaterial);
+  leftLeg.position.set(-0.38, 0.275, 0);
+  const rightLeg = meshBox(0.1, 0.55, 0.1, backMaterial);
+  rightLeg.position.set(0.38, 0.275, 0);
+
+  group.add(seat, back, leftLeg, rightLeg);
+  scene.add(group);
+}
+
+function addReceptionFurniture(scene: THREE.Scene) {
+  const deskMaterial = new THREE.MeshStandardMaterial({ color: 0x8f7664, roughness: 0.62 });
+  const deskTopMaterial = new THREE.MeshStandardMaterial({ color: 0xc9b6a4, roughness: 0.58 });
+  const chairMaterial = new THREE.MeshStandardMaterial({ color: 0x52657a, roughness: 0.72 });
+  const screenMaterial = new THREE.MeshStandardMaterial({ color: 0x202a35, roughness: 0.3, metalness: 0.25 });
+  const metalMaterial = new THREE.MeshStandardMaterial({ color: 0x68798b, roughness: 0.38, metalness: 0.65 });
+
+  const deskZ = FRONT + 2.25;
+  const desk = new THREE.Group();
+  desk.position.set(-3.95, 0, deskZ);
+
+  const deskBody = meshBox(3.55, 1.12, 0.86, deskMaterial);
+  deskBody.position.set(0, 0.56, 0);
+  deskBody.castShadow = true;
+  deskBody.receiveShadow = true;
+
+  const top = meshBox(3.8, 0.14, 1.02, deskTopMaterial);
+  top.position.set(0, 1.15, 0);
+  top.castShadow = true;
+  top.receiveShadow = true;
+
+  const screen = meshBox(1.0, 0.62, 0.08, screenMaterial);
+  screen.position.set(0.18, 1.55, 0.02);
+  screen.castShadow = true;
+
+  const screenStand = meshBox(0.08, 0.36, 0.08, metalMaterial);
+  screenStand.position.set(0.18, 1.27, 0.02);
+
+  const keyboard = meshBox(0.72, 0.05, 0.28, metalMaterial);
+  keyboard.position.set(0.18, 1.23, 0.33);
+
+  const namePlate = meshBox(1.35, 0.16, 0.06, deskTopMaterial);
+  namePlate.position.set(0, 1.21, -0.49);
+
+  desk.add(deskBody, top, screen, screenStand, keyboard, namePlate);
+  scene.add(desk);
+
+  addReceptionChair(scene, -3.95, deskZ + 0.98, chairMaterial, deskMaterial, Math.PI);
+
+  const bench = new THREE.Group();
+  bench.position.set(3.9, 0, FRONT + 1.82);
+
+  const benchSeat = meshBox(3.45, 0.18, 0.92, chairMaterial);
+  benchSeat.position.set(0, 0.58, 0);
+  benchSeat.castShadow = true;
+  benchSeat.receiveShadow = true;
+  const benchBack = meshBox(3.45, 1.05, 0.16, deskMaterial);
+  benchBack.position.set(0, 1.04, 0.34);
+  benchBack.castShadow = true;
+  benchBack.receiveShadow = true;
+  bench.add(benchSeat, benchBack);
+  scene.add(bench);
+
+  addReceptionChair(scene, 2.8, FRONT + 3.35, chairMaterial, deskMaterial, Math.PI * 0.92);
+  addReceptionChair(scene, 4.65, FRONT + 3.35, chairMaterial, deskMaterial, Math.PI * 0.92);
+
+  const divider = meshBox(0.12, 1.0, 2.8, metalMaterial);
+  divider.position.set(6.25, 0.5, FRONT + 2.1);
+  divider.castShadow = true;
+  divider.receiveShadow = true;
+  divider.userData.reception = "waiting-divider";
+  scene.add(divider);
+
+  addLabel(scene, "RECEPTION", -3.95, FRONT + 2.95, 0x5b4637);
+  addLabel(scene, "WAITING AREA", 3.75, FRONT + 3.05, 0x5b4637);
+}
+
 /*
  * Render wall boxes from the exact same footprint used by the geometry
  * validator. The old renderer used the trimmed centerline length directly,
@@ -964,6 +1121,18 @@ function buildFloorPlan(scene: THREE.Scene) {
     scene.add(header);
   }
 
+  const receptionFloor = meshBox(
+    BUILDING_W - 0.3,
+    0.035,
+    RECEPTION_DEPTH - 0.25,
+    new THREE.MeshStandardMaterial({ color: 0xe8e2da, roughness: 0.88 }),
+  );
+  receptionFloor.position.set(0, 0.15, FRONT + RECEPTION_DEPTH / 2);
+  receptionFloor.receiveShadow = true;
+  scene.add(receptionFloor);
+
+  addReceptionFurniture(scene);
+
   const threshold = meshBox(MAIN_DOOR_W, 0.04, 0.55, doorMaterial);
   threshold.position.set(0, 0.145, FRONT + 0.27);
   threshold.receiveShadow = true;
@@ -982,6 +1151,14 @@ function buildFloorPlan(scene: THREE.Scene) {
   addLabel(scene, "MAIN ENTRANCE", 0, FRONT + 0.75, 0x4a5d73);
 
   scene.userData.roomRects = ROOM_RECTS;
+  scene.userData.reception = {
+    minX: LEFT,
+    maxX: RIGHT,
+    minZ: RECEPTION_MIN_Z,
+    maxZ: RECEPTION_MAX_Z,
+    depth: RECEPTION_DEPTH,
+    furniture: getReceptionFurnitureRects(),
+  };
   scene.userData.corridor = { minX: -1, maxX: 1, minZ: FRONT, maxZ: BACK };
   scene.userData.wallThickness = WALL;
   return validateFloorPlan();
@@ -1098,10 +1275,10 @@ export default function Office3D() {
   }, []);
 
   return (
-    <div ref={mountRef} className="office-3d-viewer" aria-label="Interactive eight-space office floor plan">
+    <div ref={mountRef} className="office-3d-viewer" aria-label="Interactive eight-space office floor plan with a front reception lobby">
       <div className="office-3d-help">
-        <strong>Buildable eight-space floor plan</strong>
-        <span>14 × 22 m · 2 m corridor · 1.5 m professional room doors · 2 m main entrance · 0.20 m walls</span>
+        <strong>8-room office + reception lobby</strong>
+        <span>14 × 26 m · front reception and waiting area · 2 m main entrance · 2 m corridor · 1.5 m room doors · 0.20 m walls</span>
       </div>
       <div className="office-3d-badge">FLOOR PLAN</div>
       <div className="office-geometry-status" data-valid="false">CHECKING GEOMETRY…</div>
