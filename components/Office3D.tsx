@@ -1217,8 +1217,12 @@ function addStaffWorkstation(
   // The second chair sits beside the workstation, offset along the
   // desk length rather than occupying the operator's sitting position.
   // It remains inside the office and away from the doorway.
+  // Keep the visitor chair at one consistent center-to-center spacing
+  // from the operator chair in every staff office.
   const visitorChairX = x + direction * 1.04;
-  const visitorChairZ = z + (side === "left" ? 0.88 : -0.88);
+  const CHAIR_CENTER_SPACING = 0.90;
+  const visitorChairZ =
+    z + (side === "left" ? CHAIR_CENTER_SPACING : -CHAIR_CENTER_SPACING);
 
   addProfessionalOfficeChair(
     scene,
@@ -1317,7 +1321,9 @@ function validateStaffWorkstationClearance() {
       {
         role: "visitor",
         x: visitorChairX,
-        z: placement.z + (side === "left" ? 0.88 : -0.88),
+        z:
+          placement.z +
+          (side === "left" ? CHAIR_CENTER_SPACING : -CHAIR_CENTER_SPACING),
         halfWidth: 0.36,
       },
     ] as const;
