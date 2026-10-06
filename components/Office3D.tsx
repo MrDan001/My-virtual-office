@@ -1087,16 +1087,19 @@ function validateStaffWorkstationClearance() {
       chairMaxX > corridorMinX &&
       chairMinX < corridorMaxX;
 
-    const door = DOOR_OPENINGS.find((item) => item.id === `${placement.roomId}-door`);
-    const chairClearOfDoor =
-      !door ||
-      Math.abs(placement.z - door.z) > door.width / 2 + 0.5;
+    // Door openings are on the corridor boundary. A workstation may share
+    // the same Z coordinate as a doorway as long as the furniture remains
+    // safely inside the room and does not approach the doorway threshold.
+    const doorwayClearance =
+      side === "left"
+        ? corridorMinX - chairMaxX
+        : chairMinX - corridorMaxX;
 
     if (intrudesCorridor) {
       errors.push(`${placement.roomId}: workstation or chair intrudes into corridor clearance`);
     }
-    if (!chairClearOfDoor) {
-      errors.push(`${placement.roomId}: chair is too close to doorway clearance`);
+    if (doorwayClearance < 0.75) {
+      errors.push(`${placement.roomId}: chair has less than 0.75 m doorway clearance`);
     }
   }
 
