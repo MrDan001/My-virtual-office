@@ -1898,90 +1898,177 @@ function addExecutiveChair(
   z: number,
   facing: 1 | -1,
 ) {
-  const upholstery = new THREE.MeshStandardMaterial({
-    color: 0x8f4039,
-    roughness: 0.56,
+  const leather = new THREE.MeshStandardMaterial({
+    color: 0x242a2e,
+    roughness: 0.44,
+    metalness: 0.06,
   });
-  const upholsteryDark = new THREE.MeshStandardMaterial({
-    color: 0x6f302c,
-    roughness: 0.60,
+  const leatherSoft = new THREE.MeshStandardMaterial({
+    color: 0x343b40,
+    roughness: 0.50,
+    metalness: 0.04,
   });
-  const baseMaterial = new THREE.MeshStandardMaterial({
-    color: 0x343a40,
-    roughness: 0.30,
-    metalness: 0.72,
+  const leatherAccent = new THREE.MeshStandardMaterial({
+    color: 0x171b1f,
+    roughness: 0.52,
+    metalness: 0.04,
+  });
+  const metal = new THREE.MeshStandardMaterial({
+    color: 0x1e252b,
+    roughness: 0.26,
+    metalness: 0.84,
+  });
+  const brass = new THREE.MeshStandardMaterial({
+    color: 0xc9a45d,
+    roughness: 0.22,
+    metalness: 0.90,
   });
 
-  // Proper executive chair proportions: wide padded seat, upright back,
-  // visible armrests, gas lift and five-star caster base.
-  const seat = meshBox(0.92, 0.16, 1.02, upholstery);
-  seat.position.set(x, 0.68, z);
-  seat.castShadow = true;
-  seat.receiveShadow = true;
-  seat.userData.officeDecor = "executive-chair-seat";
-  scene.add(seat);
+  // New executive-chair design: a high-back wing chair with deeper padding,
+  // a shaped headrest/lumbar section, broad upholstered arms, subtle brass
+  // detailing and a heavier five-star pedestal. This function is only used
+  // by the manager's and director's offices.
+  const seatBase = meshBox(1.04, 0.18, 1.10, leatherAccent);
+  seatBase.position.set(x, 0.67, z);
+  seatBase.castShadow = true;
+  seatBase.receiveShadow = true;
+  seatBase.userData.officeDecor = "executive-chair-seat-base";
+  scene.add(seatBase);
 
   const seatCushion = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.34, 0.26, 4, 12),
-    upholstery,
+    new THREE.CapsuleGeometry(0.36, 0.28, 5, 16),
+    leatherSoft,
   );
-  seatCushion.scale.set(1.20, 0.34, 1.34);
-  seatCushion.position.set(x, 0.78, z);
+  seatCushion.scale.set(1.28, 0.30, 1.36);
+  seatCushion.position.set(x, 0.79, z);
   seatCushion.castShadow = true;
-  seatCushion.userData.officeDecor = "executive-chair-cushion";
+  seatCushion.receiveShadow = true;
+  seatCushion.userData.officeDecor = "executive-chair-seat-cushion";
   scene.add(seatCushion);
 
-  const back = meshBox(0.92, 0.92, 0.18, upholsteryDark);
-  back.position.set(x - facing * 0.38, 1.22, z);
-  back.castShadow = true;
-  back.receiveShadow = true;
-  back.userData.officeDecor = "executive-chair-back";
-  scene.add(back);
+  const backShell = meshBox(1.12, 1.34, 0.18, leatherAccent);
+  backShell.position.set(x - facing * 0.42, 1.28, z);
+  backShell.castShadow = true;
+  backShell.receiveShadow = true;
+  backShell.userData.officeDecor = "executive-chair-high-back-shell";
+  scene.add(backShell);
 
   const backPad = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.34, 0.28, 5, 14),
-    upholstery,
+    new THREE.CapsuleGeometry(0.39, 0.42, 6, 18),
+    leatherSoft,
   );
-  backPad.scale.set(1.18, 1.34, 0.28);
-  backPad.position.set(x - facing * 0.49, 1.25, z);
+  backPad.scale.set(1.34, 1.56, 0.28);
+  backPad.position.set(x - facing * 0.53, 1.30, z);
   backPad.castShadow = true;
-  backPad.userData.officeDecor = "executive-chair-back-pad";
+  backPad.receiveShadow = true;
+  backPad.userData.officeDecor = "executive-chair-high-back-pad";
   scene.add(backPad);
 
+  // A raised headrest gives the chair a clearly different silhouette from
+  // the workstation chairs while staying compact enough for the 6 × 5 m rooms.
+  const headrest = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.30, 0.18, 5, 14),
+    leather,
+  );
+  headrest.scale.set(1.32, 0.64, 0.34);
+  headrest.position.set(x - facing * 0.55, 1.88, z);
+  headrest.castShadow = true;
+  headrest.userData.officeDecor = "executive-chair-headrest";
+  scene.add(headrest);
+
+  const lumbar = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.25, 0.20, 5, 14),
+    leather,
+  );
+  lumbar.scale.set(1.28, 0.55, 0.30);
+  lumbar.position.set(x - facing * 0.58, 1.08, z);
+  lumbar.castShadow = true;
+  lumbar.userData.officeDecor = "executive-chair-lumbar";
+  scene.add(lumbar);
+
+  // Winged sides frame the occupant without making the chair too wide.
   for (const zSide of [-1, 1]) {
-    const armTop = meshBox(0.16, 0.12, 0.34, upholsteryDark);
-    armTop.position.set(x - facing * 0.02, 1.04, z + zSide * 0.45);
+    const wing = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.13, 0.58, 4, 10),
+      leather,
+    );
+    wing.scale.set(1.02, 1.55, 0.74);
+    wing.position.set(
+      x - facing * 0.47,
+      1.30,
+      z + zSide * 0.47,
+    );
+    wing.rotation.x = zSide * 0.06;
+    wing.castShadow = true;
+    wing.userData.officeDecor = "executive-chair-wing";
+    scene.add(wing);
+
+    const armTop = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.11, 0.28, 4, 10),
+      leatherSoft,
+    );
+    armTop.scale.set(1.25, 0.50, 1.45);
+    armTop.position.set(
+      x - facing * 0.03,
+      1.01,
+      z + zSide * 0.47,
+    );
     armTop.castShadow = true;
-    armTop.userData.officeDecor = "executive-chair-arm";
+    armTop.receiveShadow = true;
+    armTop.userData.officeDecor = "executive-chair-arm-pad";
     scene.add(armTop);
 
-    const armSupport = meshBox(0.09, 0.34, 0.09, baseMaterial);
-    armSupport.position.set(x - facing * 0.02, 0.88, z + zSide * 0.45);
+    const armSupport = meshBox(0.08, 0.34, 0.08, metal);
+    armSupport.position.set(
+      x - facing * 0.01,
+      0.83,
+      z + zSide * 0.47,
+    );
     armSupport.castShadow = true;
     armSupport.userData.officeDecor = "executive-chair-arm-support";
     scene.add(armSupport);
   }
 
+  // Three slim brass accent ribs sit on the inner face of the backrest.
+  for (const zOffset of [-0.22, 0, 0.22]) {
+    const rib = meshBox(0.028, 0.74, 0.018, brass);
+    rib.position.set(x + facing * 0.555, 1.34, z + zOffset);
+    rib.castShadow = true;
+    rib.userData.officeDecor = "executive-chair-brass-rib";
+    scene.add(rib);
+  }
+
   const column = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.075, 0.095, 0.34, 16),
-    baseMaterial,
+    new THREE.CylinderGeometry(0.085, 0.11, 0.34, 18),
+    metal,
   );
-  column.position.set(x, 0.43, z);
+  column.position.set(x, 0.44, z);
   column.castShadow = true;
   scene.add(column);
 
-  const hub = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.14, 0.16, 0.08, 16),
-    baseMaterial,
+  const accentRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.15, 0.018, 8, 20),
+    brass,
   );
-  hub.position.set(x, 0.23, z);
+  accentRing.rotation.x = Math.PI / 2;
+  accentRing.position.set(x, 0.25, z);
+  accentRing.castShadow = true;
+  accentRing.userData.officeDecor = "executive-chair-brass-ring";
+  scene.add(accentRing);
+
+  const hub = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.15, 0.18, 0.09, 18),
+    metal,
+  );
+  hub.position.set(x, 0.22, z);
   hub.castShadow = true;
   scene.add(hub);
 
+  // Heavier five-star base for a more premium executive silhouette.
   for (let i = 0; i < 5; i += 1) {
-    const angle = (i / 5) * Math.PI * 2;
-    const spokeLength = 0.38;
-    const spoke = meshBox(0.045, 0.035, spokeLength, baseMaterial);
+    const angle = (i / 5) * Math.PI * 2 + Math.PI / 10;
+    const spokeLength = 0.42;
+    const spoke = meshBox(0.048, 0.038, spokeLength, metal);
     spoke.position.set(
       x + Math.cos(angle) * (spokeLength / 2),
       0.12,
@@ -1989,11 +2076,12 @@ function addExecutiveChair(
     );
     spoke.rotation.y = angle;
     spoke.castShadow = true;
+    spoke.userData.officeDecor = "executive-chair-base-spoke";
     scene.add(spoke);
 
     const caster = new THREE.Mesh(
-      new THREE.SphereGeometry(0.048, 10, 8),
-      baseMaterial,
+      new THREE.SphereGeometry(0.052, 10, 8),
+      metal,
     );
     caster.position.set(
       x + Math.cos(angle) * spokeLength,
@@ -2001,9 +2089,11 @@ function addExecutiveChair(
       z + Math.sin(angle) * spokeLength,
     );
     caster.castShadow = true;
+    caster.userData.officeDecor = "executive-chair-caster";
     scene.add(caster);
   }
 }
+
 function addExecutivePlant(scene: THREE.Scene, x: number, z: number) {
   const potMaterial = new THREE.MeshStandardMaterial({
     color: 0x875638,
