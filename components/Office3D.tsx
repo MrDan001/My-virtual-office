@@ -2455,30 +2455,164 @@ function addExecutiveRelaxationArea(
   });
 }
 
-function addExecutiveOfficeSetups(scene: THREE.Scene) {
-  const setups = [
-    { office: "manager", x: -4.58, z: 12.30, facing: 1 as 1 | -1 },
-    { office: "director", x: 4.58, z: 12.30, facing: -1 as 1 | -1 },
-  ];
+function addDirectorOfficeRedesign(scene: THREE.Scene) {
+  // Complete Director-suite rebuild inside the existing 6 × 5 m room.
+  // The corridor-side doorway at X=1/Z=12 remains unobstructed.
+  const black = new THREE.MeshStandardMaterial({ color: 0x111316, roughness: 0.38, metalness: 0.10 });
+  const charcoal = new THREE.MeshStandardMaterial({ color: 0x202428, roughness: 0.46, metalness: 0.08 });
+  const leather = new THREE.MeshStandardMaterial({ color: 0x17191c, roughness: 0.42, metalness: 0.04 });
+  const leatherSoft = new THREE.MeshStandardMaterial({ color: 0x30353a, roughness: 0.52, metalness: 0.03 });
+  const walnut = new THREE.MeshStandardMaterial({ color: 0x5a3925, roughness: 0.48 });
+  const marble = new THREE.MeshStandardMaterial({ color: 0x292a2c, roughness: 0.25, metalness: 0.10 });
+  const gold = new THREE.MeshStandardMaterial({
+    color: 0xc99a42, roughness: 0.22, metalness: 0.88,
+    emissive: new THREE.Color(0x2b1905), emissiveIntensity: 0.28,
+  });
+  const glass = new THREE.MeshStandardMaterial({ color: 0x72787d, roughness: 0.14, metalness: 0.60 });
+  const rugMat = new THREE.MeshStandardMaterial({ color: 0x36383b, roughness: 0.94 });
+  const green = new THREE.MeshStandardMaterial({ color: 0x3e714f, roughness: 0.74 });
+  const pot = new THREE.MeshStandardMaterial({ color: 0x101214, roughness: 0.38, metalness: 0.22 });
 
-  for (const setup of setups) {
-    addExecutiveChair(scene, setup.x - setup.facing * 0.26, setup.z, setup.facing);
-    addExecutiveRelaxationArea(scene, setup.office);
-    addExecutiveDesk(scene, setup.x + setup.facing * 0.92, setup.z, setup.facing);
-    addExecutivePlant(
-      scene,
-      setup.x + setup.facing * 0.92 + setup.facing * 0.10,
-      setup.z + (setup.facing === 1 ? 1.05 : -1.05),
-    );
+  // FEATURE WALL
+  const wall = meshBox(0.08, 2.48, 5.70, black);
+  wall.position.set(4, 1.42, 14.28); wall.castShadow = true;
+  wall.userData.officeDecor = "director-redesign-feature-wall"; scene.add(wall);
 
-    scene.userData.executiveOfficeSetups ??= [];
-    scene.userData.executiveOfficeSetups.push({
-      office: setup.office,
-      style: "executive-workstation-empty",
-      person: null,
-      desk: { x: setup.x + setup.facing * 0.92, z: setup.z },
-    });
+  for (const x of [2.15,2.30,2.45,5.55,5.70,5.85]) {
+    const slat = meshBox(0.08, 2.20, 0.055, walnut);
+    slat.position.set(x, 1.38, 14.17); slat.castShadow = true;
+    slat.userData.officeDecor = "director-redesign-walnut-slat"; scene.add(slat);
   }
+
+  const plaque = meshBox(0.07, 0.72, 1.85, charcoal);
+  plaque.position.set(4, 2.02, 14.10); plaque.castShadow = true;
+  plaque.userData.officeDecor = "director-redesign-plaque"; scene.add(plaque);
+  const plaqueEdge = meshBox(0.025, 0.055, 1.92, gold);
+  plaqueEdge.position.set(4, 2.37, 14.05); scene.add(plaqueEdge);
+
+  for (const [dx,h] of [[-0.12,0.13],[0,0.22],[0.12,0.16]] as Array<[number,number]>) {
+    const mark = meshBox(0.018,h,0.055,gold);
+    mark.position.set(4+dx,2.42,14.00); scene.add(mark);
+  }
+
+  // DISPLAY SHELVES
+  for (const shelfX of [2.0,6.0]) {
+    const frame = meshBox(0.18,1.95,0.52,charcoal);
+    frame.position.set(shelfX,1.40,14.02); frame.castShadow=true; scene.add(frame);
+    for (const y of [0.72,1.20,1.68,2.16]) {
+      const shelf = meshBox(0.22,0.035,0.46,gold);
+      shelf.position.set(shelfX-0.02,y,13.94); scene.add(shelf);
+      const ornament = new THREE.Mesh(new THREE.SphereGeometry(0.065,12,10), y>1.8?gold:glass);
+      ornament.position.set(shelfX,y+0.10,13.93); ornament.scale.set(1,1.35,0.72); ornament.castShadow=true; scene.add(ornament);
+    }
+  }
+
+  // MARBLE EXECUTIVE DESK
+  const deskX=3.75, deskZ=12.75;
+  const top=meshBox(1.05,0.15,2.55,marble);
+  top.position.set(deskX,0.84,deskZ); top.castShadow=true; top.receiveShadow=true;
+  top.userData.officeDecor="director-redesign-marble-desk"; scene.add(top);
+  const fascia=meshBox(0.10,0.56,2.42,walnut);
+  fascia.position.set(deskX-0.47,0.55,deskZ); fascia.castShadow=true; scene.add(fascia);
+  const rail=meshBox(0.025,0.06,2.40,gold);
+  rail.position.set(deskX-0.525,0.91,deskZ); scene.add(rail);
+
+  for (const zSide of [-1,1]) {
+    const leg=meshBox(0.18,0.62,0.18,black);
+    leg.position.set(deskX+0.38,0.34,deskZ+zSide*0.92); leg.castShadow=true; scene.add(leg);
+  }
+
+  const laptop=meshBox(0.66,0.035,0.46,glass);
+  laptop.position.set(deskX-0.06,0.95,deskZ-0.18); laptop.castShadow=true; scene.add(laptop);
+  const lampBase=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.12,0.035,18),gold);
+  lampBase.position.set(deskX-0.30,0.94,deskZ+0.65); scene.add(lampBase);
+  const lampStem=new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.025,0.32,10),black);
+  lampStem.position.set(deskX-0.30,1.10,deskZ+0.65); scene.add(lampStem);
+  const lampShade=new THREE.Mesh(new THREE.ConeGeometry(0.11,0.12,16,1,true),gold);
+  lampShade.position.set(deskX-0.30,1.28,deskZ+0.65); scene.add(lampShade);
+
+  // CENTERPIECE DIRECTOR CHAIR
+  addExecutiveChair(scene, deskX+0.78, deskZ, -1);
+
+  // TWO VISITOR CHAIRS
+  for (const zSide of [-1,1]) {
+    const z=deskZ+zSide*1.35;
+    const seat=meshBox(0.72,0.18,0.72,leather);
+    seat.position.set(2.55,0.55,z); seat.castShadow=true; scene.add(seat);
+    const back=new THREE.Mesh(new THREE.CapsuleGeometry(0.22,0.30,4,12),leatherSoft);
+    back.scale.set(1.45,1.20,0.55); back.position.set(2.55,0.91,z+0.25); back.castShadow=true; scene.add(back);
+    for(const xSide of [-1,1]) {
+      const arm=meshBox(0.10,0.24,0.58,leather);
+      arm.position.set(2.55+xSide*0.34,0.78,z); arm.castShadow=true; scene.add(arm);
+    }
+    const column=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.09,0.24,14),gold);
+    column.position.set(2.55,0.32,z); scene.add(column);
+  }
+
+  // LOUNGE CORNER
+  const lx=5.55,lz=11.05;
+  const rug=new THREE.Mesh(new THREE.PlaneGeometry(2.25,1.75),rugMat);
+  rug.rotation.x=-Math.PI/2; rug.position.set(lx,0.17,lz); rug.receiveShadow=true; scene.add(rug);
+  const sofa=meshBox(0.78,0.70,1.62,leather);
+  sofa.position.set(6.20,0.63,lz); sofa.castShadow=true; scene.add(sofa);
+  const sofaSeat=meshBox(0.64,0.16,1.42,leatherSoft);
+  sofaSeat.position.set(6.10,0.72,lz); sofaSeat.castShadow=true; scene.add(sofaSeat);
+  for(const zSide of [-1,1]) {
+    const cushion=new THREE.Mesh(new THREE.CapsuleGeometry(0.20,0.28,4,12),leatherSoft);
+    cushion.scale.set(1,1.15,0.68); cushion.position.set(6.05,1.00,lz+zSide*0.43); cushion.castShadow=true; scene.add(cushion);
+  }
+
+  const roundTable=new THREE.Mesh(new THREE.CylinderGeometry(0.43,0.43,0.08,24),marble);
+  roundTable.position.set(5.25,0.52,lz); roundTable.castShadow=true; scene.add(roundTable);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.34,0.015,8,24),gold);
+  ring.rotation.x=Math.PI/2; ring.position.set(5.25,0.57,lz); scene.add(ring);
+  const tableStem=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.09,0.38,14),black);
+  tableStem.position.set(5.25,0.31,lz); scene.add(tableStem);
+
+  // PLANTS
+  const plantPot=new THREE.Mesh(new THREE.CylinderGeometry(0.20,0.25,0.40,18),pot);
+  plantPot.position.set(6.25,0.22,12.45); plantPot.castShadow=true; scene.add(plantPot);
+  for(const [dx,dz,h] of [[0,0,1.0],[-0.08,0.02,0.78],[0.08,-0.03,0.82],[-0.02,-0.05,0.65]] as Array<[number,number,number]>) {
+    const leaf=new THREE.Mesh(new THREE.SphereGeometry(0.18,12,10),green);
+    leaf.scale.set(0.48,1.10,0.30); leaf.position.set(6.25+dx,0.45+h*0.48,12.45+dz); leaf.castShadow=true; scene.add(leaf);
+  }
+  const smallPot=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.17,0.28,16),gold);
+  smallPot.position.set(2.75,0.14,13.72); scene.add(smallPot);
+
+  // STATEMENT FLOOR LAMP
+  const fx=5.25,fz=13.55;
+  const fs=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.035,1.45,12),black);
+  fs.position.set(fx,0.82,fz); fs.castShadow=true; scene.add(fs);
+  const fb=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.18,0.055,18),gold);
+  fb.position.set(fx,0.08,fz); scene.add(fb);
+  const shade=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.28,20,1,true),black);
+  shade.position.set(fx,1.58,fz); shade.castShadow=true; scene.add(shade);
+  const glow=new THREE.PointLight(0xffd39a,0.70,3.6,2);
+  glow.position.set(fx,1.45,fz); scene.add(glow);
+
+  const wallGlow=new THREE.PointLight(0xffc46a,1.25,5.0,2);
+  wallGlow.position.set(4,2.15,13.85); scene.add(wallGlow);
+
+  scene.userData.directorOfficeRedesign={style:"black-walnut-gold-executive-suite",rebuilt:true,room:"director"};
+}
+
+function addExecutiveOfficeSetups(scene: THREE.Scene) {
+  const manager = { office: "manager", x: -4.58, z: 12.30, facing: 1 as 1 | -1 };
+  addExecutiveChair(scene, manager.x-manager.facing*0.26, manager.z, manager.facing);
+  addExecutiveRelaxationArea(scene, manager.office);
+  addExecutiveDesk(scene, manager.x+manager.facing*0.92, manager.z, manager.facing);
+  addExecutivePlant(scene, manager.x+manager.facing*1.02, manager.z+1.05);
+  scene.userData.executiveOfficeSetups ??= [];
+  scene.userData.executiveOfficeSetups.push({
+    office:"manager", style:"executive-workstation-empty", person:null,
+    desk:{x:manager.x+manager.facing*0.92,z:manager.z},
+  });
+
+  addDirectorOfficeRedesign(scene);
+  scene.userData.executiveOfficeSetups.push({
+    office:"director", style:"black-walnut-gold-executive-suite", person:null,
+    desk:{x:3.75,z:12.75},
+  });
 }
 
 function addPremiumOfficeEnhancements(scene: THREE.Scene) {
@@ -2492,9 +2626,9 @@ function addPremiumOfficeEnhancements(scene: THREE.Scene) {
   ];
 
   for (const office of offices) {
+    if (office.id === "director") continue;
     addOfficeWallFeature(scene, office.x, office.z, office.side, office.large);
     addOfficeGlow(scene, office.x, office.z, office.side, office.large);
-
   }
 }
 
