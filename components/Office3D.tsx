@@ -2232,181 +2232,195 @@ function addExecutiveRelaxationArea(
   scene: THREE.Scene,
   office: "manager" | "director",
 ) {
-  const isManager = office === "manager";
-  const side = isManager ? -1 : 1;
+  const side = office === "manager" ? -1 : 1;
 
-  // The lounge sits in the front/outside corner of each executive room,
-  // deliberately separated from the workstation and the 1.5 m doorway opening.
-  const centerX = side * 5.65;
-  const centerZ = 10.35;
-  const facing = isManager ? 1 : -1;
+  // Deliberately use the rear outer corner of each 6 × 5 m executive office.
+  // The workstation stays toward the corridor, while this lounge remains
+  // completely inside the room and outside the 1.5 m door zone.
+  const centerX = side * 5.45;
+  const sofaZ = 13.60;
+  const tableZ = 12.72;
 
   const rugMaterial = new THREE.MeshStandardMaterial({
-    color: 0x6a5848,
-    roughness: 0.84,
+    color: 0x6b5847,
+    roughness: 0.88,
   });
   const upholstery = new THREE.MeshStandardMaterial({
-    color: 0x7a5a43,
-    roughness: 0.58,
+    color: 0x5b4030,
+    roughness: 0.54,
   });
-  const upholsteryLight = new THREE.MeshStandardMaterial({
-    color: 0x967158,
-    roughness: 0.64,
+  const cushionMaterial = new THREE.MeshStandardMaterial({
+    color: 0x805d45,
+    roughness: 0.62,
   });
   const wood = new THREE.MeshStandardMaterial({
-    color: 0x8e633d,
-    roughness: 0.52,
+    color: 0x9a6a3f,
+    roughness: 0.50,
   });
   const metal = new THREE.MeshStandardMaterial({
-    color: 0x2a3238,
-    roughness: 0.28,
-    metalness: 0.78,
+    color: 0x252d33,
+    roughness: 0.26,
+    metalness: 0.80,
   });
-  const glass = new THREE.MeshStandardMaterial({
-    color: 0x9aa0a3,
-    roughness: 0.18,
-    metalness: 0.42,
+  const brass = new THREE.MeshStandardMaterial({
+    color: 0xc9a45d,
+    roughness: 0.24,
+    metalness: 0.88,
   });
 
   const rug = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.35, 2.15),
+    new THREE.PlaneGeometry(2.15, 1.75),
     rugMaterial,
   );
   rug.rotation.x = -Math.PI / 2;
-  rug.position.set(centerX, 0.165, centerZ);
+  rug.position.set(centerX, 0.166, 13.10);
   rug.receiveShadow = true;
   rug.userData.officeDecor = "executive-relaxation-rug";
   rug.userData.roomId = office;
   scene.add(rug);
 
-  // Compact two-seat lounge sofa.
-  const sofaSeat = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.36, 0.82, 5, 16),
-    upholstery,
-  );
-  sofaSeat.scale.set(1.00, 0.32, 1.08);
-  sofaSeat.position.set(centerX + facing * 0.10, 0.55, centerZ);
-  sofaSeat.castShadow = true;
-  sofaSeat.receiveShadow = true;
-  sofaSeat.userData.officeDecor = "executive-relaxation-sofa-seat";
-  scene.add(sofaSeat);
+  // Compact executive loveseat: long axis is X, tucked neatly against the rear wall.
+  const sofaBase = meshBox(1.72, 0.18, 0.78, upholstery);
+  sofaBase.position.set(centerX, 0.50, sofaZ);
+  sofaBase.castShadow = true;
+  sofaBase.receiveShadow = true;
+  sofaBase.userData.officeDecor = "executive-relaxation-loveseat-base";
+  sofaBase.userData.roomId = office;
+  scene.add(sofaBase);
 
-  const sofaBack = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.34, 0.92, 5, 16),
-    upholsteryLight,
-  );
-  sofaBack.scale.set(0.98, 1.00, 0.32);
-  sofaBack.position.set(centerX - facing * 0.42, 0.94, centerZ);
+  const sofaCushion = meshBox(1.55, 0.16, 0.62, cushionMaterial);
+  sofaCushion.position.set(centerX, 0.67, sofaZ - 0.03);
+  sofaCushion.castShadow = true;
+  sofaCushion.receiveShadow = true;
+  sofaCushion.userData.officeDecor = "executive-relaxation-loveseat-cushion";
+  scene.add(sofaCushion);
+
+  const sofaBack = meshBox(1.72, 0.72, 0.16, upholstery);
+  sofaBack.position.set(centerX, 1.00, sofaZ + 0.29);
   sofaBack.castShadow = true;
   sofaBack.receiveShadow = true;
-  sofaBack.userData.officeDecor = "executive-relaxation-sofa-back";
+  sofaBack.userData.officeDecor = "executive-relaxation-loveseat-back";
   scene.add(sofaBack);
 
-  for (const zSide of [-1, 1]) {
-    const arm = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.14, 0.34, 4, 10),
-      upholsteryLight,
-    );
-    arm.scale.set(0.95, 1.18, 0.90);
-    arm.position.set(
-      centerX,
-      0.76,
-      centerZ + zSide * 0.78,
-    );
+  for (const xSide of [-1, 1]) {
+    const arm = meshBox(0.16, 0.48, 0.78, upholstery);
+    arm.position.set(centerX + xSide * 0.78, 0.80, sofaZ);
     arm.castShadow = true;
-    arm.userData.officeDecor = "executive-relaxation-sofa-arm";
+    arm.userData.officeDecor = "executive-relaxation-loveseat-arm";
     scene.add(arm);
-  }
 
-  // Two low front legs make the sofa read as a freestanding premium lounge piece.
-  for (const zSide of [-1, 1]) {
     const leg = meshBox(0.07, 0.20, 0.07, metal);
-    leg.position.set(centerX + facing * 0.30, 0.30, centerZ + zSide * 0.67);
+    leg.position.set(centerX + xSide * 0.62, 0.30, sofaZ - 0.20);
     leg.castShadow = true;
-    leg.userData.officeDecor = "executive-relaxation-sofa-leg";
+    leg.userData.officeDecor = "executive-relaxation-loveseat-leg";
     scene.add(leg);
   }
 
-  // Round coffee table centered in front of the sofa.
+  // Two cushions make the piece read immediately as a proper relaxing sofa.
+  for (const xSide of [-0.43, 0.43]) {
+    const cushion = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.20, 0.24, 4, 12),
+      cushionMaterial,
+    );
+    cushion.scale.set(1.00, 0.42, 0.72);
+    cushion.position.set(centerX + xSide, 0.89, sofaZ + 0.04);
+    cushion.castShadow = true;
+    cushion.userData.officeDecor = "executive-relaxation-loveseat-back-cushion";
+    scene.add(cushion);
+  }
+
+  // Low round coffee table sits in front of the loveseat, not in the corridor.
   const tableTop = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.48, 0.48, 0.10, 24),
-    glass,
+    new THREE.CylinderGeometry(0.42, 0.42, 0.09, 24),
+    wood,
   );
-  tableTop.position.set(centerX + facing * 0.92, 0.53, centerZ);
+  tableTop.position.set(centerX, 0.53, tableZ);
   tableTop.castShadow = true;
   tableTop.receiveShadow = true;
   tableTop.userData.officeDecor = "executive-relaxation-coffee-table";
   scene.add(tableTop);
 
+  const brassRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.34, 0.014, 8, 24),
+    brass,
+  );
+  brassRing.rotation.x = Math.PI / 2;
+  brassRing.position.set(centerX, 0.58, tableZ);
+  brassRing.castShadow = true;
+  brassRing.userData.officeDecor = "executive-relaxation-coffee-table-ring";
+  scene.add(brassRing);
+
   const tableStem = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.065, 0.10, 0.38, 14),
+    new THREE.CylinderGeometry(0.055, 0.085, 0.38, 14),
     metal,
   );
-  tableStem.position.set(centerX + facing * 0.92, 0.30, centerZ);
+  tableStem.position.set(centerX, 0.31, tableZ);
   tableStem.castShadow = true;
   scene.add(tableStem);
 
   const tableBase = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.27, 0.30, 0.055, 20),
+    new THREE.CylinderGeometry(0.24, 0.27, 0.055, 20),
     metal,
   );
-  tableBase.position.set(centerX + facing * 0.92, 0.075, centerZ);
+  tableBase.position.set(centerX, 0.085, tableZ);
   tableBase.castShadow = true;
   scene.add(tableBase);
 
-  // Small side table keeps the relaxation nook visually complete without
-  // consuming the center of the room.
-  const sideTableX = centerX - facing * 0.02;
-  const sideTableZ = centerZ + 0.98;
+  // Small side table stays at the outer edge of the nook.
+  const sideTableX = side * 6.25;
+  const sideTableZ = 13.08;
   const sideTop = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.24, 0.24, 0.08, 20),
+    new THREE.CylinderGeometry(0.21, 0.21, 0.07, 20),
     wood,
   );
-  sideTop.position.set(sideTableX, 0.58, sideTableZ);
+  sideTop.position.set(sideTableX, 0.56, sideTableZ);
   sideTop.castShadow = true;
   sideTop.receiveShadow = true;
   sideTop.userData.officeDecor = "executive-relaxation-side-table";
   scene.add(sideTop);
 
-  const sideLeg = meshBox(0.07, 0.48, 0.07, metal);
+  const sideLeg = meshBox(0.06, 0.46, 0.06, metal);
   sideLeg.position.set(sideTableX, 0.31, sideTableZ);
   sideLeg.castShadow = true;
   scene.add(sideLeg);
 
-  const sideFoot = meshBox(0.34, 0.045, 0.08, metal);
-  sideFoot.position.set(sideTableX, 0.085, sideTableZ);
-  sideFoot.castShadow = true;
-  scene.add(sideFoot);
+  // Warm accent lamp sits beside the loveseat and does not interfere with the desk.
+  const lampX = side * 6.30;
+  const lampZ = 13.95;
 
-  // Warm floor lamp gives the nook a clear "relaxation" identity.
-  const lampX = centerX - facing * 0.02;
-  const lampZ = centerZ - 0.98;
-  const stem = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.025, 0.035, 1.55, 12),
+  const lampBase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.14, 0.16, 0.055, 18),
     metal,
   );
-  stem.position.set(lampX, 0.92, lampZ);
-  stem.castShadow = true;
-  stem.userData.officeDecor = "executive-relaxation-floor-lamp";
-  scene.add(stem);
+  lampBase.position.set(lampX, 0.08, lampZ);
+  lampBase.castShadow = true;
+  scene.add(lampBase);
 
-  const shade = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.23, 0.15, 0.26, 20, 1, true),
+  const lampStem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.022, 0.032, 1.35, 12),
+    metal,
+  );
+  lampStem.position.set(lampX, 0.76, lampZ);
+  lampStem.castShadow = true;
+  scene.add(lampStem);
+
+  const lampShade = new THREE.Mesh(
+    new THREE.ConeGeometry(0.19, 0.25, 20, 1, true),
     new THREE.MeshStandardMaterial({
       color: 0xd5b46e,
       roughness: 0.36,
-      metalness: 0.28,
+      metalness: 0.24,
       emissive: new THREE.Color(0x3b2e1b),
-      emissiveIntensity: 0.45,
+      emissiveIntensity: 0.38,
     }),
   );
-  shade.position.set(lampX, 1.72, lampZ);
-  shade.castShadow = true;
-  shade.userData.officeDecor = "executive-relaxation-lamp-shade";
-  scene.add(shade);
+  lampShade.position.set(lampX, 1.45, lampZ);
+  lampShade.castShadow = true;
+  lampShade.userData.officeDecor = "executive-relaxation-lamp-shade";
+  scene.add(lampShade);
 
-  const glow = new THREE.PointLight(0xffd9ad, 0.65, 3.2, 2);
-  glow.position.set(lampX, 1.55, lampZ);
+  const glow = new THREE.PointLight(0xffd9ad, 0.55, 3.0, 2);
+  glow.position.set(lampX, 1.35, lampZ);
   glow.castShadow = false;
   glow.userData.officeDecor = "executive-relaxation-lamp-glow";
   scene.add(glow);
@@ -2414,9 +2428,9 @@ function addExecutiveRelaxationArea(
   scene.userData.executiveRelaxationAreas ??= [];
   scene.userData.executiveRelaxationAreas.push({
     office,
-    center: { x: centerX, z: centerZ },
-    sofa: { x: centerX + facing * 0.10, z: centerZ },
-    coffeeTable: { x: centerX + facing * 0.92, z: centerZ },
+    center: { x: centerX, z: 13.10 },
+    loveseat: { x: centerX, z: sofaZ },
+    coffeeTable: { x: centerX, z: tableZ },
     clearDoorZone: true,
   });
 }
