@@ -2279,54 +2279,74 @@ function addExecutiveRelaxationArea(
   rug.userData.roomId = office;
   scene.add(rug);
 
-  // Compact executive loveseat: long axis is X, tucked neatly against the rear wall.
-  const sofaBase = meshBox(1.72, 0.18, 0.78, upholstery);
-  sofaBase.position.set(centerX, 0.50, sofaZ);
-  sofaBase.castShadow = true;
-  sofaBase.receiveShadow = true;
-  sofaBase.userData.officeDecor = "executive-relaxation-loveseat-base";
-  sofaBase.userData.roomId = office;
-  scene.add(sofaBase);
+  // Rebuilt seating only: a compact, rounded executive two-seat lounge.
+  // It stays on the existing rug footprint and leaves the coffee table,
+  // side table and lamp positions untouched.
+  const sofaSeat = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.34, 0.72, 5, 18),
+    cushionMaterial,
+  );
+  sofaSeat.scale.set(1.22, 0.50, 1.28);
+  sofaSeat.position.set(centerX, 0.62, sofaZ);
+  sofaSeat.castShadow = true;
+  sofaSeat.receiveShadow = true;
+  sofaSeat.userData.officeDecor = "executive-relaxation-seat-rebuilt";
+  sofaSeat.userData.roomId = office;
+  scene.add(sofaSeat);
 
-  const sofaCushion = meshBox(1.55, 0.16, 0.62, cushionMaterial);
-  sofaCushion.position.set(centerX, 0.67, sofaZ - 0.03);
-  sofaCushion.castShadow = true;
-  sofaCushion.receiveShadow = true;
-  sofaCushion.userData.officeDecor = "executive-relaxation-loveseat-cushion";
-  scene.add(sofaCushion);
-
-  const sofaBack = meshBox(1.72, 0.72, 0.16, upholstery);
-  sofaBack.position.set(centerX, 1.00, sofaZ + 0.29);
+  const sofaBack = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.31, 0.76, 5, 18),
+    upholstery,
+  );
+  sofaBack.scale.set(1.28, 1.38, 0.34);
+  sofaBack.position.set(centerX, 1.03, sofaZ + 0.28);
   sofaBack.castShadow = true;
   sofaBack.receiveShadow = true;
-  sofaBack.userData.officeDecor = "executive-relaxation-loveseat-back";
+  sofaBack.userData.officeDecor = "executive-relaxation-back-rebuilt";
   scene.add(sofaBack);
 
   for (const xSide of [-1, 1]) {
-    const arm = meshBox(0.16, 0.48, 0.78, upholstery);
-    arm.position.set(centerX + xSide * 0.78, 0.80, sofaZ);
+    const arm = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.13, 0.27, 4, 14),
+      upholstery,
+    );
+    arm.scale.set(1.15, 1.55, 1.22);
+    arm.position.set(centerX + xSide * 0.78, 0.83, sofaZ);
     arm.castShadow = true;
-    arm.userData.officeDecor = "executive-relaxation-loveseat-arm";
+    arm.receiveShadow = true;
+    arm.userData.officeDecor = "executive-relaxation-arm-rebuilt";
     scene.add(arm);
-
-    const leg = meshBox(0.07, 0.20, 0.07, metal);
-    leg.position.set(centerX + xSide * 0.62, 0.30, sofaZ - 0.20);
-    leg.castShadow = true;
-    leg.userData.officeDecor = "executive-relaxation-loveseat-leg";
-    scene.add(leg);
   }
 
-  // Two cushions make the piece read immediately as a proper relaxing sofa.
-  for (const xSide of [-0.43, 0.43]) {
-    const cushion = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.20, 0.24, 4, 12),
+  // Two separate back cushions give the seat a cleaner executive lounge look.
+  for (const xOffset of [-0.40, 0.40]) {
+    const backCushion = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.19, 0.19, 4, 12),
       cushionMaterial,
     );
-    cushion.scale.set(1.00, 0.42, 0.72);
-    cushion.position.set(centerX + xSide, 0.89, sofaZ + 0.04);
-    cushion.castShadow = true;
-    cushion.userData.officeDecor = "executive-relaxation-loveseat-back-cushion";
-    scene.add(cushion);
+    backCushion.scale.set(1.05, 1.15, 0.42);
+    backCushion.position.set(centerX + xOffset, 0.97, sofaZ + 0.08);
+    backCushion.castShadow = true;
+    backCushion.userData.officeDecor = "executive-relaxation-back-cushion-rebuilt";
+    scene.add(backCushion);
+  }
+
+  const sofaBase = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.30, 0.74, 4, 14),
+    upholstery,
+  );
+  sofaBase.scale.set(1.28, 0.34, 1.12);
+  sofaBase.position.set(centerX, 0.43, sofaZ);
+  sofaBase.castShadow = true;
+  sofaBase.userData.officeDecor = "executive-relaxation-base-rebuilt";
+  scene.add(sofaBase);
+
+  for (const xSide of [-1, 1]) {
+    const leg = meshBox(0.07, 0.22, 0.07, metal);
+    leg.position.set(centerX + xSide * 0.60, 0.26, sofaZ - 0.22);
+    leg.castShadow = true;
+    leg.userData.officeDecor = "executive-relaxation-leg-rebuilt";
+    scene.add(leg);
   }
 
   // Low round coffee table sits in front of the loveseat, not in the corridor.
