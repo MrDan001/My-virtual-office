@@ -2230,7 +2230,7 @@ function addExecutiveDesk(scene: THREE.Scene, x: number, z: number, facing: 1 | 
 
 function addExecutiveRelaxationArea(
   scene: THREE.Scene,
-  office: "manager" | "director",
+  office: string,
 ) {
   const side = office === "manager" ? -1 : 1;
 
