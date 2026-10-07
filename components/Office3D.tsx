@@ -2496,7 +2496,18 @@ function addDirectorOfficeRedesign(scene: THREE.Scene) {
   for(const x of[1.6,6.4]){directorFreshBox(scene,.62,1.92,.2,x,1.4,14.08,charcoal);for(const y of[.72,1.2,1.68,2.16])directorFreshBox(scene,.5,.035,.22,x,y,13.95,gold);}
   const dz=12.84;directorFreshBox(scene,2.72,.16,1.04,4,.84,dz,marble);directorFreshBox(scene,2.48,.56,.09,4,.55,dz-.49,walnut2);directorFreshBox(scene,2.42,.05,.022,4,.91,dz-.54,gold);
   for(const q of[-1,1])directorFreshBox(scene,.16,.62,.16,4+q*1.02,.35,dz+.1,black);
-  directorFreshBox(scene,.58,.035,.4,3.8,.95,12.82,directorFreshMat(0x59666f,.18,.45));directorChair(scene,4,11.6);guest(scene,2.55,11.02);guest(scene,3.62,11.02);
+  directorFreshBox(scene,.58,.035,.4,3.8,.95,12.82,directorFreshMat(0x59666f,.18,.45));
+  addExecutiveChair(scene,4,11.60,-1);
+  const addDirectorGuest=(x:number,z:number)=>{
+    const seat=directorFreshBox(scene,.78,.16,.76,x,.54,z,leather);
+    const back=new THREE.Mesh(new THREE.CapsuleGeometry(.22,.30,4,12),soft);
+    back.scale.set(1.44,1.20,.56); back.position.set(x,.91,z+.24); back.castShadow=true; scene.add(back);
+    for(const side of[-1,1]) directorFreshBox(scene,.10,.24,.58,x+side*.34,.78,z,leather);
+    directorFreshCyl(scene,.07,.24,x,.32,z,gold);
+    seat.userData.officeDecor="director-fresh-guest-seat";
+  };
+  addDirectorGuest(2.55,11.02);
+  addDirectorGuest(3.62,11.02);
   const rug=new THREE.Mesh(new THREE.PlaneGeometry(2.2,2.2),directorFreshMat(0x383a3d,.96));rug.rotation.x=-Math.PI/2;rug.position.set(5.65,.17,10.3);scene.add(rug);
   directorFreshBox(scene,.84,.68,1.74,6.2,.62,10.28,leather);directorFreshBox(scene,.68,.16,1.48,6.08,.74,10.06,soft);directorFreshBox(scene,.72,.54,.16,6.24,1,10.5,leather);
   for(const q of[-1,1]){const c=new THREE.Mesh(new THREE.CapsuleGeometry(.2,.28,4,12),soft);c.scale.set(1.04,1.14,.68);c.position.set(6.02,1,10.24+q*.42);c.castShadow=true;scene.add(c);}
